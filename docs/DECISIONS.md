@@ -284,3 +284,54 @@ For the first browser-based Windows vertical slice, model loading is performed t
 The active development-machine CLI reported Ready but returned 404 for the older management routes. Current Microsoft examples for external clients use the `/v1` base URL.
 
 A Vite development proxy forwards `/foundry-local/*` to the loopback Foundry service to avoid CORS coupling during development.
+
+
+---
+
+## ADR-0017 — Stable development origin for local storage
+
+**Status:** Accepted  
+**Date:** 2026-09-25
+
+### Decision
+
+Vite development uses port `5173` with `strictPort: true`.
+
+If port 5173 is already occupied, CrownKeep development must fail visibly rather than silently moving to another port.
+
+### Reason
+
+Browser IndexedDB is scoped to the web origin. Because the port is part of the origin, `http://localhost:5173` and `http://localhost:5174` receive different local databases. Silent Vite port fallback made existing conversations appear to disappear even though they remained stored under the original origin.
+
+This is a development-only concern. The future installed Windows application must use a stable application storage location/origin.
+
+---
+
+## ADR-0018 — Temporal context and reversible message exclusion
+
+**Status:** Accepted  
+**Date:** 2026-09-25
+
+### Decision
+
+Every inference request receives device-generated temporal metadata:
+
+- current device-local date/time;
+- device IANA time zone when available;
+- current UTC timestamp;
+- conversation creation timestamp;
+- original persisted timestamps attached to included historical messages.
+
+CrownKeep also allows an individual persisted message to be marked `excludedFromContext`.
+
+Excluded messages remain visible in local conversation history but are omitted from future inference requests until restored.
+
+### Reason
+
+Anne needs explicit time metadata to answer relative-time questions such as “today,” “earlier,” or “what did we discuss in the last 20 minutes.”
+
+Context management should not require deleting the user's local record. Reversible exclusion separates **conversation history** from **active model context**.
+
+### Scope
+
+This enables temporal reasoning within the active conversation. It does not yet provide automatic recall across separate conversations. Cross-conversation local recall remains a later feature.
