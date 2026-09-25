@@ -8,6 +8,7 @@ import {
 } from 'react'
 import type { Conversation, Message } from './domain/conversation.ts'
 import type { AIModel, ProviderAvailability } from './providers/AIProvider.ts'
+import { FoundryLocalProvider } from './providers/FoundryLocalProvider.ts'
 import { MockProvider } from './providers/MockProvider.ts'
 import { ProviderRegistry } from './providers/ProviderRegistry.ts'
 import { IndexedDbConversationRepository } from './storage/IndexedDbConversationRepository.ts'
@@ -21,12 +22,18 @@ const developmentAlternateProvider = new MockProvider({
   modelDisplayName: 'Alternate Mock Model',
   responseLabel: 'alternate local development provider',
 })
+const foundryLocalProvider = new FoundryLocalProvider()
 
 const providerRegistry = new ProviderRegistry(
   import.meta.env.DEV
-    ? [primaryProvider, developmentAlternateProvider]
-    : [primaryProvider],
+    ? [primaryProvider, developmentAlternateProvider, foundryLocalProvider]
+    : [primaryProvider, foundryLocalProvider],
 )
+
+const ANNE_SYSTEM_PROMPT = `You are Anne, the private local AI assistant inside CrownKeep.
+Be helpful, clear, and concise. Do not claim access to cloud services or RDC data unless
+the current provider explicitly supplies that capability. When running locally, treat the
+conversation as local-only and do not imply that data was sent elsewhere.`
 
 const repository = new IndexedDbConversationRepository()
 const DEFAULT_TITLE = 'New conversation'
@@ -243,10 +250,13 @@ export default function App() {
     let assistantContent = ''
 
     try {
-      const requestMessages = [...messages, userMessage].map((message) => ({
-        role: message.role,
-        content: message.content,
-      }))
+      const requestMessages = [
+        { role: 'system' as const, content: ANNE_SYSTEM_PROMPT },
+        ...[...messages, userMessage].map((message) => ({
+          role: message.role,
+          content: message.content,
+        })),
+      ]
 
       for await (const chunk of provider.streamChat(
         { modelId: selectedModelId, messages: requestMessages },
@@ -462,6 +472,16 @@ export default function App() {
               <span className="status-dot" />
               {status}
             </div>
+
+            {selectedProviderId === 'foundry-local' && (
+              <p className="provider-help">
+                {providerAvailability?.available === false
+                  ? 'Start Foundry Local on port 39839, then refresh the provider.'
+                  : models.length === 0
+                    ? 'Foundry Local is reachable, but no cached chat model is available yet.'
+                    : 'Foundry Local is ready for Anne.'}
+              </p>
+            )}
           </div>
         </header>
 
