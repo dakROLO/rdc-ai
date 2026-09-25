@@ -132,3 +132,27 @@ The key hierarchy, enrollment, recovery, rotation, and device-revocation design 
 Important decisions, completed work, blockers, and architecture changes must be reflected in repository documentation.
 
 Chat history is not authoritative project context.
+
+
+---
+
+## ADR-0010 — Foundation web toolchain
+
+**Status:** Accepted  
+**Date:** 2026-09-24
+
+### Decision
+
+Use the current official Vite React/TypeScript application pattern as the Phase 0 foundation.
+
+Initial dependency baseline:
+
+- React 19.3;
+- Vite 8.3;
+- TypeScript 6.0.x;
+- official Vite React plugin;
+- Oxlint for the initial lint step.
+
+### Reason
+
+This keeps the foundation close to the current upstream Vite React TypeScript template and minimizes custom build tooling before local inference work begins.
