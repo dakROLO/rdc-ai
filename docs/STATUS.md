@@ -66,3 +66,11 @@ None identified.
 - Sync key hierarchy and recovery/enrollment model.
 - Cloud AI model/deployment selection.
 - Public-source license.
+
+
+## Manual test note — 2026-09-24
+
+- Windows local Vite UI test: **passed**; mock local chat rendered and responded correctly.
+- Same-network phone test: Vite endpoint loaded, but the phone displayed only a blue screen.
+- Phone rendering issue remains open for Sprint 0.2 diagnosis; do not treat mobile layout as validated yet.
+- Working product name selected: **CrownKeep**.
