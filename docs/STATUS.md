@@ -279,3 +279,25 @@ Not yet delivered:
 - browser JavaScript cannot start/stop Foundry or install/load/unload models;
 - native Windows runtime ownership remains a later desktop-host implementation step;
 - automatic idle unload/resource release must wait for the native runtime host.
+
+
+## Sprint 2.2B validation fixes — 2026-09-25
+
+AVD validation found three usability/performance issues:
+
+- browser scrollbars did not match the CrownKeep theme;
+- raw per-message timestamp prefixes leaked into small-model responses;
+- first-token latency increased to about 10.5 seconds with a 1,004-token prompt after timestamp metadata was inserted into every historical message.
+
+Fixes delivered:
+
+- CrownKeep scrollbars now use jade/graphite styling in the conversation, navigation, and Local AI panel.
+- Current device date/time and time zone remain available on every request.
+- Detailed historical message timeline metadata is now injected only for prompts with temporal intent.
+- Historical message content is sent to the model without timestamp prefixes.
+- Anne is explicitly told to use temporal metadata silently and not echo raw timestamp/timeline markup unless asked.
+- Known legacy '[Message timestamp: ...]' artifacts are stripped from display and future inference context.
+- Diagnostics now identify large active context as a likely first-token latency cause when prompt tokens are high, and direct the user to exclude older messages from Context.
+- This preserves temporal reasoning while reducing normal prompt-token overhead.
+
+Validation pending: compare prompt-token count and first-token latency on the same AVD conversation after pulling current main.
