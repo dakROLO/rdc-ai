@@ -321,3 +321,19 @@ Phase 3.1A foundation delivered on the branch:
 - Phase 3 work is isolated from stable `main` on the phase branch.
 
 Next: Sprint 3.1B — create the minimal native iPhone host and wire availability plus the first real on-device response through `window.crownKeepNativeAI`.
+
+
+## Phase 3 Windows-side native-host simulation — 2026-09-25
+
+To keep Phase 3 moving without immediate Mac access:
+
+- Added `MockNativeAIHost` for development-only simulation of the native iPhone bridge.
+- The mock host can expose Apple-provider states from Windows without changing production behavior.
+- Development URL `?nativeAI=mock` installs a fake native Apple host before provider registration.
+- `nativeAIState` can simulate:
+  - `available`
+  - `device-not-eligible`
+  - `apple-intelligence-not-enabled`
+  - `model-not-ready`
+- The available mock returns a short iPhone-local response through `AppleFoundationModelsProvider`, exercising the same provider-neutral chat path the real Swift bridge will use.
+- This lets provider registration, availability mapping, conversation continuity, cancellation plumbing, and mobile-local metadata be validated before Xcode/device work begins.
