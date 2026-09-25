@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from 'react'
+import { ANNE_SYSTEM_PROMPT } from './assistant/anne.ts'
 import type { Conversation, Message } from './domain/conversation.ts'
 import type { AIModel, ProviderAvailability } from './providers/AIProvider.ts'
 import { FoundryLocalProvider } from './providers/FoundryLocalProvider.ts'
@@ -29,11 +30,6 @@ const providerRegistry = new ProviderRegistry(
     ? [primaryProvider, developmentAlternateProvider, foundryLocalProvider]
     : [primaryProvider, foundryLocalProvider],
 )
-
-const ANNE_SYSTEM_PROMPT = `You are Anne, the private local AI assistant inside CrownKeep.
-Be helpful, clear, and concise. Do not claim access to cloud services or RDC data unless
-the current provider explicitly supplies that capability. When running locally, treat the
-conversation as local-only and do not imply that data was sent elsewhere.`
 
 const repository = new IndexedDbConversationRepository()
 const DEFAULT_TITLE = 'New conversation'
@@ -62,7 +58,7 @@ function welcomeMessage(conversationId: string): Message {
     ...makeMessage(
       conversationId,
       'assistant',
-      "Welcome to CrownKeep. I'm Anne. This conversation is stored on this device, and I'm using a mock local model while Foundry Local integration is built.",
+      "Welcome to CrownKeep. I'm Anne. This conversation is stored on this device. You can change local providers or models without changing the conversation.",
     ),
     providerId: primaryProvider.id,
     modelId: 'mock-local-v1',
