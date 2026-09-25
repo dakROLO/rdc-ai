@@ -1,4 +1,4 @@
-# RDC AI — Architecture
+# CrownKeep — Architecture
 
 ## System view
 
@@ -17,7 +17,7 @@ flowchart LR
     end
 
     subgraph Azure["RDC Azure Tenant"]
-        API["RDC AI API"]
+        API["CrownKeep API"]
         SS["Encrypted Sync Store"]
         CAI["Cloud AI Service"]
         FCTX["Future RDC Context API\n(not connected now)"]
@@ -145,7 +145,7 @@ Conversation A
  ├─ user message
  ├─ assistant — Foundry Local / model X
  ├─ user message
- ├─ assistant — RDC Cloud / model Y
+ ├─ assistant — CrownKeep Cloud / model Y
  ├─ user message
  └─ assistant — mobile local / model Z
 ```
@@ -166,7 +166,7 @@ Goals:
 
 ## Azure API direction
 
-The client authenticates through Entra as a public client and calls an Entra-protected RDC AI API.
+The client authenticates through Entra as a public client and calls an Entra-protected CrownKeep API.
 
 The API, not the client, accesses Azure cloud services requiring credentials.
 
