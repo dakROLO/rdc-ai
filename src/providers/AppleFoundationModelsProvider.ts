@@ -20,11 +20,13 @@ export class AppleFoundationModelsProvider implements AIProvider {
   readonly id = 'apple-foundation-models'
   readonly displayName = 'Anne · Apple On-Device'
   readonly location = 'local' as const
+  private readonly host: NativeAIHost
 
-  constructor(private readonly host: NativeAIHost = getNativeAIHost() as NativeAIHost) {
+  constructor(host: NativeAIHost = getNativeAIHost() as NativeAIHost) {
     if (!host) {
       throw new Error('Apple on-device AI host is not available.')
     }
+    this.host = host
   }
 
   async getAvailability(): Promise<ProviderAvailability> {
