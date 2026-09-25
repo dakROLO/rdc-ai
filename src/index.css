@@ -1661,3 +1661,144 @@ body {
 .local-ai-panel::-webkit-scrollbar-thumb:hover {
   background: rgba(46, 230, 184, 0.72);
 }
+
+
+/* Local Projects */
+.project-nav {
+  flex: 0 1 auto;
+  max-height: 34%;
+  min-height: 0;
+  display: grid;
+  gap: 6px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.nav-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.nav-heading-row .nav-heading {
+  flex: 1;
+}
+
+.nav-mini-button {
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgba(46, 230, 184, 0.16);
+  border-radius: 8px;
+  background: rgba(17, 94, 79, 0.10);
+  color: var(--jade-glow);
+  font-weight: 900;
+}
+
+.nav-mini-button:hover:not(:disabled) {
+  border-color: rgba(46, 230, 184, 0.38);
+  background: rgba(17, 94, 79, 0.22);
+}
+
+.project-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  border-radius: 10px;
+}
+
+.project-filter {
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 7px 9px;
+  background: transparent;
+  color: #b8c8c3;
+  text-align: left;
+}
+
+.project-filter:hover:not(:disabled) {
+  background: rgba(232, 228, 218, 0.045);
+  color: var(--stone);
+}
+
+.project-filter.active {
+  border-color: rgba(46, 230, 184, 0.22);
+  background: rgba(17, 94, 79, 0.18);
+  color: var(--stone);
+}
+
+.project-filter span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.project-filter small {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 0.65rem;
+}
+
+.project-actions {
+  display: flex;
+  align-items: center;
+}
+
+.project-actions button {
+  width: 25px;
+  height: 25px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #829b94;
+  font-size: 0.72rem;
+}
+
+.project-actions button:hover:not(:disabled) {
+  background: rgba(232, 228, 218, 0.07);
+  color: var(--stone);
+}
+
+.nav-empty {
+  padding: 8px 10px;
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
+.project-nav,
+.conversation-nav {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(46, 230, 184, 0.36) rgba(8, 19, 17, 0.22);
+}
+
+.project-nav::-webkit-scrollbar,
+.conversation-nav::-webkit-scrollbar {
+  width: 8px;
+}
+
+.project-nav::-webkit-scrollbar-thumb,
+.conversation-nav::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(46, 230, 184, 0.32);
+}
+
+.nav-collapsed .project-nav {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .project-nav {
+    max-height: 180px;
+  }
+}
