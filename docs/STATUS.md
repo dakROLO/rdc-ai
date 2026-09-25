@@ -4,11 +4,11 @@
 
 ## Active phase
 
-Phase 1 — Local Conversation Core
+Phase 2 — Windows Local AI
 
 ## Active sprint
 
-Sprint 1.2 — Provider-neutral streaming chat
+Sprint 2.1 — Foundry Local connectivity
 
 Sprint 0.2 implementation is complete, with install/offline validation still pending.
 
@@ -33,22 +33,22 @@ Sprint 0.2 implementation is complete, with install/offline validation still pen
 
 ## In progress
 
-- Validate Enter-to-send and Shift+Enter behavior on Windows.
-- Validate provider/model selection without creating a new conversation.
-- Validate switching between the two development mock providers in the same conversation.
+- Validate the IndexedDB version-2 ordering migration on existing conversations.
+- Connect CrownKeep to the Foundry Local daemon on Windows.
+- Validate cached-model discovery and automatic model loading.
+- Generate a real streamed Anne response through Foundry Local.
+- Validate provider failure handling without corrupting local conversation history.
 - Validate Windows PWA installation/offline shell.
-- Establish an HTTPS test deployment for iPhone PWA validation.
 
 ## Next exit target
 
-Close Sprint 1.2 after confirming:
+Close Sprint 2.1 after confirming:
 
-- Enter sends and Shift+Enter creates a newline;
-- provider selection does not create a new conversation;
-- model/provider metadata remains attached to assistant messages;
-- streaming and cancellation still work after provider changes.
-
-Then begin Sprint 2.1 — Foundry Local connectivity.
+- CrownKeep reports Foundry Local health;
+- at least one cached local model appears in the model selector;
+- Anne can stream a real response from that model;
+- refreshing preserves the correct user/assistant message order;
+- stopping or failing a Foundry response does not corrupt the conversation.
 
 ## Current blockers
 
@@ -81,3 +81,14 @@ None identified.
 - Provider registry added.
 - Provider/model selectors added.
 - Two development mock providers are available in Vite development mode specifically to validate that provider switching does not fork the conversation.
+
+
+## User validation — provider-neutral sprint
+
+- Enter-to-send worked.
+- Provider switching worked inside one conversation.
+- The user identified a reload ordering defect: messages created in the same millisecond could reload in the wrong order.
+- IndexedDB schema is now version 2 and stores an explicit per-conversation `sequence` for every message.
+- Legacy version-1 messages are migrated to deterministic sequence positions on database upgrade.
+- Sprint 1.2 is complete; Sprint 2.1 is active.
+- `FoundryLocalProvider` now implements health, cached-model discovery, model load, and SSE streaming through the documented local REST API.
