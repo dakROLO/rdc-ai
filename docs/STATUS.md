@@ -124,3 +124,12 @@ None identified.
 - CrownKeep now exposes a **Build Roadmap** viewer using the same SVG asset.
 - `docs/ROADMAP.md` remains the detailed source of sprint scope and exit criteria.
 - Added README guidance for ending a Foundry Local session: stop the server when finished, or unload the model if the server should remain running.
+
+
+## UX / organization backlog note — 2026-09-24
+
+- Move **Provider / Model selection** into a collapsible menu so inference controls do not permanently consume conversation-header space.
+- Move the **conversation list** into a collapsible/navigation menu so the chat area can use more screen space, especially on narrow windows and mobile.
+- Add a **Projects** concept for organizing groups of related conversations.
+- Projects should group conversations without changing the core rule that each conversation remains provider-neutral and independently persisted.
+- Project implementation is deferred; no data model or sync contract has been selected yet.
