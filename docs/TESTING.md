@@ -841,3 +841,18 @@ Confirm:
 - message Context include/exclude still works;
 - conversation rename/delete still works;
 - project filtering does not add other conversations to the active inference context.
+
+
+### Project UX refinement validation
+
+1. Pull the latest `feature-projects` branch.
+2. Open a conversation assigned to a project.
+3. Confirm the chat header clearly shows its current project.
+4. Change the header Project selector and confirm the chat moves immediately.
+5. On a wide/desktop viewport, drag a conversation card onto a project and confirm membership changes.
+6. Drag a conversation onto **Unassigned** and confirm project membership is removed.
+7. Narrow the viewport to approximately phone width.
+8. Confirm Projects remains visible as a compact selector.
+9. Confirm project create, rename, and delete controls remain reachable.
+10. Confirm the active conversation's Project selector remains reachable in the header.
+11. Confirm conversation rename/delete/move controls are not clipped horizontally.
