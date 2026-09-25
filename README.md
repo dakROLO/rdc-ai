@@ -14,7 +14,7 @@ The visual above is shared with the CrownKeep app. Detailed sprint definitions a
 
 ## Current status
 
-**Phase 2 — Windows Local AI / Sprint 2.1 — Foundry Local connectivity** is in progress.
+**Phase 2 — Windows Local AI / Sprint 2.1 Foundry Local connectivity is complete.
 
 Current build:
 
