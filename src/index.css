@@ -24,7 +24,9 @@ button { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: 0.5; }
 
 .app-shell {
-  min-height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr);
   background:
@@ -34,7 +36,9 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 }
 
 .sidebar {
-  min-height: 100vh;
+  min-height: 0;
+  height: 100dvh;
+  overflow: hidden;
   padding: 26px 18px;
   border-right: 1px solid var(--line);
   background: rgba(15, 31, 30, 0.94);
@@ -191,9 +195,11 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 
 .workspace {
   min-width: 0;
-  min-height: 100vh;
+  min-height: 0;
+  height: 100dvh;
+  overflow: hidden;
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
 }
 
 .topbar {
@@ -248,12 +254,18 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 }
 
 .conversation {
+  position: relative;
   width: min(920px, calc(100% - 36px));
+  min-height: 0;
+  height: 100%;
   margin: 0 auto;
-  padding: 34px 0 20px;
+  padding: 34px 4px 20px 0;
   display: flex;
   flex-direction: column;
   gap: 18px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .message {
@@ -640,5 +652,54 @@ textarea::placeholder {
 @media (max-width: 760px) {
   .provider-help {
     text-align: left;
+  }
+}
+
+
+.scroll-latest-button {
+  position: sticky;
+  bottom: 10px;
+  align-self: center;
+  z-index: 5;
+  border: 1px solid rgba(46, 230, 184, 0.34);
+  border-radius: 999px;
+  padding: 8px 13px;
+  background: rgba(15, 31, 30, 0.96);
+  color: var(--stone);
+  font-weight: 800;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(10px);
+}
+
+.scroll-latest-button:hover {
+  border-color: rgba(46, 230, 184, 0.62);
+}
+
+.scroll-latest-button.finished {
+  border-color: rgba(201, 127, 91, 0.55);
+  color: #e9b79c;
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .sidebar {
+    height: auto;
+    max-height: 35dvh;
+    overflow: hidden;
+  }
+
+  .workspace {
+    height: auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .conversation {
+    min-height: 0;
+    width: calc(100% - 20px);
   }
 }
