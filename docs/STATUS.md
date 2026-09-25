@@ -253,3 +253,29 @@ Additional Sprint 2.2 hardening delivered from AVD validation:
 - Existing conversation deletion remains available for permanent local deletion.
 - Other conversations are not automatically included in the active conversation's inference context.
 - Cross-conversation local recall is not implemented yet and remains separate from active-conversation temporal context.
+
+
+## Sprint 2.2B implementation foundation — 2026-09-25
+
+Implementation completed for the browser-development side of the runtime lifecycle contract; user validation is pending.
+
+Delivered:
+
+- Added `LocalRuntimeManager` as a separate lifecycle abstraction from `AIProvider`.
+- Added `BrowserLocalRuntimeManager` for the current external Foundry development workflow.
+- Runtime contract includes start, stop, model install, model load, and model unload capabilities for a future native Windows host.
+- Added Local AI first-run/setup stages: Runtime → Model → Verify.
+- Added **Recheck** to retry provider/runtime discovery after external changes.
+- CrownKeep rechecks Foundry state when the window regains focus.
+- Added a hidden local verification request that benchmarks the selected model without adding a test message to conversation history.
+- Successful verification persists locally for the selected provider/model.
+- Setup guidance uses observed timing and flags slow GPU-labeled variants rather than trusting catalog labels alone.
+- A normal successful chat also marks the selected provider/model as locally verified.
+- Mock providers are development-only in production builds; the real local provider is the production default.
+- Browser mode clearly states that native runtime lifecycle is externally managed today and will be owned by the installed Windows build later.
+
+Not yet delivered:
+
+- browser JavaScript cannot start/stop Foundry or install/load/unload models;
+- native Windows runtime ownership remains a later desktop-host implementation step;
+- automatic idle unload/resource release must wait for the native runtime host.
