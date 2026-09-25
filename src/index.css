@@ -1802,3 +1802,194 @@ body {
     max-height: 180px;
   }
 }
+
+
+/* Projects interaction + responsive refinement */
+.active-project-control {
+  margin-top: 7px;
+  display: inline-grid;
+  grid-template-columns: auto minmax(140px, 240px);
+  align-items: center;
+  gap: 3px 8px;
+}
+
+.active-project-control > span {
+  color: var(--muted);
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+}
+
+.active-project-control select {
+  min-width: 0;
+  width: 100%;
+  border: 1px solid rgba(46, 230, 184, 0.22);
+  border-radius: 8px;
+  padding: 5px 26px 5px 8px;
+  background: rgba(17, 94, 79, 0.13);
+  color: var(--stone);
+  font-size: 0.72rem;
+  font-weight: 700;
+  outline: none;
+}
+
+.active-project-control select:focus {
+  border-color: rgba(46, 230, 184, 0.55);
+  box-shadow: 0 0 0 3px rgba(46, 230, 184, 0.07);
+}
+
+.active-project-control small {
+  grid-column: 2;
+  color: var(--muted);
+  font-size: 0.6rem;
+}
+
+.project-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.project-filter-select {
+  display: none;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid rgba(46, 230, 184, 0.2);
+  border-radius: 9px;
+  padding: 7px 30px 7px 9px;
+  background: #102925;
+  color: var(--stone);
+  outline: none;
+}
+
+.project-filter.drop-target {
+  border-color: rgba(46, 230, 184, 0.72);
+  background: rgba(46, 230, 184, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(46, 230, 184, 0.2);
+}
+
+.conversation-row[draggable="true"] {
+  cursor: grab;
+}
+
+.conversation-row[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.conversation-row[draggable="true"]:hover {
+  border-color: rgba(46, 230, 184, 0.16);
+}
+
+@media (max-width: 760px) {
+  .sidebar {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .project-nav {
+    grid-column: 1 / -1;
+    width: 100%;
+    max-height: none;
+    overflow: visible;
+    gap: 6px;
+    padding: 0;
+  }
+
+  .project-nav .nav-heading-row {
+    display: flex;
+  }
+
+  .project-nav .nav-heading {
+    display: block;
+    padding: 0 2px;
+    font-size: 0.62rem;
+  }
+
+  .project-filter-select {
+    display: block;
+  }
+
+  .project-nav > .project-filter,
+  .project-nav > .project-row {
+    display: none;
+  }
+
+  .project-manage-button {
+    display: grid;
+    place-items: center;
+  }
+
+  .conversation-nav {
+    grid-column: 1 / -1;
+  }
+
+  .conversation-row {
+    flex-basis: min(250px, 76vw);
+  }
+
+  .conversation-actions {
+    gap: 1px;
+  }
+
+  .conversation-actions button {
+    width: 30px;
+    height: 30px;
+  }
+
+  .conversation-title {
+    display: grid;
+    gap: 2px;
+  }
+
+  .active-project-control {
+    width: 100%;
+    max-width: 360px;
+    grid-template-columns: auto minmax(0, 1fr);
+    margin-top: 5px;
+  }
+
+  .active-project-control small {
+    display: none;
+  }
+
+  .active-project-control select {
+    font-size: 0.72rem;
+    padding-block: 5px;
+  }
+}
+
+@media (max-width: 520px) {
+  .sidebar {
+    padding-inline: 8px;
+  }
+
+  .brand-row {
+    min-width: 0;
+  }
+
+  .new-chat-button {
+    padding-inline: 10px;
+    font-size: 0.8rem;
+  }
+
+  .conversation-row {
+    flex-basis: min(270px, 82vw);
+  }
+
+  .conversation-open span {
+    font-size: 0.82rem;
+  }
+
+  .conversation-actions button {
+    width: 28px;
+    padding: 0;
+  }
+
+  .topbar {
+    padding: 9px 10px;
+  }
+
+  .active-project-control {
+    max-width: none;
+  }
+}
