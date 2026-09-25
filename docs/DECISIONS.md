@@ -259,3 +259,28 @@ The endpoint is configurable through `VITE_FOUNDRY_LOCAL_ENDPOINT`.
 A browser application cannot execute `foundry server status` directly. Microsoft Foundry Local normally uses a dynamic port, but its CLI supports starting/restarting the daemon on a fixed port for application integration.
 
 The fixed port is a development/distribution convention, not a credential or permanent architectural coupling.
+
+
+---
+
+## ADR-0016 — Prefer the current OpenAI-compatible Foundry Local /v1 surface
+
+**Status:** Accepted  
+**Date:** 2026-09-24
+
+### Decision
+
+CrownKeep probes and consumes the current Foundry Local OpenAI-compatible HTTP surface first:
+
+- `GET /v1/models`
+- `POST /v1/chat/completions`
+
+The older `/openai/*` management surface is compatibility fallback only.
+
+For the first browser-based Windows vertical slice, model loading is performed through the Foundry CLI rather than relying on an HTTP management endpoint.
+
+### Reason
+
+The active development-machine CLI reported Ready but returned 404 for the older management routes. Current Microsoft examples for external clients use the `/v1` base URL.
+
+A Vite development proxy forwards `/foundry-local/*` to the loopback Foundry service to avoid CORS coupling during development.
