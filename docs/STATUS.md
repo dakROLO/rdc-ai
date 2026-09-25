@@ -133,3 +133,13 @@ None identified.
 - Add a **Projects** concept for organizing groups of related conversations.
 - Projects should group conversations without changing the core rule that each conversation remains provider-neutral and independently persisted.
 - Project implementation is deferred; no data model or sync contract has been selected yet.
+
+
+## Church AV PC Foundry Local validation — 2026-09-25
+
+- CrownKeep successfully connected to Foundry Local on a second Windows machine.
+- Foundry selected and loaded `phi-4-mini-instruct-generic-cpu`.
+- During generation, total CPU reached roughly 98%; `foundrylocald` used the majority of CPU and about 3.5 GB memory.
+- The response took at least 1–2 minutes to begin/complete, indicating that the generic CPU execution path is functionally compatible but not a good interactive default on this hardware.
+- This is a hardware/performance limitation rather than evidence that CrownKeep's provider path is broken.
+- Sprint 2.2 should surface execution-device/model-variant information and warn when a CPU-only model is likely to be slow.
