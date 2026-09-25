@@ -74,3 +74,19 @@ foundry server status
 CrownKeep defaults to `http://localhost:39839`. Override it with the public-client environment value `VITE_FOUNDRY_LOCAL_ENDPOINT` when needed.
 
 This setup keeps inference on the Windows device. It does not involve Azure inference or RDC data.
+
+
+## API-version compatibility note
+
+The Windows development machine demonstrated that a Ready current Foundry daemon can return 404 for the older `/openai/status` and `/openai/models` routes.
+
+Current CrownKeep behavior:
+
+1. probe `GET /v1/models` first;
+2. if unavailable, probe the older `GET /openai/status` surface;
+3. use `POST /v1/chat/completions` for inference;
+4. do not depend on `/openai/load/{name}` in the current vertical slice;
+5. load a model with the CLI before chatting:
+   `foundry model load phi-4-mini`.
+
+During Vite development, `/foundry-local/*` is proxied to `http://127.0.0.1:39839/*`, which keeps browser requests same-origin.
