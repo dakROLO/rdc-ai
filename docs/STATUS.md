@@ -238,3 +238,18 @@ Validation required on the current AVD and primary Windows machine:
 - send a Foundry Local prompt and verify first-token/total-time/token diagnostics;
 - collapse/reopen conversation navigation and confirm the preference survives refresh;
 - check narrow/mobile layout for clipping.
+
+
+## Temporal context / stable-origin hardening — 2026-09-25
+
+Additional Sprint 2.2 hardening delivered from AVD validation:
+
+- CrownKeep now supplies the current device-local date/time, IANA time zone, UTC timestamp, and conversation creation time to Anne on every inference request.
+- Persisted historical messages are annotated with their original timestamps before they are sent to the selected provider.
+- Relative-time questions such as “today,” “earlier,” and “what did we discuss in the last N minutes?” can now be grounded in active-conversation timestamps rather than model training knowledge.
+- Individual messages can be kept in local history while being reversibly excluded from future inference context.
+- Excluded messages are visibly marked in the conversation UI and can be restored later.
+- Vite development is pinned to port 5173 with strict-port behavior. If 5173 is occupied, development fails instead of silently switching origins and presenting a different IndexedDB database.
+- Existing conversation deletion remains available for permanent local deletion.
+- Other conversations are not automatically included in the active conversation's inference context.
+- Cross-conversation local recall is not implemented yet and remains separate from active-conversation temporal context.
