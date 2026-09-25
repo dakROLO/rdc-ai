@@ -281,3 +281,41 @@ Confirm:
 - refreshing the page preserves the conversation on that phone.
 
 This remains a basic LAN/mobile-browser test, not the final HTTPS PWA install test.
+
+
+---
+
+## Sprint 1.2 — Provider-neutral chat test
+
+Pull the latest `main` and run:
+
+```powershell
+git pull
+npm install
+npm run dev
+```
+
+### Keyboard behavior
+
+1. Type a message.
+2. Press **Enter**.
+3. Confirm the message sends.
+4. Type a multi-line message using **Shift+Enter**.
+5. Confirm Shift+Enter inserts a newline rather than sending.
+
+### Provider switching
+
+In development mode, CrownKeep exposes two mock local providers so the provider-neutral architecture can be tested before Foundry Local is connected.
+
+1. Send a message using **Anne · Mock Local**.
+2. Change Provider to **Anne · Alternate Local**.
+3. Send another message in the same conversation.
+4. Confirm the conversation ID/history does not change or fork.
+5. Switch back to the first provider and continue again.
+6. Refresh and confirm the entire conversation remains intact.
+
+Each assistant message retains its own provider/model metadata even when the conversation changes providers.
+
+### Cancellation regression
+
+Start a streamed response and use **Stop**. Confirm the conversation remains usable and can continue afterward.
