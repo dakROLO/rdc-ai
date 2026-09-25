@@ -143,3 +143,12 @@ None identified.
 - The response took at least 1–2 minutes to begin/complete, indicating that the generic CPU execution path is functionally compatible but not a good interactive default on this hardware.
 - This is a hardware/performance limitation rather than evidence that CrownKeep's provider path is broken.
 - Sprint 2.2 should surface execution-device/model-variant information and warn when a CPU-only model is likely to be slow.
+
+
+## AVD execution-provider finding — 2026-09-25
+
+- A church Azure Virtual Desktop with no physical GPU available was offered/loaded the `qwen2.5-0.5b-instruct-generic-gpu` variant using `WebGpuExecutionProvider`.
+- Direct inference was extremely slow despite the catalog reporting Device=GPU.
+- Conclusion: CrownKeep must not treat a catalog GPU label as proof of useful hardware acceleration in virtualized environments.
+- For this AVD, explicitly force the CPU variant `qwen2.5-0.5b-instruct-generic-cpu` for comparison.
+- Sprint 2.2 should add a lightweight local-inference benchmark / time-to-first-token check and recommend fallback variants when observed performance is poor.
