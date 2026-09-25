@@ -2,6 +2,7 @@ import type { Conversation, Message } from '../domain/conversation.ts'
 
 export interface CreateConversationInput {
   title?: string
+  projectId?: string
 }
 
 export interface ConversationRepository {
