@@ -375,3 +375,46 @@ Then:
 8. Refresh and confirm the conversation remains in correct order.
 
 CrownKeep calls Foundry Local directly on the PC. No Azure or cloud inference is involved in this test.
+
+
+---
+
+## Current Foundry Local API verification
+
+The installed CLI may expose the newer OpenAI-compatible server without the older `/openai/*` management routes.
+
+Use:
+
+```powershell
+foundry --version
+foundry server status
+foundry model load phi-4-mini
+Invoke-RestMethod http://127.0.0.1:39839/v1/models
+```
+
+Expected:
+
+- `foundry server status` reports Ready;
+- the web URL is on loopback, for example `http://127.0.0.1:39839`;
+- `/v1/models` returns an OpenAI-compatible model list after a model is loaded.
+
+A 404 from the root `/` does not mean the daemon is down.
+
+If `/v1/models` still returns 404, record the output of:
+
+```powershell
+foundry --version
+foundry server logs -n 50
+```
+
+Do not diagnose the root-page 404 as a service failure.
+
+### Conversation scrolling regression
+
+1. Open a conversation long enough to exceed the visible message area.
+2. Confirm the CrownKeep header/sidebar/composer remain fixed while only message history scrolls.
+3. Scroll upward.
+4. Confirm a floating **Latest** button appears.
+5. While still away from the bottom, send or allow Anne to finish a response.
+6. Confirm the button indicates **Anne finished**.
+7. Select it and confirm the message pane returns to the newest response.
