@@ -575,3 +575,64 @@ Or keep the daemon running but free the loaded model from memory:
 ```powershell
 foundry model unload phi-4-mini
 ```
+
+
+---
+
+## Direct Foundry inference diagnostic
+
+Use this when CrownKeep shows **Anne is thinking locally** but it is unclear whether Foundry Local is actually generating.
+
+First verify the loaded variant:
+
+```powershell
+foundry model list --loaded --variants -v
+```
+
+Then call the OpenAI-compatible API directly:
+
+```powershell
+$models = Invoke-RestMethod http://127.0.0.1:39839/v1/models
+$model = $models.data[0].id
+
+$body = @{
+  model = $model
+  messages = @(
+    @{
+      role = "user"
+      content = "Reply with exactly: local model works"
+    }
+  )
+  stream = $false
+  max_tokens = 20
+} | ConvertTo-Json -Depth 5
+
+$sw = [System.Diagnostics.Stopwatch]::StartNew()
+
+$response = Invoke-RestMethod `
+  -Uri http://127.0.0.1:39839/v1/chat/completions `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body $body
+
+$sw.Stop()
+
+$response.choices[0].message.content
+"Elapsed: $($sw.Elapsed.TotalSeconds) seconds"
+```
+
+If this returns a response, Foundry Local and the loaded model are working independently of CrownKeep.
+
+For a second CLI-only check:
+
+```powershell
+foundry complete qwen2.5-0.5b "Reply with exactly: local model works"
+```
+
+To watch the daemon while testing:
+
+```powershell
+foundry server logs -f
+```
+
+If direct Foundry inference works but CrownKeep remains stuck, troubleshoot CrownKeep's request/stream handling rather than the model runtime.
