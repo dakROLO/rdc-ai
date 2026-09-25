@@ -110,9 +110,9 @@ Exit criteria:
 - at least one installed/supported local model can generate a streamed response;
 - provider failures do not corrupt conversation state.
 
-### Sprint 2.2 — Windows local experience hardening — **IN PROGRESS**
+### Sprint 2.2 — Windows local experience hardening — **COMPLETE**
 
-#### Sprint 2.2A — Local AI diagnostics and control surface — **IMPLEMENTED · VALIDATION PENDING**
+#### Sprint 2.2A — Local AI diagnostics and control surface — **COMPLETE**
 
 Focus:
 
@@ -127,7 +127,7 @@ Focus:
 
 Defer installer/native-shell work until these provider/runtime contracts are stable.
 
-#### Sprint 2.2B — Runtime lifecycle + first-run setup — **IMPLEMENTED FOUNDATION · VALIDATION PENDING**
+#### Sprint 2.2B — Runtime lifecycle + first-run setup — **COMPLETE FOR BROWSER FOUNDATION**
 
 Focus:
 
@@ -164,22 +164,39 @@ Exit criteria:
 
 ## Phase 3 — iPhone Local AI
 
-### Sprint 3.1 — Mobile capability detection + model lifecycle
+### Sprint 3.1 — iPhone capability detection + native host — **IN PROGRESS**
 
-**Outcome:** The PWA can determine whether local mobile inference is supported.
+**Outcome:** CrownKeep can distinguish native Apple on-device AI from browser-only iPhone use and has a stable bridge boundary for local iPhone inference.
+
+#### Sprint 3.1A — Capability + provider boundary — **IMPLEMENTED FOUNDATION**
 
 Deliverables:
 
-- `WebLLMProvider` adapter;
-- WebGPU/browser capability checks;
-- model download/cache state;
-- storage/quota messaging;
-- unsupported-device fallback UX.
+- native `AppleFoundationModelsProvider` adapter behind the existing `AIProvider` contract;
+- `NativeAIHost` bridge contract for the iPhone host;
+- iPhone/iPad browser capability detection;
+- explicit Safari/PWA unsupported-local-AI provider instead of attempting Windows Foundry;
+- Apple availability-state mapping for device eligibility, Apple Intelligence state, and model readiness;
+- first Swift `CrownKeepFoundationModelsService` scaffold using `SystemLanguageModel` and `LanguageModelSession`.
+
+#### Sprint 3.1B — Minimal native iPhone host — **NEXT**
+
+Deliverables:
+
+- minimal Xcode iPhone host;
+- shared CrownKeep React UI loaded inside the native app;
+- bridge implementation that exposes `window.crownKeepNativeAI`;
+- availability + model descriptor calls wired end-to-end;
+- first on-device response returned through the existing provider-neutral conversation path;
+- device test on a supported iPhone.
+
+WebLLM/WebGPU remains a fallback/experimental path for devices or distribution modes where the native Apple model is unavailable; it is no longer the primary iPhone strategy.
 
 Exit criteria:
 
-- supported/unsupported state is explicit;
-- model lifecycle does not block access to saved conversations.
+- Safari/PWA and native-host states are explicit;
+- a supported native iPhone can report Apple model availability through CrownKeep;
+- the Windows provider path remains unaffected.
 
 ### Sprint 3.2 — Mobile local conversation
 
