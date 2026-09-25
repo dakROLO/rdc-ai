@@ -206,3 +206,23 @@ Initial application:
 4. Sync storage does not need plaintext conversations.
 5. Real RDC data remains disconnected until explicitly scheduled.
 6. Public repository contents must be safe for anonymous viewing.
+
+
+## Windows desktop distribution direction
+
+CrownKeep's target Windows release is a normal downloadable desktop installer, not a developer workflow that requires PowerShell or a separately installed Foundry Local CLI.
+
+Current direction:
+
+- retain the React/TypeScript UI and provider-neutral conversation architecture;
+- add a native Windows desktop shell when packaging work begins;
+- embed the current Foundry Local SDK in the desktop application so normal users do not need to install or operate the Foundry CLI;
+- use the SDK for hardware detection, execution-provider selection, model discovery/acquisition, loading, inference, and cache management;
+- download the chosen model during first-run setup rather than bundling multi-hundred-MB/GB model files into the installer;
+- benchmark observed performance during onboarding and persist a known-good model/variant choice;
+- keep advanced model/runtime controls available for troubleshooting without requiring them for normal use;
+- produce a signed Windows setup executable for direct web download, with MSI/MSIX/Store distribution considered later if useful.
+
+A Tauri 2 desktop shell with the Foundry Local Rust SDK is a strong implementation candidate because it can preserve the current React UI while providing native process/runtime access and Windows installer packaging. This is an implementation direction to validate during the packaging sprint rather than a locked framework dependency.
+
+The existing PWA remains useful for browser/mobile work and as a development surface, but the Windows downloadable product may use a native shell because local runtime/model management is a concrete capability gap that a browser-only PWA cannot reliably own.
