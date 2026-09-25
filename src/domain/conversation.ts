@@ -17,6 +17,11 @@ export interface Message {
   role: MessageRole
   content: string
   createdAt: string
+  /**
+   * Monotonic position within a conversation. Assigned by the local repository.
+   * Optional on newly-created in-memory messages until they are persisted.
+   */
+  sequence?: number
   providerId?: string
   modelId?: string
   inferenceLocation?: InferenceLocation
