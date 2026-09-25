@@ -301,3 +301,26 @@ Fixes delivered:
 - This preserves temporal reasoning while reducing normal prompt-token overhead.
 
 Validation pending: compare prompt-token count and first-token latency on the same AVD conversation after pulling current main.
+
+
+## Projects MVP branch — 2026-09-25
+
+Branch: `feature-projects`
+
+A local-only Projects MVP has been implemented independently from the Phase 3 iPhone branch.
+
+Delivered:
+
+- Added a `Project` domain entity.
+- Added a `ProjectRepository` contract.
+- IndexedDB schema version 3 adds a dedicated `projects` store.
+- Conversations may have an optional `projectId`.
+- Existing conversations migrate safely as unassigned; no message/history rewrite is required.
+- Sidebar supports project creation, rename, delete, and filtering.
+- Conversations can be moved between projects or returned to Unassigned.
+- Creating a new chat while viewing a project creates the conversation in that project.
+- Deleting a project preserves all conversations and unassigns them.
+- Projects do not alter inference context or provider/model behavior.
+- Feature work is isolated from `main` and `phase-3-iphone-local-ai`.
+
+Validation pending before PR to main.
