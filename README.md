@@ -1,25 +1,31 @@
-# RDC AI
+# CrownKeep
 
-**RDC AI** is a local-first conversational AI application for Windows and iPhone.
+> **Private by default. Powerful by choice.**
 
-The goal is one conversation experience that can move between device-local AI and an RDC-hosted cloud AI provider without binding a conversation to any single model.
+**CrownKeep** is a local-first conversational AI application for Windows and iPhone. The assistant inside CrownKeep is **Anne**.
+
+The product is designed around one durable conversation experience that can use device-local AI whenever practical and later move explicitly to RDC-hosted cloud AI without binding a conversation to a single model.
 
 ## Current status
 
-**Phase 0 — Foundation / Sprint 0.2 — Application Shell** is in progress.
+**Phase 1 — Local Conversation Core / Sprint 1.1 — Local Persistence** is in progress.
 
-The repository is intentionally public. It contains application code, architecture, interfaces, synthetic test data, and deployment templates only. It must not contain RDC customer data, production credentials, secrets, access tokens, private Blueprint content, or production connection strings.
+Current build:
 
-## Product direction
+- CrownKeep brand and Anne assistant identity;
+- local-only IndexedDB conversation storage;
+- create/open/rename/delete conversations;
+- messages survive browser refresh;
+- mock local streaming provider;
+- responsive Windows/mobile browser UI;
+- future cloud controls intentionally disabled;
+- no RDC customer data connection.
 
-- Windows local inference through Microsoft Foundry Local.
-- iPhone local inference through a small on-device model, initially using a browser/PWA-compatible provider.
-- Offline-capable local conversations.
-- Local persistent conversation storage.
-- Microsoft Entra ID for authenticated RDC cloud capabilities.
-- Client-side authenticated encryption for cross-device conversation synchronization.
-- Explicit **Take to Cloud** escalation when stronger cloud reasoning is wanted.
-- A future `ContextProvider` extension point for RDC data, with **no RDC data connection in the current project scope**.
+## Privacy boundary
+
+The repository is intentionally public, but real user/customer data is not.
+
+Current local conversations are stored in the browser's local IndexedDB database on that device. No Azure synchronization, Entra sign-in, cloud AI, or RDC customer-data integration is connected yet.
 
 ## Durable project context
 
@@ -32,6 +38,8 @@ Start here before making changes:
 - [Security Model](docs/SECURITY.md)
 - [Current Status](docs/STATUS.md)
 - [Testing Guide](docs/TESTING.md)
+- [Brand System](docs/BRAND.md)
+- [Foundry Local Device Snapshot](docs/FOUNDRY-LOCAL-DEVICE.md)
 - [Naming Notes](docs/NAMING.md)
 - [Agent Instructions](AGENTS.md)
 
@@ -39,9 +47,7 @@ Chat conversations are not the system of record. Decisions, completed work, bloc
 
 ## Local development
 
-Prerequisite: a current Node.js 22 release.
-
-From the folder where you want the project to live:
+Prerequisite: Node.js 22 and Git.
 
 ```powershell
 git clone https://github.com/dakROLO/rdc-ai.git
@@ -50,7 +56,22 @@ npm install
 npm run dev
 ```
 
-**Important:** after cloning, change into the new `rdc-ai` folder before running `npm install`. If npm reports that it cannot find `package.json`, check that your prompt ends in `\rdc-ai>`.
+If the repository is already cloned:
+
+```powershell
+Set-Location .\rdc-ai
+git pull
+npm install
+npm run dev
+```
+
+For same-network phone testing:
+
+```powershell
+npm run dev -- --host
+```
+
+Use the Network URL printed by Vite rather than `localhost`.
 
 Validation:
 
@@ -59,37 +80,17 @@ npm run lint
 npm run build
 ```
 
-The current application uses a mock local provider so the conversation/provider plumbing can be tested before Foundry Local is connected. See [Testing Guide](docs/TESTING.md) for the current Windows and PWA test procedure.
-
-## Current foundation structure
-
-```text
-src/
-├── auth/       # Entra-facing abstraction; no live auth yet
-├── context/    # Future RDC context contract; no RDC data connection
-├── domain/     # Conversation/message model
-├── providers/  # AIProvider contract + mock provider
-├── storage/    # Local conversation repository contract
-└── sync/       # Encrypted sync transport contract
-```
-
-PWA metadata and the service worker live under `public/`.
-
-## Configuration
-
-`.env.example` contains public-client placeholders only.
-
-Never place a secret in a `VITE_*` variable because Vite client variables are shipped to the browser.
+See [Testing Guide](docs/TESTING.md) for the current sprint acceptance procedure.
 
 ## Core architectural rule
 
 A conversation does not belong to a model.
 
-Provider and model metadata belong to individual assistant messages so one conversation can contain local Windows responses, local iPhone responses, cloud responses, and later local responses again.
+Provider/model metadata belongs to individual assistant messages so the same conversation can later contain responses from Anne via Foundry Local, an iPhone-local model, CrownKeep cloud AI, and local AI again.
 
 ## Scope boundary
 
-The application may define interfaces for future RDC customer/project context, but it must not connect to RDC customer data, Blueprint data, dashboard data, or customer portal production resources until a later explicitly approved phase.
+The application contains a future `ContextProvider` interface but does not connect to RDC customer, Blueprint, dashboard, document, or operational data.
 
 ## License
 
