@@ -80,7 +80,30 @@ function formatTokenRate(run: InferenceRunStats | null): string {
   return `${(run.completionTokens / (run.totalMs / 1000)).toFixed(1)} tok/s`
 }
 
-function buildTemporalContext(conversation: Conversation): string {
+function hasTemporalIntent(value: string): boolean {
+  return /\b(today|date|time|timestamp|when|recent|recently|earlier|ago|minute|minutes|hour|hours|yesterday|tomorrow|last\s+(?:few|\d+|minute|minutes|hour|hours|day|days|week|weeks)|this\s+(?:morning|afternoon|evening|week)|how\s+long)\b/i.test(
+    value,
+  )
+}
+
+function formatTemporalContextTime(value: string): string {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(date)
+}
+
+function buildTemporalContext(
+  conversation: Conversation,
+  contextMessages: Message[],
+  currentPrompt: string,
+): string {
   const now = new Date()
   const timeZone =
     Intl.DateTimeFormat().resolvedOptions().timeZone || 'Device local time zone'
@@ -89,19 +112,23 @@ function buildTemporalContext(conversation: Conversation): string {
     timeStyle: 'long',
   }).format(now)
 
-  return [
-    'CrownKeep temporal context:',
-    `- Current device-local date/time: ${localNow}`,
-    `- Device IANA time zone: ${timeZone}`,
-    `- Current UTC timestamp: ${now.toISOString()}`,
-    `- This conversation was created at: ${conversation.createdAt}`,
-    '- Historical messages below are prefixed with their original persisted timestamps.',
-    '- Use these timestamps when interpreting today, yesterday, recently, last N minutes/hours, or the timing/order of prior messages.',
-  ].join('\n')
-}
+  const lines = [
+    'CrownKeep time context. Use this metadata for reasoning; do not repeat it unless the user asks for timing details.',
+    `Current local date/time: ${localNow}`,
+    `Time zone: ${timeZone}`,
+    `Conversation started: ${formatTemporalContextTime(conversation.createdAt)}`,
+  ]
 
-function messageForInference(message: Message): string {
-  return `[Message timestamp: ${message.createdAt}]\n${message.content}`
+  if (hasTemporalIntent(currentPrompt)) {
+    lines.push('Relevant conversation timeline:')
+    contextMessages.forEach((message, index) => {
+      lines.push(
+        `#${index + 1} ${message.role} — ${formatTemporalContextTime(message.createdAt)}`,
+      )
+    })
+  }
+
+  return lines.join('\n')
 }
 
 function formatMessageTime(value: string): string {
@@ -478,10 +505,13 @@ export default function App() {
       )
       const requestMessages = [
         { role: 'system' as const, content: ANNE_SYSTEM_PROMPT },
-        { role: 'system' as const, content: buildTemporalContext(conversation) },
+        {
+          role: 'system' as const,
+          content: buildTemporalContext(conversation, contextMessages, text),
+        },
         ...contextMessages.map((message) => ({
           role: message.role,
-          content: messageForInference(message),
+          content: message.content,
         })),
       ]
 
