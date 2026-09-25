@@ -31,6 +31,8 @@ Start here before making changes:
 - [Decision Log](docs/DECISIONS.md)
 - [Security Model](docs/SECURITY.md)
 - [Current Status](docs/STATUS.md)
+- [Testing Guide](docs/TESTING.md)
+- [Naming Notes](docs/NAMING.md)
 - [Agent Instructions](AGENTS.md)
 
 Chat conversations are not the system of record. Decisions, completed work, blockers, and architectural changes must be reflected in this repository.
@@ -39,16 +41,20 @@ Chat conversations are not the system of record. Decisions, completed work, bloc
 
 Prerequisite: a current Node.js 22 release.
 
-```bash
+From the folder where you want the project to live:
+
+```powershell
 git clone https://github.com/dakROLO/rdc-ai.git
-cd rdc-ai
+Set-Location .\rdc-ai
 npm install
 npm run dev
 ```
 
+**Important:** after cloning, change into the new `rdc-ai` folder before running `npm install`. If npm reports that it cannot find `package.json`, check that your prompt ends in `\rdc-ai>`.
+
 Validation:
 
-```bash
+```powershell
 npm run lint
 npm run build
 ```
