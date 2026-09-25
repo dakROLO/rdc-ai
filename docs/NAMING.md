@@ -127,3 +127,24 @@ These communicate privacy strongly, but may imply storage more than intelligence
 - **Crownhold** — *Local first. Cloud when you choose.*
 
 No final product name has been selected.
+
+
+---
+
+## Working product name — 2026-09-24
+
+**CrownKeep** is now the working product name.
+
+Working tagline:
+
+> **Private by default. Powerful by choice.**
+
+The repository name remains `rdc-ai` for now. Branding changes to code/UI should wait until the visual direction is selected.
+
+Brand intent:
+
+- privacy/local-first before cloud;
+- user sovereignty and control;
+- subtle royal/king lineage;
+- modern product, not medieval novelty;
+- strong enough to stand independently while being shared by Royal Digital Clarity.
