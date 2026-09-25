@@ -156,3 +156,61 @@ Initial dependency baseline:
 ### Reason
 
 This keeps the foundation close to the current upstream Vite React TypeScript template and minimizes custom build tooling before local inference work begins.
+
+
+---
+
+## ADR-0011 — CrownKeep product identity and Anne assistant
+
+**Status:** Accepted  
+**Date:** 2026-09-24
+
+### Decision
+
+The working product identity is **CrownKeep** with the tagline:
+
+> **Private by default. Powerful by choice.**
+
+The conversational assistant is named **Anne**.
+
+The canonical palette is:
+
+- Graphite `#0F1F1E`
+- Deep Jade `#115E4F`
+- Jade Glow `#2EE6B8`
+- Burnished Copper `#C97F5B`
+- Stone `#E8E4DA`
+
+The canonical visual direction is the Inner Keep mark documented in `docs/BRAND.md`.
+
+---
+
+## ADR-0012 — Native IndexedDB for first local persistence implementation
+
+**Status:** Accepted  
+**Date:** 2026-09-24
+
+### Decision
+
+Use browser-native IndexedDB behind the existing `ConversationRepository` abstraction for the first persistent local store.
+
+### Reason
+
+It keeps Sprint 1.1 dependency-light, works offline, is available in the PWA/browser target, and preserves the ability to replace the storage implementation later without changing the conversation domain.
+
+### Constraint
+
+IndexedDB is an implementation detail. UI and provider code must depend on the repository abstraction rather than IndexedDB directly.
+
+---
+
+## ADR-0013 — IDs must work on LAN HTTP development origins
+
+**Status:** Accepted  
+**Date:** 2026-09-24
+
+### Decision
+
+Do not depend directly on `crypto.randomUUID()` for application IDs.
+
+Use `crypto.getRandomValues()` when available, with a development fallback, so basic same-network phone testing does not fail solely because the app is being served over a non-HTTPS LAN origin.
