@@ -55,3 +55,75 @@ These are not decisions, just the current shortlist:
 5. **RDC Anchor**
 
 Before selecting a public product name, perform a current trademark/product/domain conflict check.
+
+
+---
+
+## Naming direction update — 2026-09-24
+
+The product does not need `RDC` in its public name.
+
+New priority:
+
+1. communicate **local/privacy first**;
+2. imply that the user controls when anything leaves the device;
+3. subtly connect to Royal Digital Clarity's king/royal identity;
+4. still leave room for optional cloud escalation and cross-device continuity.
+
+The royal theme should feel like **ownership, sovereignty, protection, and a trusted stronghold**, not novelty medieval branding.
+
+### Strong concept families
+
+#### Keep / stronghold
+
+- **CrownKeep**
+- **The Keep**
+- **King's Keep**
+- **Crownhold**
+- **Royal Keep**
+
+The word **Keep** is especially aligned because a castle keep is the protected inner stronghold. It naturally maps to local-first AI: conversations and inference stay inside the user's own protected environment unless they deliberately send something outward.
+
+#### Sovereignty / user control
+
+- **Sovereign**
+- **Sovereign AI**
+- **Crown Sovereign**
+- **Sovereign Local**
+
+This direction strongly communicates user ownership and control over data and inference.
+
+#### Guard / protection
+
+- **CrownGuard**
+- **Royal Guard**
+- **King's Guard**
+- **CrownShield**
+
+These emphasize privacy/security well, but feel more like a security product than a conversational AI product.
+
+#### Vault / private chamber
+
+- **CrownVault**
+- **Royal Vault**
+- **King's Vault**
+
+These communicate privacy strongly, but may imply storage more than intelligence/conversation.
+
+### Current strongest candidates
+
+1. **CrownKeep**
+2. **Sovereign**
+3. **The Keep**
+4. **Crownhold**
+5. **CrownGuard**
+
+### Tagline directions
+
+- **CrownKeep** — *Your AI stays in your keep.*
+- **CrownKeep** — *Private by default. Powerful by choice.*
+- **Sovereign** — *Your data. Your device. Your choice.*
+- **The Keep** — *AI that starts with you.*
+- **Crownhold** — *Local first. Cloud when you choose.*
+
+No final product name has been selected.
