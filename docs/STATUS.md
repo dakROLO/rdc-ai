@@ -162,3 +162,25 @@ None identified.
 - The model did not follow the exact-response instruction reliably, which is a model-quality limitation rather than a runtime-performance problem.
 - `foundry complete qwen2.5-0.5b ...` also returned quickly but ignored the exact wording request.
 - Because direct API inference is fast while CrownKeep previously remained on an empty streamed response, the next debugging target is CrownKeep's streaming/SSE handling against the current Foundry Local build.
+
+
+## AVD CPU vs virtual-WebGPU benchmark — 2026-09-25
+
+Observed on the church Azure Virtual Desktop:
+
+### WebGPU / generic GPU variant
+- Model: `qwen2.5-0.5b-instruct-generic-gpu:4`
+- Execution path: WebGpuExecutionProvider on an AVD with no physical GPU
+- Foundry telemetry request time: **49,876 ms**
+- Result: functionally executes, but is unsuitable for interactive CrownKeep use on this host.
+
+### Forced CPU variant
+- Model: `qwen2.5-0.5b-instruct-generic-cpu`
+- Execution path: CPUExecutionProvider
+- Streaming request: 40 prompt tokens + 9 completion tokens
+- HTTP request duration: **979.5 ms**
+- Approximate end-to-end completion throughput: **9.2 completion tokens/sec (~550 tokens/min)** for this very short request.
+- Approximate post-tokenization generation window: **~26 completion tokens/sec (~1,570 tokens/min)**; treat this as a rough short-sample estimate rather than a sustained benchmark.
+- Foundry stream emitted normal SSE deltas and `data: [DONE]`.
+
+Conclusion: on virtualized Windows hosts, CrownKeep must benchmark observed execution performance rather than preferring a model solely because its catalog variant is labeled GPU.
