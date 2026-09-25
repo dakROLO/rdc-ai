@@ -592,8 +592,11 @@ foundry model list --loaded --variants -v
 Then call the OpenAI-compatible API directly:
 
 ```powershell
-$models = Invoke-RestMethod http://127.0.0.1:39839/v1/models
-$model = $models.data[0].id
+foundry model list --loaded --variants -v
+
+# Use the exact loaded model ID reported above.
+# Example from the church AV PC:
+$model = "qwen2.5-0.5b-instruct-generic-gpu"
 
 $body = @{
   model = $model
@@ -622,6 +625,8 @@ $response.choices[0].message.content
 ```
 
 If this returns a response, Foundry Local and the loaded model are working independently of CrownKeep.
+
+Do not blindly use the first item from `/v1/models`: that endpoint may include a model that is cached/known but not currently loaded. The inference request must name the model that is actually loaded.
 
 For a second CLI-only check:
 
