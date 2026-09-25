@@ -1,8 +1,8 @@
-# RDC AI — Project Context
+# CrownKeep — Project Context
 
 ## Product goal
 
-Build a local-first AI application with a consistent conversational experience across Windows and iPhone.
+Build CrownKeep, a local-first AI application with a consistent conversational experience across Windows and iPhone. The conversational assistant is Anne.
 
 The application should use device-local inference whenever practical while allowing the user to explicitly escalate part of the same conversation to an RDC-hosted cloud AI provider.
 
@@ -12,14 +12,14 @@ Conversation history should later synchronize securely between registered device
 
 ### Windows
 
-- Shared RDC AI interface.
+- Shared CrownKeep interface.
 - Local conversation database.
 - Microsoft Foundry Local as the initial Windows inference provider.
 - Architecture remains open to additional providers later.
 
 ### iPhone
 
-- Shared RDC AI interface as an installable PWA.
+- Shared CrownKeep interface as an installable PWA.
 - Local conversation database.
 - Small on-device model.
 - Initial provider may use WebGPU/WebLLM where device/browser capabilities allow it.
@@ -142,7 +142,7 @@ The public client must not contain a client secret.
 
 ## Cloud escalation
 
-The user explicitly chooses **Take to Cloud**.
+The user explicitly chooses **Open to Cloud**.
 
 Before escalation, the UI should explain that the conversation context required for that request will be sent to the RDC cloud AI provider.
 
@@ -192,8 +192,8 @@ Conversation view should eventually support:
 - selected model;
 - streaming output;
 - stop generation;
-- Take to Cloud;
-- Return to Local.
+- Open to Cloud;
+- Return to the Keep.
 
 ## Explicit non-goals
 
