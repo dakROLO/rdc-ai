@@ -437,3 +437,141 @@ foundry model unload phi-4-mini
 ```
 
 Model cache files stay on disk for later use.
+
+
+---
+
+## Fresh Windows machine — get CrownKeep running
+
+Use this path on a Windows computer that has not run CrownKeep before.
+
+### 1. Check prerequisites
+
+Open PowerShell and run:
+
+```powershell
+git --version
+node --version
+npm --version
+```
+
+CrownKeep currently targets Node.js 22.
+
+If Git or Node are missing, install them before continuing.
+
+### 2. Clone CrownKeep
+
+Choose a working folder:
+
+```powershell
+mkdir C:\CrownKeepTest -ErrorAction SilentlyContinue
+Set-Location C:\CrownKeepTest
+git clone https://github.com/dakROLO/rdc-ai.git
+Set-Location .\rdc-ai
+```
+
+If the repository already exists on the machine:
+
+```powershell
+Set-Location C:\CrownKeepTest\rdc-ai
+git pull
+```
+
+### 3. Install JavaScript dependencies
+
+```powershell
+npm install
+```
+
+### 4. Run CrownKeep without a real model
+
+```powershell
+npm run dev
+```
+
+Open the Local URL printed by Vite, usually `http://localhost:5173`.
+
+Use **Anne · Mock Local** first. This verifies the application, local IndexedDB storage, chat history, provider switching, and UI without requiring Foundry Local.
+
+### 5. Optional: install Foundry Local for real local inference
+
+Install Foundry Local if it is not already available:
+
+```powershell
+winget install Microsoft.FoundryLocal
+foundry --version
+```
+
+Then start the local service on CrownKeep's development port:
+
+```powershell
+foundry server start --port 39839 --idle-timeout 0
+```
+
+If the daemon is already running:
+
+```powershell
+foundry server restart --port 39839 --idle-timeout 0
+```
+
+### 6. Select and load a model
+
+Inspect available models:
+
+```powershell
+foundry model list --type chat
+```
+
+For the current CrownKeep development path, a known working test model is:
+
+```powershell
+foundry model download phi-4-mini
+foundry model load phi-4-mini
+```
+
+Verify the OpenAI-compatible service:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:39839/v1/models
+```
+
+A loaded model should appear in the returned JSON.
+
+### 7. Test Anne through Foundry Local
+
+Keep Foundry Local running.
+
+In CrownKeep:
+
+1. choose **Anne · Foundry Local**;
+2. confirm the model selector populates;
+3. choose the loaded model;
+4. ask Anne a simple question;
+5. confirm the response streams;
+6. refresh and confirm the conversation remains in order.
+
+### 8. Same-network phone test
+
+To make the Vite development server reachable from another device:
+
+```powershell
+npm run dev -- --host
+```
+
+Use the Network URL printed by Vite from the phone.
+
+This tests the CrownKeep web UI from the phone. It does **not** mean the model is running on the phone. When CrownKeep is served from the Windows computer during this development flow, Foundry Local inference remains hosted by that Windows computer.
+
+### 9. End the session
+
+When finished:
+
+```powershell
+foundry server stop
+```
+
+Or keep the daemon running but free the loaded model from memory:
+
+```powershell
+foundry model unload phi-4-mini
+```
