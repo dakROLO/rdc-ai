@@ -11,6 +11,7 @@ The repository is the durable project context. Do not rely on chat history as th
 Before substantial work, read:
 
 0. `docs/BRAND.md`
+0. `docs/ANNE.md`
 
 1. `docs/PROJECT-CONTEXT.md`
 2. `docs/ARCHITECTURE.md`
