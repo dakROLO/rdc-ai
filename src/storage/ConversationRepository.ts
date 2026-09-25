@@ -11,5 +11,6 @@ export interface ConversationRepository {
   rename(id: string, title: string): Promise<void>
   delete(id: string): Promise<void>
   saveMessage(message: Message): Promise<void>
+  setMessageContextExcluded(messageId: string, excluded: boolean): Promise<void>
   listMessages(conversationId: string): Promise<Message[]>
 }
