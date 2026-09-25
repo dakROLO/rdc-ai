@@ -818,3 +818,50 @@ When the first Xcode host is added, validate:
    - model not ready;
 4. no unavailable state silently routes the conversation to cloud;
 5. the first native response returns through the same `AIProvider` conversation flow used on Windows.
+
+
+---
+
+## Mock native iPhone host from Windows
+
+Use this while the physical Mac/Xcode environment is unavailable.
+
+Check out the Phase 3 branch:
+
+```powershell
+git fetch
+git switch phase-3-iphone-local-ai
+git pull
+npm install
+npm run dev
+```
+
+### Simulate a supported native iPhone host
+
+Open:
+
+```text
+http://localhost:5173/?nativeAI=mock
+```
+
+Expected:
+
+- Provider list includes **Anne · Apple On-Device**.
+- Model list includes **Apple On-Device Model**.
+- Sending a message returns a development response beginning with **Mock iPhone-local Anne received:**.
+- The assistant message remains marked local.
+- Conversation persistence/provider neutrality continues to work.
+
+### Simulate Apple availability failures
+
+Use one of:
+
+```text
+http://localhost:5173/?nativeAI=mock&nativeAIState=device-not-eligible
+http://localhost:5173/?nativeAI=mock&nativeAIState=apple-intelligence-not-enabled
+http://localhost:5173/?nativeAI=mock&nativeAIState=model-not-ready
+```
+
+Confirm CrownKeep reports the selected state explicitly and does not silently route the prompt to cloud.
+
+This harness does not prove Apple's Foundation Models framework works. It proves the CrownKeep TypeScript/provider side of the native bridge before the real Swift/Xcode host is connected.
