@@ -2,13 +2,15 @@
 
 ## Purpose
 
-This file defines the working rules for humans and coding agents contributing to RDC AI.
+This file defines the working rules for humans and coding agents contributing to CrownKeep.
 
 ## Source of truth
 
 The repository is the durable project context. Do not rely on chat history as the authoritative record.
 
 Before substantial work, read:
+
+0. `docs/BRAND.md`
 
 1. `docs/PROJECT-CONTEXT.md`
 2. `docs/ARCHITECTURE.md`
