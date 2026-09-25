@@ -405,20 +405,34 @@ Exit criteria:
 - Make conversation navigation collapsible so the active chat gets priority screen space.
 - Preserve quick visibility of the currently selected provider/model even when controls are collapsed.
 
-### Projects
+### Projects — MVP IMPLEMENTED ON `feature-projects`
 
 Introduce a Project entity that can group multiple conversations.
 
-Initial design questions to resolve before implementation:
+MVP decisions:
 
-- whether a conversation can belong to one project or multiple projects;
-- project title/description/metadata;
-- local-only project persistence first;
-- how projects sync across devices later;
-- whether future ContextProvider data attaches at the project level;
-- project archive/delete behavior without accidentally deleting conversations.
+- a conversation belongs to zero or one project;
+- projects persist locally first;
+- project deletion unassigns conversations rather than deleting them;
+- project membership is organizational and does not automatically enter model context;
+- project records and membership will need sync treatment later.
 
-Projects should be implemented as an organizational layer above conversations, not as a replacement for the conversation model.
+Implemented on the feature branch:
+
+- create / rename / delete projects;
+- All chats / Unassigned / project filters;
+- assign or move conversations;
+- create a new conversation directly inside the selected project.
+
+Future work:
+
+- project descriptions/metadata;
+- archive behavior;
+- cross-device sync;
+- intentional project-level local recall/context;
+- possible future ContextProvider attachment at project level.
+
+Projects remain an organizational layer above conversations, not a replacement for the conversation model.
 
 ### Cross-conversation local recall
 
