@@ -16,6 +16,7 @@ import type {
 import {
   createAppleFoundationModelsProviderIfAvailable,
 } from './providers/AppleFoundationModelsProvider.ts'
+import { installMockNativeAIHostFromQuery } from './native/MockNativeAIHost.ts'
 import { FoundryLocalProvider } from './providers/FoundryLocalProvider.ts'
 import { IOSBrowserLocalUnavailableProvider } from './providers/IOSBrowserLocalUnavailableProvider.ts'
 import { MockProvider } from './providers/MockProvider.ts'
@@ -35,6 +36,9 @@ const developmentAlternateProvider = new MockProvider({
   responseLabel: 'alternate local development provider',
 })
 const foundryLocalProvider = new FoundryLocalProvider()
+
+installMockNativeAIHostFromQuery()
+
 const appleFoundationModelsProvider =
   createAppleFoundationModelsProviderIfAvailable()
 const mobileCapability = getMobileCapabilitySnapshot()
