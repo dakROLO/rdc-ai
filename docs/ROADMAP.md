@@ -92,7 +92,7 @@ Exit criteria:
 
 ## Phase 2 — Windows Local AI
 
-### Sprint 2.1 — Foundry Local connectivity — **IN PROGRESS**
+### Sprint 2.1 — Foundry Local connectivity — **COMPLETE**
 
 **Outcome:** Windows can discover/connect to Microsoft Foundry Local through a provider adapter.
 
@@ -110,7 +110,7 @@ Exit criteria:
 - at least one installed/supported local model can generate a streamed response;
 - provider failures do not corrupt conversation state.
 
-### Sprint 2.2 — Windows local experience hardening
+### Sprint 2.2 — Windows local experience hardening — **IN PROGRESS**
 
 **Outcome:** Foundry Local is usable as the normal Windows provider.
 
@@ -124,7 +124,7 @@ Deliverables:
 - execution-device/model-variant visibility;
 - CPU-only model performance warning and smaller-model fallback guidance;
 - time-to-first-token benchmark / observed-performance check so virtual GPU labels are not trusted blindly;
-- Foundry SSE compatibility validation against current preview builds, with non-streaming fallback if needed.
+- Foundry SSE compatibility monitoring across preview builds; current SSE path has been validated on two Windows hosts.
 
 Exit criteria:
 
