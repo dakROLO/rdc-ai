@@ -224,3 +224,60 @@ For contributors:
 4. run lint/build/tests before submitting changes.
 
 Do not require ordinary users to clone GitHub or install Node once a hosted release is available.
+
+
+---
+
+## Sprint 1.1 — Local persistence test
+
+After pulling the latest `main`:
+
+```powershell
+Set-Location .\rdc-ai
+git pull
+npm install
+npm run dev -- --host
+```
+
+### Windows persistence checks
+
+1. Open CrownKeep.
+2. Confirm the CrownKeep jade/copper theme and Anne identity appear.
+3. Send a message.
+4. Refresh the browser.
+5. Confirm both your message and Anne's response remain.
+6. Create a second conversation.
+7. Send a different message in that conversation.
+8. Refresh again.
+9. Confirm both conversations remain in the sidebar.
+10. Open each conversation and confirm its own messages are intact.
+11. Rename one conversation and refresh.
+12. Confirm the new title remains.
+13. Delete one conversation and refresh.
+14. Confirm it stays deleted.
+
+Expected sync status during this sprint: **Stored on this device**.
+
+No Azure, Entra sign-in, or internet connection is required for these conversation operations after the application itself has loaded.
+
+### Same-network phone retry
+
+Run:
+
+```powershell
+npm run dev -- --host
+```
+
+Open the Network URL Vite prints on the phone.
+
+The previous background-only failure is expected to be addressed by the new ID helper, which no longer directly requires `crypto.randomUUID()`.
+
+Confirm:
+
+- CrownKeep UI renders rather than only the background;
+- Anne's welcome message appears;
+- a new conversation can be created;
+- a message can be sent through the mock provider;
+- refreshing the page preserves the conversation on that phone.
+
+This remains a basic LAN/mobile-browser test, not the final HTTPS PWA install test.
