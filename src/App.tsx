@@ -17,8 +17,10 @@ import {
   createAppleFoundationModelsProviderIfAvailable,
 } from './providers/AppleFoundationModelsProvider.ts'
 import { FoundryLocalProvider } from './providers/FoundryLocalProvider.ts'
+import { IOSBrowserLocalUnavailableProvider } from './providers/IOSBrowserLocalUnavailableProvider.ts'
 import { MockProvider } from './providers/MockProvider.ts'
 import { ProviderRegistry } from './providers/ProviderRegistry.ts'
+import { getMobileCapabilitySnapshot } from './mobile/MobileCapability.ts'
 import { browserLocalRuntimeManager } from './runtime/BrowserLocalRuntimeManager.ts'
 import type { RuntimeSnapshot } from './runtime/LocalRuntimeManager.ts'
 import { IndexedDbConversationRepository } from './storage/IndexedDbConversationRepository.ts'
@@ -35,17 +37,24 @@ const developmentAlternateProvider = new MockProvider({
 const foundryLocalProvider = new FoundryLocalProvider()
 const appleFoundationModelsProvider =
   createAppleFoundationModelsProviderIfAvailable()
+const mobileCapability = getMobileCapabilitySnapshot()
+const iosBrowserUnavailableProvider = mobileCapability.isIOS
+  ? new IOSBrowserLocalUnavailableProvider()
+  : undefined
 
 const developmentProviders = [
   primaryProvider,
   developmentAlternateProvider,
   foundryLocalProvider,
   ...(appleFoundationModelsProvider ? [appleFoundationModelsProvider] : []),
+  ...(iosBrowserUnavailableProvider ? [iosBrowserUnavailableProvider] : []),
 ]
 
 const productionProviders = appleFoundationModelsProvider
   ? [appleFoundationModelsProvider]
-  : [foundryLocalProvider]
+  : iosBrowserUnavailableProvider
+    ? [iosBrowserUnavailableProvider]
+    : [foundryLocalProvider]
 
 const providerRegistry = new ProviderRegistry(
   import.meta.env.DEV ? developmentProviders : productionProviders,
