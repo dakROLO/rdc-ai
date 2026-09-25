@@ -143,6 +143,13 @@ function formatMessageTime(value: string): string {
   }).format(date)
 }
 
+function cleanTemporalArtifact(value: string): string {
+  return value.replace(
+    /^\s*\[Message timestamp:\s*[^\]]+\]\s*/i,
+    '',
+  )
+}
+
 function modelStorageKey(providerId: string): string {
   return `crownkeep.modelId.${providerId}`
 }
@@ -254,6 +261,12 @@ export default function App() {
 
     if (lastRun.runtimeDevice === 'GPU' && totalMs > 15_000) {
       return 'This GPU-labeled variant is performing slowly. On virtual Windows hosts, a CPU variant may be faster.'
+    }
+    if (
+      (lastRun.promptTokens ?? 0) >= 750 &&
+      firstTokenMs > 5_000
+    ) {
+      return `Active context is large (${lastRun.promptTokens} prompt tokens). Exclude older messages from Context to reduce first-token latency.`
     }
     if (firstTokenMs > 8_000) {
       return 'Local startup is slow. A smaller model or different runtime variant may feel more responsive.'
@@ -511,7 +524,7 @@ export default function App() {
         },
         ...contextMessages.map((message) => ({
           role: message.role,
-          content: message.content,
+          content: cleanTemporalArtifact(message.content),
         })),
       ]
 
@@ -1121,7 +1134,7 @@ export default function App() {
                     </button>
                   </div>
                 </div>
-                <p>{message.content || '…'}</p>
+                <p>{message.content ? cleanTemporalArtifact(message.content) : '…'}</p>
                 {message.excludedFromContext && (
                   <small className="context-state">Excluded from future inference context</small>
                 )}
