@@ -40,11 +40,30 @@ A page refresh currently resets the demonstration conversation. That is expected
 
 ### Get the application
 
+Run these commands from the folder where you want the project to live:
+
 ```powershell
 git clone https://github.com/dakROLO/rdc-ai.git
-cd rdc-ai
+Set-Location .\rdc-ai
 npm install
 ```
+
+After `git clone`, PowerShell remains in the parent folder. You **must** enter the new `rdc-ai` folder before running npm.
+
+Your prompt should look similar to:
+
+```text
+PS C:\some\folder\rdc-ai>
+```
+
+If npm reports `ENOENT` and says it cannot open `package.json`, run:
+
+```powershell
+Set-Location .\rdc-ai
+npm install
+```
+
+That error normally means npm was run from the parent directory rather than from the repository.
 
 ### Start the development server
 
