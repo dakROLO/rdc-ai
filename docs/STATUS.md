@@ -324,3 +324,23 @@ Delivered:
 - Feature work is isolated from `main` and `phase-3-iphone-local-ai`.
 
 Validation pending before PR to main.
+
+
+## Projects UX refinement — 2026-09-25
+
+User validation on a narrow viewport identified three discoverability issues:
+
+- the active conversation did not make its project membership obvious;
+- assigning a chat to a project required a prompt instead of direct manipulation;
+- narrow layouts compressed/hid project management controls.
+
+Refinement delivered on `feature-projects`:
+
+- active conversation header now includes a Project selector and current membership state;
+- desktop/wider layouts allow conversation rows to be dragged onto a project or onto Unassigned;
+- drag/drop is an enhancement only; project assignment remains accessible without drag;
+- narrow/mobile layouts show a compact project filter select plus visible create/rename/delete controls;
+- active-chat project assignment is available directly in the header on narrow screens;
+- project drop targets receive visible CrownKeep-themed highlighting.
+
+Validation pending on desktop drag/drop and the same narrow viewport that surfaced the issue.
