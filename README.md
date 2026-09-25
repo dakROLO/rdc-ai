@@ -8,7 +8,7 @@ The product is designed around one durable conversation experience that can use 
 
 ## Current status
 
-**Phase 1 — Local Conversation Core / Sprint 1.1 — Local Persistence** is in progress.
+**Phase 1 — Local Conversation Core / Sprint 1.2 — Provider-neutral streaming chat** is in progress.
 
 Current build:
 
@@ -16,6 +16,9 @@ Current build:
 - local-only IndexedDB conversation storage;
 - create/open/rename/delete conversations;
 - messages survive browser refresh;
+- provider registry and provider/model selection;
+- development provider switching without changing conversations;
+- Enter-to-send and Shift+Enter newline behavior;
 - mock local streaming provider;
 - responsive Windows/mobile browser UI;
 - future cloud controls intentionally disabled;
