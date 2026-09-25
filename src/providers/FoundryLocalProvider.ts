@@ -51,14 +51,21 @@ export class FoundryLocalProvider implements AIProvider {
   private activeEndpoint?: string
 
   constructor(options: FoundryLocalProviderOptions = {}) {
-    const configured = options.endpoint ?? import.meta.env.VITE_FOUNDRY_LOCAL_ENDPOINT
+    const configured =
+      options.endpoint || import.meta.env.VITE_FOUNDRY_LOCAL_ENDPOINT
 
     this.endpointCandidates = configured
       ? [normalizeEndpoint(configured)]
-      : [
-          'http://127.0.0.1:39839',
-          'http://localhost:39839',
-        ]
+      : import.meta.env.DEV
+        ? [
+            '/foundry-local',
+            'http://127.0.0.1:39839',
+            'http://localhost:39839',
+          ]
+        : [
+            'http://127.0.0.1:39839',
+            'http://localhost:39839',
+          ]
   }
 
   private async resolveEndpoint(): Promise<string> {
