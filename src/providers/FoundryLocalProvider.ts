@@ -47,19 +47,47 @@ export class FoundryLocalProvider implements AIProvider {
   readonly displayName = 'Anne · Foundry Local'
   readonly location = 'local' as const
 
-  private readonly endpoint: string
+  private readonly endpointCandidates: string[]
+  private activeEndpoint?: string
 
   constructor(options: FoundryLocalProviderOptions = {}) {
-    this.endpoint = normalizeEndpoint(
-      options.endpoint ??
-        import.meta.env.VITE_FOUNDRY_LOCAL_ENDPOINT ??
-        'http://localhost:39839',
+    const configured = options.endpoint ?? import.meta.env.VITE_FOUNDRY_LOCAL_ENDPOINT
+
+    this.endpointCandidates = configured
+      ? [normalizeEndpoint(configured)]
+      : [
+          'http://127.0.0.1:39839',
+          'http://localhost:39839',
+        ]
+  }
+
+  private async resolveEndpoint(): Promise<string> {
+    if (this.activeEndpoint) return this.activeEndpoint
+
+    const failures: string[] = []
+
+    for (const endpoint of this.endpointCandidates) {
+      try {
+        const response = await fetch(`${endpoint}/openai/status`)
+        await assertOk(response, 'Foundry Local status check')
+        this.activeEndpoint = endpoint
+        return endpoint
+      } catch (error) {
+        failures.push(
+          `${endpoint}: ${error instanceof Error ? error.message : 'unreachable'}`,
+        )
+      }
+    }
+
+    throw new Error(
+      `Could not reach Foundry Local. Tried ${failures.join(' | ')}`,
     )
   }
 
   async getAvailability(): Promise<ProviderAvailability> {
     try {
-      const response = await fetch(`${this.endpoint}/openai/status`)
+      const endpoint = await this.resolveEndpoint()
+      const response = await fetch(`${endpoint}/openai/status`)
       await assertOk(response, 'Foundry Local status check')
 
       const status = (await response.json()) as FoundryStatusResponse
@@ -69,21 +97,23 @@ export class FoundryLocalProvider implements AIProvider {
         available: true,
         detail: advertised
           ? `Foundry Local is reachable at ${advertised}.`
-          : `Foundry Local is reachable at ${this.endpoint}.`,
+          : `Foundry Local is reachable at ${endpoint}.`,
       }
     } catch (error) {
+      this.activeEndpoint = undefined
       return {
         available: false,
         detail:
           error instanceof Error
             ? error.message
-            : `Could not reach Foundry Local at ${this.endpoint}.`,
+            : 'Could not reach Foundry Local on the configured loopback endpoint.',
       }
     }
   }
 
   async listModels(): Promise<AIModel[]> {
-    const response = await fetch(`${this.endpoint}/openai/models`)
+    const endpoint = await this.resolveEndpoint()
+    const response = await fetch(`${endpoint}/openai/models`)
     await assertOk(response, 'Foundry Local model discovery')
 
     const modelNames = (await response.json()) as string[]
@@ -94,20 +124,22 @@ export class FoundryLocalProvider implements AIProvider {
     }))
   }
 
-  private async ensureModelLoaded(modelId: string): Promise<void> {
+  private async ensureModelLoaded(modelId: string): Promise<string> {
+    const endpoint = await this.resolveEndpoint()
     const response = await fetch(
-      `${this.endpoint}/openai/load/${encodeURIComponent(modelId)}?ttl=3600`,
+      `${endpoint}/openai/load/${encodeURIComponent(modelId)}?ttl=3600`,
     )
     await assertOk(response, `Loading Foundry Local model ${modelId}`)
+    return endpoint
   }
 
   async *streamChat(
     request: ChatRequest,
     signal?: AbortSignal,
   ): AsyncIterable<ChatChunk> {
-    await this.ensureModelLoaded(request.modelId)
+    const endpoint = await this.ensureModelLoaded(request.modelId)
 
-    const response = await fetch(`${this.endpoint}/v1/chat/completions`, {
+    const response = await fetch(`${endpoint}/v1/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
