@@ -50,3 +50,27 @@ A fixed local development port may be used for the first vertical slice, but the
 - Microsoft Learn — Foundry Local CLI reference
 - Microsoft Learn — Foundry Local REST API reference
 - Microsoft Learn — Integrate inference SDKs with Foundry Local
+
+
+## Implemented vertical slice
+
+`FoundryLocalProvider` now:
+
+- checks `GET /openai/status`;
+- lists locally cached models with `GET /openai/models`;
+- loads the selected cached model through `GET /openai/load/{name}`;
+- sends `POST /v1/chat/completions` with `stream: true`;
+- parses the documented server-sent event stream until `data: [DONE]`;
+- stores the Foundry provider/model metadata on Anne's persisted response.
+
+### First development setup
+
+```powershell
+foundry server restart --port 39839 --idle-timeout 0
+foundry model download phi-4-mini
+foundry server status
+```
+
+CrownKeep defaults to `http://localhost:39839`. Override it with the public-client environment value `VITE_FOUNDRY_LOCAL_ENDPOINT` when needed.
+
+This setup keeps inference on the Windows device. It does not involve Azure inference or RDC data.
