@@ -757,3 +757,18 @@ Expected limitation:
 The browser development build cannot directly start/stop Foundry or install/load/unload models. Those methods are represented in the runtime lifecycle contract for the later Windows desktop host.
 
 A successful normal CrownKeep chat may also satisfy the local verification step because it proves the selected provider/model can complete a real inference request.
+
+
+### Temporal latency regression
+
+Use the same AVD/model where a 1,004 prompt-token request produced about 10.5 seconds to first token.
+
+1. Pull current main and restart Vite.
+2. Open the same conversation.
+3. Ask a normal non-temporal question such as: `Give me one sentence about CrownKeep.`
+4. Confirm Anne does not print a raw `[Message timestamp: ...]` prefix.
+5. Open Local AI → Diagnostics and record Prompt tokens and First token.
+6. Ask a temporal question such as: `What did we talk about in the last 10 minutes?`
+7. Confirm Anne can still reason over message timing without printing internal timeline markup.
+8. Confirm the conversation and Local AI panel scrollbars use CrownKeep jade/graphite styling.
+9. If Prompt tokens are >= 750 and first-token time remains high, use **⊘ Context** on older messages and repeat the normal question to measure the reduction.
