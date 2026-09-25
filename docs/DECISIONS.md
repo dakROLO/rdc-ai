@@ -357,3 +357,36 @@ A later Windows desktop host will implement those lifecycle actions natively whi
 This avoids coupling conversation/provider logic to PowerShell or a particular desktop wrapper and provides a stable seam for moving from today's developer workflow to a downloadable Windows application.
 
 Observed model performance remains part of setup validation so CrownKeep can avoid preferring a poorly performing device variant merely because it is labeled GPU.
+
+
+---
+
+## ADR-0021 — Projects are a local organizational layer above conversations
+
+**Status:** Accepted for MVP  
+**Date:** 2026-09-25
+
+### Decision
+
+Introduce a `Project` entity above conversations for organization.
+
+For the first implementation:
+
+- a conversation belongs to zero or one project;
+- projects are stored locally in IndexedDB;
+- assigning or moving a conversation does not change its provider-neutral identity or message history;
+- deleting a project does **not** delete its conversations; affected conversations become unassigned;
+- deleting a conversation remains an explicit, separate action;
+- Projects do not automatically add other project conversations to Anne's inference context.
+
+### Reason
+
+A single optional `projectId` keeps the local data model simple and deterministic while leaving room for later sync and project-level context features.
+
+Project deletion must be non-destructive because Projects are an organizational structure, not the owner of conversation data.
+
+### Future
+
+Encrypted sync will eventually need to synchronize Project records and conversation membership.
+
+Project-level context/recall is a separate capability and must not be inferred merely from organizational membership.
