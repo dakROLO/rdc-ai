@@ -90,7 +90,7 @@ None identified.
 - The user identified a reload ordering defect: messages created in the same millisecond could reload in the wrong order.
 - IndexedDB schema is now version 2 and stores an explicit per-conversation `sequence` for every message.
 - Legacy version-1 messages are migrated to deterministic sequence positions on database upgrade.
-- Sprint 1.2 is complete; Sprint 2.1 is active.
+- Sprint 1.2 is complete; Sprint 2.1 is complete; Sprint 2.2 is active.
 - `FoundryLocalProvider` now implements health, cached-model discovery, model load, and SSE streaming through the documented local REST API.
 
 
@@ -184,3 +184,14 @@ Observed on the church Azure Virtual Desktop:
 - Foundry stream emitted normal SSE deltas and `data: [DONE]`.
 
 Conclusion: on virtualized Windows hosts, CrownKeep must benchmark observed execution performance rather than preferring a model solely because its catalog variant is labeled GPU.
+
+
+## Sprint 2.1 completion / second-machine validation — 2026-09-25
+
+- CrownKeep successfully generated a streamed Foundry Local response on the church Azure Virtual Desktop using `qwen2.5-0.5b-instruct-generic-cpu`.
+- CrownKeep request contained **307 prompt tokens** and completed end-to-end in **3,799.8 ms**.
+- Foundry emitted the expected SSE response and CrownKeep rendered the assistant response correctly.
+- The same Foundry provider has now been validated on the primary Windows development machine and a second Windows/AVD environment.
+- The AVD test also established that virtual WebGPU model selection can be dramatically slower than an explicitly forced CPU variant.
+- Sprint 2.1 exit criteria are satisfied. **Sprint 2.1 is complete; Sprint 2.2 is active.**
+- Sprint 2.2 should focus on execution-device visibility, observed performance instrumentation, model guidance, startup/provider diagnostics, and UX hardening rather than basic connectivity.
