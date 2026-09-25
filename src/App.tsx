@@ -34,7 +34,7 @@ const foundryLocalProvider = new FoundryLocalProvider()
 const providerRegistry = new ProviderRegistry(
   import.meta.env.DEV
     ? [primaryProvider, developmentAlternateProvider, foundryLocalProvider]
-    : [primaryProvider, foundryLocalProvider],
+    : [foundryLocalProvider],
 )
 
 const repository = new IndexedDbConversationRepository()
@@ -149,16 +149,11 @@ function makeMessage(
 }
 
 function welcomeMessage(conversationId: string): Message {
-  return {
-    ...makeMessage(
-      conversationId,
-      'assistant',
-      "Welcome to CrownKeep. I'm Anne. This conversation is stored on this device. You can change local providers or models without changing the conversation.",
-    ),
-    providerId: primaryProvider.id,
-    modelId: 'mock-local-v1',
-    inferenceLocation: 'local',
-  }
+  return makeMessage(
+    conversationId,
+    'assistant',
+    "Welcome to CrownKeep. I'm Anne. This conversation is stored on this device. You can change local providers or models without changing the conversation.",
+  )
 }
 
 function titleFromMessage(value: string): string {
@@ -1076,8 +1071,8 @@ export default function App() {
                     <time dateTime={message.createdAt} title={new Date(message.createdAt).toString()}>
                       {formatMessageTime(message.createdAt)}
                     </time>
-                    {message.role === 'assistant' && (
-                      <span title={`${message.providerId ?? 'unknown'} · ${message.modelId ?? 'unknown'}`}>
+                    {message.role === 'assistant' && message.providerId && (
+                      <span title={`${message.providerId} · ${message.modelId ?? 'unknown'}`}>
                         ◆ {message.inferenceLocation === 'cloud' ? 'Cloud' : 'Local'}
                       </span>
                     )}
