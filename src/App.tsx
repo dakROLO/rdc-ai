@@ -13,6 +13,9 @@ import type {
   ProviderAvailability,
   TokenUsage,
 } from './providers/AIProvider.ts'
+import {
+  createAppleFoundationModelsProviderIfAvailable,
+} from './providers/AppleFoundationModelsProvider.ts'
 import { FoundryLocalProvider } from './providers/FoundryLocalProvider.ts'
 import { MockProvider } from './providers/MockProvider.ts'
 import { ProviderRegistry } from './providers/ProviderRegistry.ts'
@@ -30,11 +33,22 @@ const developmentAlternateProvider = new MockProvider({
   responseLabel: 'alternate local development provider',
 })
 const foundryLocalProvider = new FoundryLocalProvider()
+const appleFoundationModelsProvider =
+  createAppleFoundationModelsProviderIfAvailable()
+
+const developmentProviders = [
+  primaryProvider,
+  developmentAlternateProvider,
+  foundryLocalProvider,
+  ...(appleFoundationModelsProvider ? [appleFoundationModelsProvider] : []),
+]
+
+const productionProviders = appleFoundationModelsProvider
+  ? [appleFoundationModelsProvider]
+  : [foundryLocalProvider]
 
 const providerRegistry = new ProviderRegistry(
-  import.meta.env.DEV
-    ? [primaryProvider, developmentAlternateProvider, foundryLocalProvider]
-    : [foundryLocalProvider],
+  import.meta.env.DEV ? developmentProviders : productionProviders,
 )
 
 const repository = new IndexedDbConversationRepository()
