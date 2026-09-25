@@ -772,3 +772,72 @@ Use the same AVD/model where a 1,004 prompt-token request produced about 10.5 se
 7. Confirm Anne can still reason over message timing without printing internal timeline markup.
 8. Confirm the conversation and Local AI panel scrollbars use CrownKeep jade/graphite styling.
 9. If Prompt tokens are >= 750 and first-token time remains high, use **⊘ Context** on older messages and repeat the normal question to measure the reduction.
+
+
+---
+
+## Projects MVP validation
+
+Branch:
+
+```text
+feature-projects
+```
+
+Update and run:
+
+```powershell
+git fetch
+git switch feature-projects
+git pull
+npm install
+npm run dev
+```
+
+### Existing-data migration
+
+1. Open CrownKeep with existing conversations already stored on port 5173.
+2. Confirm all existing conversations still appear under **All chats**.
+3. Confirm existing conversations appear under **Unassigned**.
+4. Open several existing conversations and confirm their messages remain intact and ordered.
+
+### Project lifecycle
+
+1. Create a project using the **+** next to Projects.
+2. Confirm the project appears in the sidebar.
+3. Rename the project.
+4. Refresh CrownKeep and confirm the project persists.
+5. Create a second project.
+
+### Conversation membership
+
+1. Use the project/move control on an existing conversation.
+2. Enter an exact project name.
+3. Confirm the conversation appears when that project is selected.
+4. Confirm it no longer appears in **Unassigned**.
+5. Open the conversation and confirm all messages/provider metadata remain unchanged.
+6. Move it back to Unassigned by leaving the project prompt blank.
+
+### New chat inside a project
+
+1. Select a project.
+2. Choose **New Chat**.
+3. Send a message.
+4. Confirm the new conversation stays inside that project after refresh.
+
+### Non-destructive delete
+
+1. Put at least one conversation inside a test project.
+2. Delete the project.
+3. Confirm the warning says conversations will be kept.
+4. Confirm the project disappears.
+5. Confirm its conversation is now visible under **Unassigned** with its full history intact.
+
+### Regression
+
+Confirm:
+
+- normal local inference still works;
+- message Context include/exclude still works;
+- conversation rename/delete still works;
+- project filtering does not add other conversations to the active inference context.
