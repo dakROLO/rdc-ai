@@ -121,7 +121,9 @@ Focus:
 - observed request/first-token/completion timing;
 - model/device/variant details where the runtime exposes them;
 - poor-performance guidance based on observed behavior;
-- keep all diagnostics optional so normal chat remains clean.
+- keep all diagnostics optional so normal chat remains clean;
+- temporal context and reversible message exclusion for active-conversation context management;
+- stable development origin so local IndexedDB conversations do not appear to disappear when Vite changes ports.
 
 Defer installer/native-shell work until these provider/runtime contracts are stable.
 
