@@ -112,6 +112,19 @@ Exit criteria:
 
 ### Sprint 2.2 — Windows local experience hardening — **IN PROGRESS**
 
+#### Sprint 2.2A — Local AI diagnostics and control surface — **NEXT**
+
+Focus:
+
+- compact/collapsible provider and model controls;
+- visible local runtime health and selected model;
+- observed request/first-token/completion timing;
+- model/device/variant details where the runtime exposes them;
+- poor-performance guidance based on observed behavior;
+- keep all diagnostics optional so normal chat remains clean.
+
+Defer installer/native-shell work until these provider/runtime contracts are stable.
+
 **Outcome:** Foundry Local is usable as the normal Windows provider.
 
 Deliverables:
