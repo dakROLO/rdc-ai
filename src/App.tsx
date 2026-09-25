@@ -8,6 +8,7 @@ import {
 } from 'react'
 import { ANNE_SYSTEM_PROMPT } from './assistant/anne.ts'
 import type { Conversation, Message } from './domain/conversation.ts'
+import type { Project } from './domain/project.ts'
 import type {
   AIModel,
   ProviderAvailability,
@@ -214,6 +215,8 @@ export default function App() {
   const defaultProviderId = providers[0]?.id ?? primaryProvider.id
 
   const [conversations, setConversations] = useState<Conversation[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
+  const [projectFilter, setProjectFilter] = useState('all')
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [prompt, setPrompt] = useState('')
@@ -252,6 +255,19 @@ export default function App() {
   const setupVerified =
     setupRecord?.providerId === selectedProviderId &&
     setupRecord.modelId === selectedModelId
+  const projectById = useMemo(
+    () => new Map(projects.map((project) => [project.id, project])),
+    [projects],
+  )
+  const visibleConversations = useMemo(() => {
+    if (projectFilter === 'all') return conversations
+    if (projectFilter === 'unassigned') {
+      return conversations.filter((conversation) => !conversation.projectId)
+    }
+    return conversations.filter(
+      (conversation) => conversation.projectId === projectFilter,
+    )
+  }, [conversations, projectFilter])
 
   const status = useMemo(() => {
     if (!providerAvailability) return 'Checking local AI…'
@@ -335,8 +351,20 @@ export default function App() {
     return next
   }
 
+  async function refreshProjects(): Promise<Project[]> {
+    const next = await repository.listProjects()
+    setProjects(next)
+    return next
+  }
+
   async function createConversation(): Promise<void> {
-    const conversation = await repository.create({ title: DEFAULT_TITLE })
+    const conversation = await repository.create({
+      title: DEFAULT_TITLE,
+      projectId:
+        projectFilter !== 'all' && projectFilter !== 'unassigned'
+          ? projectFilter
+          : undefined,
+    })
     const welcome = welcomeMessage(conversation.id)
     await repository.saveMessage(welcome)
     await refreshConversations()
@@ -358,8 +386,13 @@ export default function App() {
 
     async function initialize() {
       try {
-        const existing = await repository.list()
+        const [existing, existingProjects] = await Promise.all([
+          repository.list(),
+          repository.listProjects(),
+        ])
         if (cancelled) return
+
+        setProjects(existingProjects)
 
         if (existing.length === 0) {
           await createConversation()
@@ -664,6 +697,76 @@ export default function App() {
     localStorage.setItem(modelStorageKey(selectedProviderId), modelId)
   }
 
+  async function createProject() {
+    if (isGenerating) return
+    const title = window.prompt('Project name')?.trim()
+    if (!title) return
+
+    const project = await repository.createProject({ title })
+    await refreshProjects()
+    setProjectFilter(project.id)
+  }
+
+  async function renameProject(project: Project) {
+    if (isGenerating) return
+    const title = window.prompt('Rename project', project.title)?.trim()
+    if (!title) return
+
+    await repository.renameProject(project.id, title)
+    await refreshProjects()
+  }
+
+  async function deleteProject(project: Project) {
+    if (
+      isGenerating ||
+      !window.confirm(
+        `Delete project "${project.title}"? Its conversations will be kept and moved to Unassigned.`,
+      )
+    ) {
+      return
+    }
+
+    await repository.deleteProject(project.id)
+    await Promise.all([refreshProjects(), refreshConversations()])
+    if (projectFilter === project.id) setProjectFilter('unassigned')
+  }
+
+  async function moveConversationToProject(conversation: Conversation) {
+    if (isGenerating) return
+
+    const choices = projects.map((project) => project.title).join('\n')
+    const currentProject = conversation.projectId
+      ? projectById.get(conversation.projectId)?.title ?? ''
+      : ''
+
+    const value = window.prompt(
+      `Move conversation to project. Enter an exact project name, or leave blank for Unassigned.\n\nProjects:\n${choices || '(No projects yet)'}`,
+      currentProject,
+    )
+
+    if (value === null) return
+    const title = value.trim()
+
+    if (!title) {
+      await repository.assignConversationToProject(conversation.id)
+    } else {
+      const project = projects.find(
+        (item) => item.title.toLocaleLowerCase() === title.toLocaleLowerCase(),
+      )
+      if (!project) {
+        window.alert('Project not found. Use one of the listed project names.')
+        return
+      }
+      await repository.assignConversationToProject(conversation.id, project.id)
+    }
+
+    const next = await refreshConversations()
+    const updated = next.find((item) => item.id === conversation.id)
+    if (updated && activeConversation?.id === conversation.id) {
+      setActiveConversation(updated)
+    }
+  }
+
   async function renameConversation(conversation: Conversation) {
     if (isGenerating) return
     const value = window.prompt('Rename conversation', conversation.title)?.trim()
@@ -848,9 +951,82 @@ export default function App() {
           <span className="nav-label">New Chat</span>
         </button>
 
+        <section className="project-nav" aria-label="Projects">
+          <div className="nav-heading-row">
+            <p className="nav-heading">Projects</p>
+            <button
+              type="button"
+              className="nav-mini-button"
+              onClick={() => void createProject()}
+              disabled={isGenerating}
+              title="New project"
+              aria-label="New project"
+            >
+              +
+            </button>
+          </div>
+
+          <button
+            className={`project-filter ${projectFilter === 'all' ? 'active' : ''}`}
+            type="button"
+            onClick={() => setProjectFilter('all')}
+          >
+            <span>All chats</span>
+            <small>{conversations.length}</small>
+          </button>
+
+          <button
+            className={`project-filter ${projectFilter === 'unassigned' ? 'active' : ''}`}
+            type="button"
+            onClick={() => setProjectFilter('unassigned')}
+          >
+            <span>Unassigned</span>
+            <small>{conversations.filter((conversation) => !conversation.projectId).length}</small>
+          </button>
+
+          {projects.map((project) => (
+            <div className="project-row" key={project.id}>
+              <button
+                className={`project-filter ${projectFilter === project.id ? 'active' : ''}`}
+                type="button"
+                onClick={() => setProjectFilter(project.id)}
+                title={project.title}
+              >
+                <span>{project.title}</span>
+                <small>
+                  {conversations.filter((conversation) => conversation.projectId === project.id).length}
+                </small>
+              </button>
+              <div className="project-actions">
+                <button
+                  type="button"
+                  onClick={() => void renameProject(project)}
+                  disabled={isGenerating}
+                  title="Rename project"
+                  aria-label={`Rename ${project.title}`}
+                >
+                  ✎
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void deleteProject(project)}
+                  disabled={isGenerating}
+                  title="Delete project"
+                  aria-label={`Delete ${project.title}`}
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          ))}
+        </section>
+
         <section className="conversation-nav" aria-label="Conversations">
           <p className="nav-heading">Conversations</p>
-          {conversations.map((conversation) => (
+          {visibleConversations.length === 0 && (
+            <p className="nav-empty">No conversations here yet.</p>
+          )}
+          {visibleConversations.map((conversation) => (
             <div
               className={`conversation-row ${activeConversation?.id === conversation.id ? 'active' : ''}`}
               key={conversation.id}
@@ -863,9 +1039,22 @@ export default function App() {
                 title={conversation.title}
               >
                 <span>{conversation.title}</span>
-                <small>Stored locally</small>
+                <small>
+                  {conversation.projectId
+                    ? projectById.get(conversation.projectId)?.title ?? 'Project'
+                    : 'Unassigned'}
+                </small>
               </button>
               <div className="conversation-actions">
+                <button
+                  type="button"
+                  onClick={() => void moveConversationToProject(conversation)}
+                  disabled={isGenerating}
+                  title="Move to project"
+                  aria-label={`Move ${conversation.title} to project`}
+                >
+                  ▣
+                </button>
                 <button
                   type="button"
                   onClick={() => void renameConversation(conversation)}
