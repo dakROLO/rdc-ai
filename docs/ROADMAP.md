@@ -120,7 +120,9 @@ Deliverables:
 - loading/error states;
 - cancellation;
 - basic performance instrumentation;
-- startup/provider diagnostics.
+- startup/provider diagnostics;
+- execution-device/model-variant visibility;
+- CPU-only model performance warning and smaller-model fallback guidance.
 
 Exit criteria:
 
