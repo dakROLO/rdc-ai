@@ -212,3 +212,29 @@ Planned work:
 7. After diagnostics are stable, move conversation navigation into a collapsible surface and then address Projects separately.
 
 Do not begin Windows installer/Tauri packaging in this package. Packaging remains a later distribution milestone after the local runtime UX and contracts are stable.
+
+
+## Sprint 2.2A implementation — 2026-09-25
+
+Implementation is complete; user validation is pending.
+
+Delivered:
+
+- Provider/model controls moved into a compact collapsible **Local AI** surface.
+- Local AI surface now shows provider health, selected provider/model, inferred model device when the model ID exposes CPU/GPU/NPU, and whether inference remains Inside the Keep.
+- Foundry SSE usage metadata is now captured when present, including prompt/completion/total token counts.
+- CrownKeep measures request-to-first-token time, total response time, completion throughput, run outcome, and output size.
+- Diagnostics remain hidden by default and can be expanded from the Local AI surface.
+- Observed-performance guidance warns on slow starts, low throughput, and especially slow GPU-labeled variants on virtual Windows hosts.
+- Conversation navigation can now collapse to a compact rail on desktop and remembers that preference locally.
+- Provider/model choice remains provider-neutral and does not alter conversation identity.
+- No real RDC data, Azure sync, cloud provider, or installer/runtime embedding was added in this sprint.
+
+Validation required on the current AVD and primary Windows machine:
+
+- pull current `main`;
+- confirm Local AI menu layout and model selection;
+- confirm CPU device hint for `qwen2.5-0.5b-instruct-generic-cpu`;
+- send a Foundry Local prompt and verify first-token/total-time/token diagnostics;
+- collapse/reopen conversation navigation and confirm the preference survives refresh;
+- check narrow/mobile layout for clipping.
