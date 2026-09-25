@@ -1,0 +1,17 @@
+{
+  "name": "RDC AI",
+  "short_name": "RDC AI",
+  "description": "Local-first AI across Windows, iPhone, and RDC Cloud.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#08111f",
+  "theme_color": "#0b1727",
+  "icons": [
+    {
+      "src": "/rdc-ai-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
