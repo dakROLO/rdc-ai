@@ -418,3 +418,22 @@ Do not diagnose the root-page 404 as a service failure.
 5. While still away from the bottom, send or allow Anne to finish a response.
 6. Confirm the button indicates **Anne finished**.
 7. Select it and confirm the message pane returns to the newest response.
+
+
+---
+
+## End-of-session Foundry cleanup
+
+To finish a development session and release the local inference runtime:
+
+```powershell
+foundry server stop
+```
+
+If the server should remain running but the loaded model should be removed from memory:
+
+```powershell
+foundry model unload phi-4-mini
+```
+
+Model cache files stay on disk for later use.
