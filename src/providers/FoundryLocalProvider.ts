@@ -24,6 +24,11 @@ interface StreamDelta {
       content?: string | null
     }
   }>
+  usage?: {
+    prompt_tokens?: number
+    completion_tokens?: number
+    total_tokens?: number
+  }
 }
 
 type ApiMode = 'v1' | 'legacy'
@@ -46,6 +51,14 @@ async function assertOk(response: Response, operation: string): Promise<Response
   throw new Error(
     `${operation} failed (${response.status})${detail ? `: ${detail}` : ''}`,
   )
+}
+
+function inferRuntimeDevice(modelId: string): AIModel['runtimeDevice'] {
+  const normalized = modelId.toLowerCase()
+  if (/(^|[-_:])npu($|[-_:])/.test(normalized)) return 'NPU'
+  if (/(^|[-_:])gpu($|[-_:])/.test(normalized)) return 'GPU'
+  if (/(^|[-_:])cpu($|[-_:])/.test(normalized)) return 'CPU'
+  return undefined
 }
 
 function parseModelNames(payload: unknown): string[] {
@@ -174,6 +187,8 @@ export class FoundryLocalProvider implements AIProvider {
     return modelNames.map((name) => ({
       id: name,
       displayName: name,
+      runtimeDevice: inferRuntimeDevice(name),
+      variantId: name,
     }))
   }
 
@@ -240,9 +255,16 @@ export class FoundryLocalProvider implements AIProvider {
 
           const parsed = JSON.parse(data) as StreamDelta
           const text = parsed.choices?.[0]?.delta?.content ?? ''
+          const usage = parsed.usage
+            ? {
+                promptTokens: parsed.usage.prompt_tokens,
+                completionTokens: parsed.usage.completion_tokens,
+                totalTokens: parsed.usage.total_tokens,
+              }
+            : undefined
 
-          if (text) {
-            yield { text }
+          if (text || usage) {
+            yield { text, usage }
           }
         }
 
