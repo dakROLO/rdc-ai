@@ -5,10 +5,14 @@ export interface ProviderAvailability {
   detail?: string
 }
 
+export type ModelRuntimeDevice = 'CPU' | 'GPU' | 'NPU'
+
 export interface AIModel {
   id: string
   displayName: string
   contextWindow?: number
+  runtimeDevice?: ModelRuntimeDevice
+  variantId?: string
 }
 
 export interface ChatMessageInput {
@@ -22,9 +26,16 @@ export interface ChatRequest {
   context?: unknown
 }
 
+export interface TokenUsage {
+  promptTokens?: number
+  completionTokens?: number
+  totalTokens?: number
+}
+
 export interface ChatChunk {
   text: string
   done?: boolean
+  usage?: TokenUsage
 }
 
 export interface AIProvider {
