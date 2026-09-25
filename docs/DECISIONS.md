@@ -335,3 +335,25 @@ Context management should not require deleting the user's local record. Reversib
 ### Scope
 
 This enables temporal reasoning within the active conversation. It does not yet provide automatic recall across separate conversations. Cross-conversation local recall remains a later feature.
+
+
+---
+
+## ADR-0019 — Separate inference from runtime lifecycle management
+
+**Status:** Accepted  
+**Date:** 2026-09-25
+
+### Decision
+
+Keep local AI inference behind `AIProvider`, and manage native runtime/model lifecycle behind a separate `LocalRuntimeManager` contract.
+
+The browser development implementation may inspect an externally managed Foundry Local service but must not pretend it can install, start, stop, load, or unload native runtime resources.
+
+A later Windows desktop host will implement those lifecycle actions natively while reusing the same React first-run setup UI.
+
+### Reason
+
+This avoids coupling conversation/provider logic to PowerShell or a particular desktop wrapper and provides a stable seam for moving from today's developer workflow to a downloadable Windows application.
+
+Observed model performance remains part of setup validation so CrownKeep can avoid preferring a poorly performing device variant merely because it is labeled GPU.
