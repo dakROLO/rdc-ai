@@ -417,3 +417,10 @@ Initial design questions to resolve before implementation:
 - project archive/delete behavior without accidentally deleting conversations.
 
 Projects should be implemented as an organizational layer above conversations, not as a replacement for the conversation model.
+
+### Cross-conversation local recall
+
+- Allow Anne to intentionally retrieve relevant recent content from other local conversations without automatically stuffing every conversation into the active prompt.
+- Preserve explicit timestamps and conversation identity in retrieved context.
+- Keep this local-first and permission-aware before any future cloud synchronization/context integration.
+- Do not conflate this with the current active-conversation history, which remains isolated by default.
