@@ -226,3 +226,32 @@ Current direction:
 A Tauri 2 desktop shell with the Foundry Local Rust SDK is a strong implementation candidate because it can preserve the current React UI while providing native process/runtime access and Windows installer packaging. This is an implementation direction to validate during the packaging sprint rather than a locked framework dependency.
 
 The existing PWA remains useful for browser/mobile work and as a development surface, but the Windows downloadable product may use a native shell because local runtime/model management is a concrete capability gap that a browser-only PWA cannot reliably own.
+
+
+## Local runtime lifecycle contract
+
+CrownKeep separates **inference** from **runtime lifecycle management**.
+
+`AIProvider` remains responsible for provider availability, model listing, and chat inference.
+
+`LocalRuntimeManager` is responsible for native lifecycle capabilities such as:
+
+- inspect local runtime state;
+- start/stop the runtime;
+- install/acquire a model;
+- load/unload a model;
+- report which lifecycle actions the current host can perform.
+
+The current browser development host uses `BrowserLocalRuntimeManager`. It can inspect Foundry Local and guide setup, but it intentionally cannot start/stop the daemon or install/load/unload models from browser JavaScript.
+
+The future Windows desktop host will implement the same runtime contract with embedded/native capabilities. This lets the existing React onboarding UI survive the transition from the engineering CLI workflow to a normal Windows installer.
+
+First-run state is derived from three stages:
+
+1. runtime reachable;
+2. model selected/available;
+3. local inference verified through an observed quick check.
+
+Successful verification is stored locally with the selected provider/model and basic observed timing. The stored record is advisory and can be invalidated by changing the model/runtime.
+
+Runtime performance guidance is based on observed first-token and total-response timing, not solely on a CPU/GPU/NPU label.
