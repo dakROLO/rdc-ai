@@ -253,6 +253,25 @@ export class IndexedDbConversationRepository implements ConversationRepository {
     await transactionComplete(transaction)
   }
 
+  async setMessageContextExcluded(messageId: string, excluded: boolean): Promise<void> {
+    const database = await this.databasePromise
+    const transaction = database.transaction(MESSAGES_STORE, 'readwrite')
+    const store = transaction.objectStore(MESSAGES_STORE)
+    const request = store.get(messageId) as IDBRequest<Message | undefined>
+
+    request.onsuccess = () => {
+      const message = request.result
+      if (!message) return
+
+      store.put({
+        ...message,
+        excludedFromContext: excluded || undefined,
+      })
+    }
+
+    await transactionComplete(transaction)
+  }
+
   async listMessages(conversationId: string): Promise<Message[]> {
     const database = await this.databasePromise
     const transaction = database.transaction(MESSAGES_STORE, 'readonly')
