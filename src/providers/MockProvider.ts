@@ -8,7 +8,7 @@ import type {
 
 const MODEL: AIModel = {
   id: 'mock-local-v1',
-  displayName: 'Mock Local Model',
+  displayName: 'Anne · Mock Local',
 }
 
 function delay(ms: number, signal?: AbortSignal): Promise<void> {
@@ -32,11 +32,11 @@ function delay(ms: number, signal?: AbortSignal): Promise<void> {
 
 export class MockProvider implements AIProvider {
   readonly id = 'mock-local'
-  readonly displayName = 'Mock Local'
+  readonly displayName = 'Anne · Mock Local'
   readonly location = 'local' as const
 
   async getAvailability(): Promise<ProviderAvailability> {
-    return { available: true, detail: 'Development provider is ready.' }
+    return { available: true, detail: "Anne's development local provider is ready." }
   }
 
   async listModels(): Promise<AIModel[]> {
@@ -46,8 +46,8 @@ export class MockProvider implements AIProvider {
   async *streamChat(request: ChatRequest, signal?: AbortSignal): AsyncIterable<ChatChunk> {
     const prompt = request.messages.at(-1)?.content ?? ''
     const response =
-      `The local provider contract is working. You said: "${prompt}". ` +
-      'Foundry Local and the mobile provider will plug into this same stream without changing the conversation model.'
+      `Yes — CrownKeep's local provider contract is working. You said: "${prompt}". ` +
+      'This conversation is staying on this device while the real Foundry Local provider is built.'
 
     const words = response.split(' ')
     for (const [index, word] of words.entries()) {
