@@ -526,9 +526,9 @@ export default function App() {
             {selectedProviderId === 'foundry-local' && (
               <p className="provider-help">
                 {providerAvailability?.available === false
-                  ? 'Start Foundry Local on port 39839, then refresh the provider.'
+                  ? 'Foundry Local is not reachable through a supported /v1 or legacy API.'
                   : models.length === 0
-                    ? 'Foundry Local is reachable, but no cached chat model is available yet.'
+                    ? 'Foundry Local is reachable. Load a model with: foundry model load phi-4-mini'
                     : 'Foundry Local is ready for Anne.'}
               </p>
             )}
