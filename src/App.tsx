@@ -16,6 +16,8 @@ import type {
 import { FoundryLocalProvider } from './providers/FoundryLocalProvider.ts'
 import { MockProvider } from './providers/MockProvider.ts'
 import { ProviderRegistry } from './providers/ProviderRegistry.ts'
+import { browserLocalRuntimeManager } from './runtime/BrowserLocalRuntimeManager.ts'
+import type { RuntimeSnapshot } from './runtime/LocalRuntimeManager.ts'
 import { IndexedDbConversationRepository } from './storage/IndexedDbConversationRepository.ts'
 import { createId } from './utils/id.ts'
 
@@ -39,6 +41,17 @@ const repository = new IndexedDbConversationRepository()
 const DEFAULT_TITLE = 'New conversation'
 const PROVIDER_STORAGE_KEY = 'crownkeep.providerId'
 const SIDEBAR_STORAGE_KEY = 'crownkeep.sidebarCollapsed'
+const LOCAL_AI_SETUP_STORAGE_KEY = 'crownkeep.localAiSetup'
+
+interface LocalAiSetupRecord {
+  providerId: string
+  modelId: string
+  validatedAt: string
+  firstTokenMs?: number
+  totalMs: number
+  completionTokens?: number
+  healthy: boolean
+}
 
 type RunOutcome = 'running' | 'complete' | 'stopped' | 'error'
 
@@ -107,6 +120,20 @@ function modelStorageKey(providerId: string): string {
   return `crownkeep.modelId.${providerId}`
 }
 
+function readLocalAiSetupRecord(): LocalAiSetupRecord | null {
+  try {
+    const raw = localStorage.getItem(LOCAL_AI_SETUP_STORAGE_KEY)
+    if (!raw) return null
+    return JSON.parse(raw) as LocalAiSetupRecord
+  } catch {
+    return null
+  }
+}
+
+function saveLocalAiSetupRecord(record: LocalAiSetupRecord): void {
+  localStorage.setItem(LOCAL_AI_SETUP_STORAGE_KEY, JSON.stringify(record))
+}
+
 function makeMessage(
   conversationId: string,
   role: Message['role'],
@@ -168,10 +195,20 @@ export default function App() {
     () => localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true',
   )
   const [lastRun, setLastRun] = useState<InferenceRunStats | null>(null)
+  const [runtimeSnapshot, setRuntimeSnapshot] = useState<RuntimeSnapshot | null>(null)
+  const [providerRefreshNonce, setProviderRefreshNonce] = useState(0)
+  const [isRuntimeCheckRunning, setIsRuntimeCheckRunning] = useState(false)
+  const [runtimeCheckError, setRuntimeCheckError] = useState<string | null>(null)
+  const [setupRecord, setSetupRecord] = useState<LocalAiSetupRecord | null>(
+    () => readLocalAiSetupRecord(),
+  )
 
   const selectedProvider =
     providerRegistry.get(selectedProviderId) ?? providerRegistry.require(defaultProviderId)
   const selectedModel = models.find((model) => model.id === selectedModelId)
+  const setupVerified =
+    setupRecord?.providerId === selectedProviderId &&
+    setupRecord.modelId === selectedModelId
 
   const status = useMemo(() => {
     if (!providerAvailability) return 'Checking local AI…'
@@ -204,6 +241,15 @@ export default function App() {
     }
     return 'Observed local inference looks healthy.'
   }, [lastRun])
+
+  const setupRecommendation = useMemo(() => {
+    if (!setupVerified || !setupRecord) return null
+    if (setupRecord.healthy) return 'Local AI setup is verified on this model.'
+    if (selectedModel?.runtimeDevice === 'GPU') {
+      return 'This GPU-labeled variant tested slowly. Compare a CPU variant on this machine.'
+    }
+    return 'This model is working but feels slow. A smaller model may improve responsiveness.'
+  }, [setupRecord, setupVerified, selectedModel])
 
   function updateScrollState() {
     const element = conversationScrollRef.current
@@ -309,12 +355,17 @@ export default function App() {
 
     localStorage.setItem(PROVIDER_STORAGE_KEY, selectedProviderId)
     setProviderAvailability(null)
+    setRuntimeSnapshot(null)
+    setRuntimeCheckError(null)
 
     async function loadProviderState() {
-      const [availability, availableModels] = await Promise.all([
-        provider.getAvailability(),
-        provider.listModels(),
-      ])
+      const availability = await provider.getAvailability()
+      if (cancelled) return
+
+      let availableModels: AIModel[] = []
+      if (availability.available) {
+        availableModels = await provider.listModels()
+      }
 
       if (cancelled) return
 
@@ -328,22 +379,47 @@ export default function App() {
         ''
 
       setSelectedModelId(nextModel)
+
+      const snapshot = await browserLocalRuntimeManager.inspect(
+        provider,
+        availability,
+        availableModels,
+      )
+      if (!cancelled) setRuntimeSnapshot(snapshot)
     }
 
     void loadProviderState().catch((error: unknown) => {
       if (cancelled) return
 
+      const detail =
+        error instanceof Error ? error.message : 'Provider initialization failed.'
       setModels([])
       setSelectedModelId('')
       setProviderAvailability({
         available: false,
-        detail: error instanceof Error ? error.message : 'Provider initialization failed.',
+        detail,
+      })
+      setRuntimeSnapshot({
+        state: 'unavailable',
+        detail,
+        models: [],
       })
     })
 
     return () => {
       cancelled = true
     }
+  }, [selectedProviderId, providerRefreshNonce])
+
+  useEffect(() => {
+    function handleFocus() {
+      if (selectedProviderId === 'foundry-local') {
+        setProviderRefreshNonce((current) => current + 1)
+      }
+    }
+
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
   }, [selectedProviderId])
 
   async function sendMessage(event: FormEvent<HTMLFormElement>) {
@@ -466,20 +542,40 @@ export default function App() {
       )
     } finally {
       const completedAt = performance.now()
+      const totalMs = completedAt - startedAt
+      const firstTokenMs =
+        firstTokenAt === undefined ? undefined : firstTokenAt - startedAt
       setLastRun({
         providerId: provider.id,
         modelId: selectedModelId,
         runtimeDevice: selectedModel?.runtimeDevice,
         startedAt: startedAtIso,
-        firstTokenMs:
-          firstTokenAt === undefined ? undefined : firstTokenAt - startedAt,
-        totalMs: completedAt - startedAt,
+        firstTokenMs,
+        totalMs,
         promptTokens: latestUsage?.promptTokens,
         completionTokens: latestUsage?.completionTokens,
         totalTokens: latestUsage?.totalTokens,
         outputChars: assistantContent.length,
         outcome: runOutcome,
       })
+
+      if (runOutcome === 'complete' && assistantContent.trim()) {
+        const healthy =
+          totalMs <= 15_000 &&
+          (firstTokenMs === undefined || firstTokenMs <= 8_000) &&
+          !(selectedModel?.runtimeDevice === 'GPU' && totalMs > 10_000)
+        const record: LocalAiSetupRecord = {
+          providerId: provider.id,
+          modelId: selectedModelId,
+          validatedAt: new Date().toISOString(),
+          firstTokenMs,
+          totalMs,
+          completionTokens: latestUsage?.completionTokens,
+          healthy,
+        }
+        saveLocalAiSetupRecord(record)
+        setSetupRecord(record)
+      }
 
       await repository.saveMessage({ ...assistantMessage, content: assistantContent })
       await refreshConversations()
@@ -545,6 +641,90 @@ export default function App() {
     }
 
     await openConversation(remaining[0])
+  }
+
+  async function runRuntimeQuickCheck() {
+    if (
+      isGenerating ||
+      isRuntimeCheckRunning ||
+      !selectedModelId ||
+      providerAvailability?.available === false
+    ) {
+      return
+    }
+
+    const provider = providerRegistry.require(selectedProviderId)
+    const startedAt = performance.now()
+    let firstTokenAt: number | undefined
+    let latestUsage: TokenUsage | undefined
+    let output = ''
+
+    setIsRuntimeCheckRunning(true)
+    setRuntimeCheckError(null)
+
+    try {
+      for await (const chunk of provider.streamChat({
+        modelId: selectedModelId,
+        messages: [
+          {
+            role: 'system',
+            content:
+              'You are Anne inside CrownKeep. This is a local runtime verification. Respond very briefly.',
+          },
+          {
+            role: 'user',
+            content: 'Reply with one short greeting.',
+          },
+        ],
+      })) {
+        if (chunk.text && firstTokenAt === undefined) firstTokenAt = performance.now()
+        if (chunk.usage) latestUsage = chunk.usage
+        output += chunk.text
+      }
+
+      const totalMs = performance.now() - startedAt
+      const firstTokenMs =
+        firstTokenAt === undefined ? undefined : firstTokenAt - startedAt
+      const runtimeDevice = selectedModel?.runtimeDevice
+      const healthy =
+        totalMs <= 15_000 &&
+        (firstTokenMs === undefined || firstTokenMs <= 8_000) &&
+        !(runtimeDevice === 'GPU' && totalMs > 10_000)
+
+      const record: LocalAiSetupRecord = {
+        providerId: selectedProviderId,
+        modelId: selectedModelId,
+        validatedAt: new Date().toISOString(),
+        firstTokenMs,
+        totalMs,
+        completionTokens: latestUsage?.completionTokens,
+        healthy,
+      }
+
+      saveLocalAiSetupRecord(record)
+      setSetupRecord(record)
+
+      setLastRun({
+        providerId: selectedProviderId,
+        modelId: selectedModelId,
+        runtimeDevice,
+        startedAt: record.validatedAt,
+        firstTokenMs,
+        totalMs,
+        promptTokens: latestUsage?.promptTokens,
+        completionTokens: latestUsage?.completionTokens,
+        totalTokens: latestUsage?.totalTokens,
+        outputChars: output.length,
+        outcome: 'complete',
+      })
+    } catch (error) {
+      setRuntimeCheckError(
+        error instanceof Error ? error.message : 'Local AI verification failed.',
+      )
+    } finally {
+      setIsRuntimeCheckRunning(false)
+      setProviderRefreshNonce((current) => current + 1)
+    }
   }
 
   async function toggleMessageContext(message: Message) {
@@ -760,6 +940,80 @@ export default function App() {
                   {providerAvailability?.detail ??
                     'CrownKeep is checking the selected local provider.'}
                 </p>
+
+                {selectedProviderId === 'foundry-local' && (
+                  <section className="runtime-setup-card" aria-label="Local AI setup">
+                    <div className="runtime-setup-heading">
+                      <div>
+                        <span className="runtime-kicker">Local AI setup</span>
+                        <strong>
+                          {runtimeSnapshot?.state === 'ready'
+                            ? setupVerified
+                              ? 'Verified'
+                              : 'Ready to verify'
+                            : runtimeSnapshot?.state === 'model-required'
+                              ? 'Model needed'
+                              : runtimeSnapshot?.state === 'unavailable'
+                                ? 'Runtime not reachable'
+                                : 'Checking'}
+                        </strong>
+                      </div>
+                      <button
+                        type="button"
+                        className="runtime-refresh-button"
+                        onClick={() => setProviderRefreshNonce((current) => current + 1)}
+                        disabled={isGenerating || isRuntimeCheckRunning}
+                      >
+                        Recheck
+                      </button>
+                    </div>
+
+                    <div className="runtime-steps">
+                      <div className={providerAvailability?.available ? 'done' : ''}>
+                        <span>1</span>
+                        <p><strong>Runtime</strong><small>{providerAvailability?.available ? 'Connected' : 'Needs attention'}</small></p>
+                      </div>
+                      <div className={selectedModelId ? 'done' : ''}>
+                        <span>2</span>
+                        <p><strong>Model</strong><small>{selectedModelId ? 'Selected' : 'Not ready'}</small></p>
+                      </div>
+                      <div className={setupVerified ? 'done' : ''}>
+                        <span>3</span>
+                        <p><strong>Verify</strong><small>{setupVerified ? 'Passed' : 'Not tested'}</small></p>
+                      </div>
+                    </div>
+
+                    {runtimeSnapshot?.state === 'ready' && selectedModelId && !setupVerified && (
+                      <button
+                        type="button"
+                        className="runtime-verify-button"
+                        onClick={() => void runRuntimeQuickCheck()}
+                        disabled={isGenerating || isRuntimeCheckRunning}
+                      >
+                        {isRuntimeCheckRunning ? 'Testing local AI…' : 'Verify local AI'}
+                      </button>
+                    )}
+
+                    {setupRecommendation && (
+                      <p className={`runtime-setup-note ${setupRecord?.healthy ? 'healthy' : 'warning'}`}>
+                        {setupRecommendation}
+                        {setupRecord
+                          ? ` · ${formatDuration(setupRecord.totalMs)} total`
+                          : ''}
+                      </p>
+                    )}
+
+                    {runtimeCheckError && (
+                      <p className="runtime-setup-note warning">{runtimeCheckError}</p>
+                    )}
+
+                    <p className="runtime-management-note">
+                      {browserLocalRuntimeManager.mode === 'external-development'
+                        ? 'Development mode: CrownKeep can inspect the runtime, but Foundry/model lifecycle is still managed outside the browser. The Windows desktop build will own these steps.'
+                        : 'CrownKeep manages the local runtime on this device.'}
+                    </p>
+                  </section>
+                )}
 
                 {selectedProviderId === 'foundry-local' && models.length === 0 && providerAvailability?.available && (
                   <p className="runtime-warning">
