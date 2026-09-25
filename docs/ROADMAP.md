@@ -127,7 +127,7 @@ Focus:
 
 Defer installer/native-shell work until these provider/runtime contracts are stable.
 
-#### Sprint 2.2B — Runtime lifecycle + first-run setup — **NEXT AFTER VALIDATION**
+#### Sprint 2.2B — Runtime lifecycle + first-run setup — **IMPLEMENTED FOUNDATION · VALIDATION PENDING**
 
 Focus:
 
@@ -136,7 +136,9 @@ Focus:
 - model recommendation based on observed performance rather than catalog labels alone;
 - startup/reconnect/retry behavior;
 - idle/unload behavior and resource release;
-- preserve the current CLI path as an engineering diagnostic only.
+- preserve the current CLI path as an engineering diagnostic only;
+- browser implementation must remain capability-aware and never imply native lifecycle control it does not have;
+- use the runtime lifecycle contract as the seam for the later Windows desktop host.
 
 **Outcome:** Foundry Local is usable as the normal Windows provider.
 
