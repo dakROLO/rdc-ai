@@ -3,4 +3,13 @@ import { defineConfig } from 'vite'
 
 export default defineConfig({
   plugins: [react()],
+  server: {
+    proxy: {
+      '/foundry-local': {
+        target: 'http://127.0.0.1:39839',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/foundry-local/, ''),
+      },
+    },
+  },
 })
