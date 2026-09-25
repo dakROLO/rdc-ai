@@ -91,7 +91,7 @@ npm run lint
 npm run build
 ```
 
-See [Testing Guide](docs/TESTING.md) for the current sprint acceptance procedure.
+See [Testing Guide](docs/TESTING.md) for the current sprint acceptance procedure, including the **Fresh Windows machine** setup path.
 
 ### Foundry Local development
 
