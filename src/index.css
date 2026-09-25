@@ -1061,7 +1061,10 @@ body {
 
 @media (max-width: 760px) {
   .roadmap-button {
-    display: none;
+    grid-column: 1 / -1;
+    width: 100%;
+    padding: 7px 10px;
+    font-size: 0.78rem;
   }
 
   .roadmap-modal {
