@@ -728,3 +728,32 @@ Important distinctions:
 - **⊘ Context** preserves the local history but omits that message from future inference requests.
 - Other conversations are not automatically part of the active conversation's model context.
 - Cross-conversation local recall is a separate future capability.
+
+
+---
+
+## Sprint 2.2B runtime onboarding validation
+
+With Foundry Local already running and a model loaded:
+
+1. Pull current `main` and run CrownKeep on port 5173.
+2. Select **Anne · Foundry Local**.
+3. Open **Local AI**.
+4. Confirm the **Local AI setup** card shows:
+   - Runtime: Connected
+   - Model: Selected
+   - Verify: Not tested (until verification is run)
+5. Select **Verify local AI**.
+6. Confirm the verification completes without adding a test message to the active conversation.
+7. Confirm the setup card changes to **Verified**.
+8. Confirm the verification survives a browser refresh for the same selected provider/model.
+9. Stop or restart Foundry outside CrownKeep, return focus to the CrownKeep window, and confirm CrownKeep rechecks runtime state.
+10. Use **Recheck** after any external Foundry/model change and confirm provider/model state refreshes.
+11. Change to a different model and confirm verification is no longer treated as valid for the previous model.
+12. Confirm the browser UI explicitly states that runtime/model lifecycle is externally managed in development.
+
+Expected limitation:
+
+The browser development build cannot directly start/stop Foundry or install/load/unload models. Those methods are represented in the runtime lifecycle contract for the later Windows desktop host.
+
+A successful normal CrownKeep chat may also satisfy the local verification step because it proves the selected provider/model can complete a real inference request.
