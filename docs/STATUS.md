@@ -103,3 +103,15 @@ None identified.
 - The current CLI requires a model to be loaded separately for this vertical slice; use `foundry model load phi-4-mini`.
 - Conversation-history scrolling was changed so the app frame remains fixed and only the message pane scrolls.
 - A floating **Latest** button appears when the user scrolls away from the bottom; after generation completes while away, it changes to **Anne finished**.
+
+
+## Foundry Local live validation and responsive UX — 2026-09-24
+
+- User confirmed CrownKeep discovered the loaded `phi-4-mini-instruct-openvino-gpu` model through `/v1/models`.
+- User confirmed Anne generated a real local response through Foundry Local.
+- This proves the first Windows local inference vertical slice is functioning.
+- Anne's CrownKeep awareness comes from the explicit runtime system prompt plus conversation history; the local model does not automatically read the repository or RDC data.
+- Canonical Anne runtime context moved to `src/assistant/anne.ts` with durable explanation in `docs/ANNE.md`.
+- New-chat welcome text no longer incorrectly claims the mock provider when Foundry Local is selected later.
+- Responsive layout hardening added for narrow portrait windows and medium-width desktop windows.
+- Message cards now wrap aggressively and retain horizontal breathing room instead of touching/clipping the right edge.
