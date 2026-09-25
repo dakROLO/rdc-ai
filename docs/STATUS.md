@@ -48,7 +48,7 @@ None identified.
 - GitHub Actions CI run #1: **success**.
 - Production TypeScript/Vite build: **passed**.
 - Oxlint: **passed**.
-- Browser PWA installation/offline validation: **pending**.
+- PWA packaging corrected to include required 192×192 and 512×512 PNG install icons.\n- Service worker updated to discover/cache Vite production assets during installation.\n- Browser PWA installation/offline validation: **pending manual verification**.
 
 ## Open architectural decisions
 
