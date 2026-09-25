@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="RDC AI">
+  <rect width="512" height="512" rx="112" fill="#0b1727"/>
+  <path d="M116 148h164c76 0 124 44 124 108s-48 108-124 108H116V148Zm92 66v84h66c33 0 52-15 52-42s-19-42-52-42h-66Z" fill="#f4f7fb"/>
+  <rect x="94" y="116" width="42" height="42" rx="8" fill="#4fd1c5"/>
+  <rect x="72" y="174" width="30" height="30" rx="6" fill="#4fd1c5"/>
+  <rect x="104" y="376" width="34" height="34" rx="7" fill="#4fd1c5"/>
+</svg>
