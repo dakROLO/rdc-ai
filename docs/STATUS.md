@@ -152,3 +152,13 @@ None identified.
 - Conclusion: CrownKeep must not treat a catalog GPU label as proof of useful hardware acceleration in virtualized environments.
 - For this AVD, explicitly force the CPU variant `qwen2.5-0.5b-instruct-generic-cpu` for comparison.
 - Sprint 2.2 should add a lightweight local-inference benchmark / time-to-first-token check and recommend fallback variants when observed performance is poor.
+
+
+## AVD CPU baseline — 2026-09-25
+
+- Forced `qwen2.5-0.5b-instruct-generic-cpu:4` on the church AVD using `CPUExecutionProvider`.
+- Direct non-streaming `/v1/chat/completions` request completed in approximately **0.97 seconds**.
+- This proves the AVD can run a small local model interactively on CPU.
+- The model did not follow the exact-response instruction reliably, which is a model-quality limitation rather than a runtime-performance problem.
+- `foundry complete qwen2.5-0.5b ...` also returned quickly but ignored the exact wording request.
+- Because direct API inference is fast while CrownKeep previously remained on an empty streamed response, the next debugging target is CrownKeep's streaming/SSE handling against the current Foundry Local build.
