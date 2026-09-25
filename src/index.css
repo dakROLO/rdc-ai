@@ -1620,3 +1620,44 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* CrownKeep scrollbars */
+.conversation,
+.conversation-nav,
+.local-ai-panel {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(46, 230, 184, 0.42) rgba(8, 19, 17, 0.35);
+}
+
+.conversation::-webkit-scrollbar,
+.conversation-nav::-webkit-scrollbar,
+.local-ai-panel::-webkit-scrollbar {
+  width: 10px;
+  height: 8px;
+}
+
+.conversation::-webkit-scrollbar-track,
+.conversation-nav::-webkit-scrollbar-track,
+.local-ai-panel::-webkit-scrollbar-track {
+  background: rgba(8, 19, 17, 0.35);
+  border-radius: 999px;
+}
+
+.conversation::-webkit-scrollbar-thumb,
+.conversation-nav::-webkit-scrollbar-thumb,
+.local-ai-panel::-webkit-scrollbar-thumb {
+  border: 2px solid rgba(8, 19, 17, 0.75);
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    rgba(46, 230, 184, 0.55),
+    rgba(17, 94, 79, 0.8)
+  );
+}
+
+.conversation::-webkit-scrollbar-thumb:hover,
+.conversation-nav::-webkit-scrollbar-thumb:hover,
+.local-ai-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(46, 230, 184, 0.72);
+}
