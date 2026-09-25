@@ -355,3 +355,29 @@ Exit criteria:
 - voice/transcription;
 - Ollama;
 - native wrappers unless justified by a concrete capability gap.
+
+
+---
+
+## Backlog items to place in future sprints
+
+### Collapsible navigation / controls
+
+- Collapse Provider / Model controls behind a compact menu or settings surface.
+- Make conversation navigation collapsible so the active chat gets priority screen space.
+- Preserve quick visibility of the currently selected provider/model even when controls are collapsed.
+
+### Projects
+
+Introduce a Project entity that can group multiple conversations.
+
+Initial design questions to resolve before implementation:
+
+- whether a conversation can belong to one project or multiple projects;
+- project title/description/metadata;
+- local-only project persistence first;
+- how projects sync across devices later;
+- whether future ContextProvider data attaches at the project level;
+- project archive/delete behavior without accidentally deleting conversations.
+
+Projects should be implemented as an organizational layer above conversations, not as a replacement for the conversation model.
