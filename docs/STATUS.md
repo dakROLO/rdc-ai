@@ -337,3 +337,26 @@ To keep Phase 3 moving without immediate Mac access:
   - `model-not-ready`
 - The available mock returns a short iPhone-local response through `AppleFoundationModelsProvider`, exercising the same provider-neutral chat path the real Swift bridge will use.
 - This lets provider registration, availability mapping, conversation continuity, cancellation plumbing, and mobile-local metadata be validated before Xcode/device work begins.
+
+
+## Phase 3 mock native-host validation — 2026-09-25
+
+User validation on Windows confirmed the mock native iPhone bridge works end-to-end.
+
+Observed:
+
+- CrownKeep exposed **Anne · Apple On-Device** as a selectable provider.
+- CrownKeep exposed **Apple On-Device Model** as the model.
+- Local AI diagnostics showed the simulated Apple provider as Ready / NPU / Inside the Keep.
+- A test prompt returned through the provider-neutral CrownKeep conversation path with the expected development response: `Mock iPhone-local Anne received: ...`.
+- Existing conversation UI and local-message metadata remained intact.
+
+Conclusion:
+
+The TypeScript/provider side of the iPhone native bridge is proven before the real Swift/Xcode host exists.
+
+UX note:
+
+Provider/model dropdowns are useful during development, but the native iPhone release should automatically prefer Apple On-Device when available and move manual provider/model selection into an advanced Local AI settings surface.
+
+Latest Phase 3 branch CI is green after fixing the Apple provider's TypeScript syntax compatibility and the iPhone-unavailable provider lint warning.
