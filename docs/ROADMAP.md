@@ -1,4 +1,4 @@
-# RDC AI — Sprint Roadmap
+# CrownKeep — Sprint Roadmap
 
 This roadmap is outcome-based. A sprint ends when its exit criteria are met, not merely when code has been written.
 
@@ -68,7 +68,7 @@ Exit criteria:
 - multiple conversations can be created/opened;
 - no network service is required.
 
-### Sprint 1.2 — Provider-neutral streaming chat — **IN PROGRESS**
+### Sprint 1.2 — Provider-neutral streaming chat — **COMPLETE**
 
 **Outcome:** The UI can stream from any provider implementing the common contract.
 
@@ -90,7 +90,7 @@ Exit criteria:
 
 ## Phase 2 — Windows Local AI
 
-### Sprint 2.1 — Foundry Local connectivity
+### Sprint 2.1 — Foundry Local connectivity — **IN PROGRESS**
 
 **Outcome:** Windows can discover/connect to Microsoft Foundry Local through a provider adapter.
 
