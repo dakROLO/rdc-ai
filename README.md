@@ -6,7 +6,7 @@ The goal is one conversation experience that can move between device-local AI an
 
 ## Current status
 
-**Phase 0 — Foundation** is in progress.
+**Phase 0 — Foundation / Sprint 0.2 — Application Shell** is in progress.
 
 The repository is intentionally public. It contains application code, architecture, interfaces, synthetic test data, and deployment templates only. It must not contain RDC customer data, production credentials, secrets, access tokens, private Blueprint content, or production connection strings.
 
@@ -34,6 +34,46 @@ Start here before making changes:
 - [Agent Instructions](AGENTS.md)
 
 Chat conversations are not the system of record. Decisions, completed work, blockers, and architectural changes must be reflected in this repository.
+
+## Local development
+
+Prerequisite: a current Node.js 22 release.
+
+```bash
+git clone https://github.com/dakROLO/rdc-ai.git
+cd rdc-ai
+npm install
+npm run dev
+```
+
+Validation:
+
+```bash
+npm run lint
+npm run build
+```
+
+The current application uses a mock local provider so the conversation/provider plumbing can be tested before Foundry Local is connected.
+
+## Current foundation structure
+
+```text
+src/
+├── auth/       # Entra-facing abstraction; no live auth yet
+├── context/    # Future RDC context contract; no RDC data connection
+├── domain/     # Conversation/message model
+├── providers/  # AIProvider contract + mock provider
+├── storage/    # Local conversation repository contract
+└── sync/       # Encrypted sync transport contract
+```
+
+PWA metadata and the service worker live under `public/`.
+
+## Configuration
+
+`.env.example` contains public-client placeholders only.
+
+Never place a secret in a `VITE_*` variable because Vite client variables are shipped to the browser.
 
 ## Core architectural rule
 
