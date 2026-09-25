@@ -1,12 +1,40 @@
-import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  type FormEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import type { Conversation, Message } from './domain/conversation.ts'
+import type { AIModel, ProviderAvailability } from './providers/AIProvider.ts'
 import { MockProvider } from './providers/MockProvider.ts'
+import { ProviderRegistry } from './providers/ProviderRegistry.ts'
 import { IndexedDbConversationRepository } from './storage/IndexedDbConversationRepository.ts'
 import { createId } from './utils/id.ts'
 
-const provider = new MockProvider()
+const primaryProvider = new MockProvider()
+const developmentAlternateProvider = new MockProvider({
+  id: 'mock-local-alternate',
+  displayName: 'Anne · Alternate Local',
+  modelId: 'mock-local-alternate-v1',
+  modelDisplayName: 'Alternate Mock Model',
+  responseLabel: 'alternate local development provider',
+})
+
+const providerRegistry = new ProviderRegistry(
+  import.meta.env.DEV
+    ? [primaryProvider, developmentAlternateProvider]
+    : [primaryProvider],
+)
+
 const repository = new IndexedDbConversationRepository()
 const DEFAULT_TITLE = 'New conversation'
+const PROVIDER_STORAGE_KEY = 'crownkeep.providerId'
+
+function modelStorageKey(providerId: string): string {
+  return `crownkeep.modelId.${providerId}`
+}
 
 function makeMessage(
   conversationId: string,
@@ -29,7 +57,7 @@ function welcomeMessage(conversationId: string): Message {
       'assistant',
       "Welcome to CrownKeep. I'm Anne. This conversation is stored on this device, and I'm using a mock local model while Foundry Local integration is built.",
     ),
-    providerId: provider.id,
+    providerId: primaryProvider.id,
     modelId: 'mock-local-v1',
     inferenceLocation: 'local',
   }
@@ -41,6 +69,9 @@ function titleFromMessage(value: string): string {
 }
 
 export default function App() {
+  const providers = useMemo(() => providerRegistry.list(), [])
+  const defaultProviderId = providers[0]?.id ?? primaryProvider.id
+
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -48,12 +79,26 @@ export default function App() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [storageError, setStorageError] = useState<string | null>(null)
+  const [selectedProviderId, setSelectedProviderId] = useState(() => {
+    const stored = localStorage.getItem(PROVIDER_STORAGE_KEY)
+    return stored && providerRegistry.get(stored) ? stored : defaultProviderId
+  })
+  const [models, setModels] = useState<AIModel[]>([])
+  const [selectedModelId, setSelectedModelId] = useState('')
+  const [providerAvailability, setProviderAvailability] =
+    useState<ProviderAvailability | null>(null)
   const abortController = useRef<AbortController | null>(null)
 
-  const status = useMemo(
-    () => (isGenerating ? 'Anne is thinking locally…' : 'Inside the Keep'),
-    [isGenerating],
-  )
+  const selectedProvider =
+    providerRegistry.get(selectedProviderId) ?? providerRegistry.require(defaultProviderId)
+
+  const status = useMemo(() => {
+    if (providerAvailability && !providerAvailability.available) {
+      return 'Local provider unavailable'
+    }
+
+    return isGenerating ? 'Anne is thinking locally…' : 'Inside the Keep'
+  }, [isGenerating, providerAvailability])
 
   async function refreshConversations(): Promise<Conversation[]> {
     const next = await repository.list()
@@ -114,18 +159,71 @@ export default function App() {
     }
   }, [])
 
+  useEffect(() => {
+    let cancelled = false
+    const provider = providerRegistry.require(selectedProviderId)
+
+    localStorage.setItem(PROVIDER_STORAGE_KEY, selectedProviderId)
+    setProviderAvailability(null)
+
+    async function loadProviderState() {
+      const [availability, availableModels] = await Promise.all([
+        provider.getAvailability(),
+        provider.listModels(),
+      ])
+
+      if (cancelled) return
+
+      setProviderAvailability(availability)
+      setModels(availableModels)
+
+      const storedModel = localStorage.getItem(modelStorageKey(provider.id))
+      const nextModel =
+        availableModels.find((model) => model.id === storedModel)?.id ??
+        availableModels[0]?.id ??
+        ''
+
+      setSelectedModelId(nextModel)
+    }
+
+    void loadProviderState().catch((error: unknown) => {
+      if (cancelled) return
+
+      setModels([])
+      setSelectedModelId('')
+      setProviderAvailability({
+        available: false,
+        detail: error instanceof Error ? error.message : 'Provider initialization failed.',
+      })
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [selectedProviderId])
+
   async function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const text = prompt.trim()
     const conversation = activeConversation
-    if (!text || !conversation || isGenerating) return
+    const provider = providerRegistry.require(selectedProviderId)
+
+    if (
+      !text ||
+      !conversation ||
+      !selectedModelId ||
+      isGenerating ||
+      providerAvailability?.available === false
+    ) {
+      return
+    }
 
     const userMessage = makeMessage(conversation.id, 'user', text)
     const assistantMessage: Message = {
       ...makeMessage(conversation.id, 'assistant', ''),
       providerId: provider.id,
-      modelId: 'mock-local-v1',
-      inferenceLocation: 'local',
+      modelId: selectedModelId,
+      inferenceLocation: provider.location,
     }
 
     setPrompt('')
@@ -151,7 +249,7 @@ export default function App() {
       }))
 
       for await (const chunk of provider.streamChat(
-        { modelId: 'mock-local-v1', messages: requestMessages },
+        { modelId: selectedModelId, messages: requestMessages },
         controller.signal,
       )) {
         assistantContent += chunk.text
@@ -184,6 +282,28 @@ export default function App() {
       abortController.current = null
       setIsGenerating(false)
     }
+  }
+
+  function handleComposerKeyDown(event: ReactKeyboardEvent<HTMLTextAreaElement>) {
+    if (
+      event.key === 'Enter' &&
+      !event.shiftKey &&
+      !event.nativeEvent.isComposing
+    ) {
+      event.preventDefault()
+      event.currentTarget.form?.requestSubmit()
+    }
+  }
+
+  function handleProviderChange(providerId: string) {
+    if (isGenerating || providerId === selectedProviderId) return
+    setSelectedProviderId(providerId)
+  }
+
+  function handleModelChange(modelId: string) {
+    if (isGenerating) return
+    setSelectedModelId(modelId)
+    localStorage.setItem(modelStorageKey(selectedProviderId), modelId)
   }
 
   async function renameConversation(conversation: Conversation) {
@@ -300,13 +420,48 @@ export default function App() {
 
       <main className="workspace">
         <header className="topbar">
-          <div>
+          <div className="conversation-title">
             <p className="eyebrow">Anne · Local assistant</p>
             <h2>{activeConversation?.title ?? 'Opening CrownKeep…'}</h2>
           </div>
-          <div className="provider-pill" title={status}>
-            <span className="status-dot" />
-            {status}
+
+          <div className="provider-area">
+            <div className="provider-selectors">
+              <label>
+                <span>Provider</span>
+                <select
+                  value={selectedProviderId}
+                  onChange={(event) => handleProviderChange(event.target.value)}
+                  disabled={isGenerating}
+                >
+                  {providers.map((provider) => (
+                    <option value={provider.id} key={provider.id}>
+                      {provider.displayName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                <span>Model</span>
+                <select
+                  value={selectedModelId}
+                  onChange={(event) => handleModelChange(event.target.value)}
+                  disabled={isGenerating || models.length === 0}
+                >
+                  {models.map((model) => (
+                    <option value={model.id} key={model.id}>
+                      {model.displayName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="provider-pill" title={providerAvailability?.detail ?? status}>
+              <span className="status-dot" />
+              {status}
+            </div>
           </div>
         </header>
 
@@ -318,7 +473,11 @@ export default function App() {
               <article className={`message ${message.role}`} key={message.id}>
                 <div className="message-meta">
                   <strong>{message.role === 'user' ? 'You' : 'Anne'}</strong>
-                  {message.role === 'assistant' && <span>◆ Local</span>}
+                  {message.role === 'assistant' && (
+                    <span title={`${message.providerId ?? 'unknown'} · ${message.modelId ?? 'unknown'}`}>
+                      ◆ {message.inferenceLocation === 'cloud' ? 'Cloud' : 'Local'}
+                    </span>
+                  )}
                 </div>
                 <p>{message.content || '…'}</p>
               </article>
@@ -328,7 +487,12 @@ export default function App() {
 
         <section className="composer-wrap">
           <div className="cloud-row">
-            <button className="secondary-button cloud-button" type="button" disabled title="Scheduled for a later phase">
+            <button
+              className="secondary-button cloud-button"
+              type="button"
+              disabled
+              title="Scheduled for a later phase"
+            >
               Open to Cloud
             </button>
             <span>{activeConversation?.syncState === 'local-only' ? 'Stored on this device' : status}</span>
@@ -341,26 +505,36 @@ export default function App() {
               rows={3}
               value={prompt}
               onChange={(event) => setPrompt(event.target.value)}
+              onKeyDown={handleComposerKeyDown}
               disabled={!activeConversation || isLoading}
             />
-            <div className="composer-actions">
-              {isGenerating ? (
-                <button className="secondary-button" type="button" onClick={stopGeneration}>
-                  Stop
+            <div className="composer-footer">
+              <span>Enter to send · Shift+Enter for a new line</span>
+              <div className="composer-actions">
+                {isGenerating ? (
+                  <button className="secondary-button" type="button" onClick={stopGeneration}>
+                    Stop
+                  </button>
+                ) : null}
+                <button
+                  className="primary-button"
+                  type="submit"
+                  disabled={
+                    !prompt.trim() ||
+                    isGenerating ||
+                    !activeConversation ||
+                    !selectedModelId ||
+                    providerAvailability?.available === false
+                  }
+                >
+                  Send
                 </button>
-              ) : null}
-              <button
-                className="primary-button"
-                type="submit"
-                disabled={!prompt.trim() || isGenerating || !activeConversation}
-              >
-                Send
-              </button>
+              </div>
             </div>
           </form>
 
           <p className="privacy-note">
-            Anne is running through CrownKeep's local mock provider. No cloud service or RDC data is connected.
+            Anne is using {selectedProvider.displayName}. Provider/model choices can change without changing this conversation.
           </p>
         </section>
       </main>
