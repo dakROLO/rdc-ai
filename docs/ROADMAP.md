@@ -2,6 +2,8 @@
 
 This roadmap is outcome-based. A sprint ends when its exit criteria are met, not merely when code has been written.
 
+Visual summary: `public/crownkeep-sprints.svg`. The same asset is rendered in the repository README and inside CrownKeep.
+
 ## Phase 0 — Foundation
 
 ### Sprint 0.1 — Repository and project contract — **COMPLETE**
