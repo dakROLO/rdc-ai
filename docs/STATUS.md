@@ -301,3 +301,23 @@ Fixes delivered:
 - This preserves temporal reasoning while reducing normal prompt-token overhead.
 
 Validation pending: compare prompt-token count and first-token latency on the same AVD conversation after pulling current main.
+
+
+## Phase 3 branch kickoff — 2026-09-25
+
+Branch: `phase-3-iphone-local-ai`
+
+Windows/Foundry browser hardening was accepted by user validation and Phase 2 is treated as complete for the current browser-development scope.
+
+Phase 3.1A foundation delivered on the branch:
+
+- Added `NativeAIHost` TypeScript bridge contract.
+- Added `AppleFoundationModelsProvider` implementing the existing provider-neutral `AIProvider` interface.
+- Added iPhone/iPad capability detection that distinguishes native-host and browser-only use.
+- Added explicit iPhone Safari/PWA local-AI unavailable provider so iPhone browser mode does not attempt the Windows Foundry path.
+- Added production provider selection that prefers Apple on-device AI when the native host is present.
+- Added `native/ios/CrownKeepFoundationModelsService.swift` as the first Swift Foundation Models service scaffold.
+- Added native-host implementation notes under `native/ios/README.md`.
+- Phase 3 work is isolated from stable `main` on the phase branch.
+
+Next: Sprint 3.1B — create the minimal native iPhone host and wire availability plus the first real on-device response through `window.crownKeepNativeAI`.
