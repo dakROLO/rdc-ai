@@ -53,7 +53,7 @@ npm run lint
 npm run build
 ```
 
-The current application uses a mock local provider so the conversation/provider plumbing can be tested before Foundry Local is connected.
+The current application uses a mock local provider so the conversation/provider plumbing can be tested before Foundry Local is connected. See [Testing Guide](docs/TESTING.md) for the current Windows and PWA test procedure.
 
 ## Current foundation structure
 
