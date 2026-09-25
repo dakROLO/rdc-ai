@@ -214,3 +214,48 @@ IndexedDB is an implementation detail. UI and provider code must depend on the r
 Do not depend directly on `crypto.randomUUID()` for application IDs.
 
 Use `crypto.getRandomValues()` when available, with a development fallback, so basic same-network phone testing does not fail solely because the app is being served over a non-HTTPS LAN origin.
+
+
+---
+
+## ADR-0014 — Message order uses a persisted sequence
+
+**Status:** Accepted  
+**Date:** 2026-09-24
+
+### Decision
+
+Every persisted message receives a monotonic `sequence` within its conversation.
+
+`createdAt` remains a timestamp, but it is not the authoritative ordering key.
+
+### Reason
+
+Two messages can be created within the same millisecond. Timestamp-only sorting allowed an assistant response and its triggering user message to swap positions after an IndexedDB reload.
+
+IndexedDB schema version 2 migrates version-1 records to deterministic sequence positions.
+
+---
+
+## ADR-0015 — Foundry Local REST provider with configurable fixed development endpoint
+
+**Status:** Accepted  
+**Date:** 2026-09-24
+
+### Decision
+
+CrownKeep's first Windows Foundry Local integration uses the documented OpenAI-compatible REST service behind `FoundryLocalProvider`.
+
+Development defaults to:
+
+```text
+http://localhost:39839
+```
+
+The endpoint is configurable through `VITE_FOUNDRY_LOCAL_ENDPOINT`.
+
+### Reason
+
+A browser application cannot execute `foundry server status` directly. Microsoft Foundry Local normally uses a dynamic port, but its CLI supports starting/restarting the daemon on a fixed port for application integration.
+
+The fixed port is a development/distribution convention, not a credential or permanent architectural coupling.
