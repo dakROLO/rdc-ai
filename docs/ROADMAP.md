@@ -4,7 +4,7 @@ This roadmap is outcome-based. A sprint ends when its exit criteria are met, not
 
 ## Phase 0 — Foundation
 
-### Sprint 0.1 — Repository and project contract — **IN PROGRESS**
+### Sprint 0.1 — Repository and project contract — **COMPLETE**
 
 **Outcome:** The repository becomes the durable source of project truth.
 
@@ -25,7 +25,7 @@ Exit criteria:
 - local development can start from the README;
 - no real RDC customer data or production secrets are present.
 
-### Sprint 0.2 — Application shell
+### Sprint 0.2 — Application shell — **IN PROGRESS**
 
 **Outcome:** A minimal installable PWA runs on Windows and iPhone-compatible browsers.
 
