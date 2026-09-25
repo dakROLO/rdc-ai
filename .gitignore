@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.vite/
+*.local
+*.log
+.DS_Store
+Thumbs.db
+
+# Environment files may contain deployment-specific values.
+.env
+.env.*
+!.env.example
+
+# TypeScript build metadata
+*.tsbuildinfo
