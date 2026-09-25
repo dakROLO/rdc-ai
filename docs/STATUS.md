@@ -57,6 +57,7 @@ None identified.
 ## Validation evidence
 
 - GitHub Actions foundation CI: **passed**.
+- GitHub Actions Sprint 1.1 compile/lint validation: **passed**.
 - Windows Vite UI and mock chat: **passed**.
 - Same-network phone test before fix: **failed with background-only render**.
 - Likely compatibility issue addressed by removing direct dependency on `crypto.randomUUID()`.
