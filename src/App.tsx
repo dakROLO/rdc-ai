@@ -95,6 +95,10 @@ export default function App() {
   const [providerAvailability, setProviderAvailability] =
     useState<ProviderAvailability | null>(null)
   const abortController = useRef<AbortController | null>(null)
+  const conversationScrollRef = useRef<HTMLElement | null>(null)
+  const nearBottomRef = useRef(true)
+  const [isNearBottom, setIsNearBottom] = useState(true)
+  const [responseFinishedAway, setResponseFinishedAway] = useState(false)
 
   const selectedProvider =
     providerRegistry.get(selectedProviderId) ?? providerRegistry.require(defaultProviderId)
@@ -106,6 +110,35 @@ export default function App() {
 
     return isGenerating ? 'Anne is thinking locally…' : 'Inside the Keep'
   }, [isGenerating, providerAvailability])
+
+  function updateScrollState() {
+    const element = conversationScrollRef.current
+    if (!element) return
+
+    const nearBottom =
+      element.scrollHeight - element.scrollTop - element.clientHeight < 96
+
+    nearBottomRef.current = nearBottom
+    setIsNearBottom(nearBottom)
+
+    if (nearBottom) {
+      setResponseFinishedAway(false)
+    }
+  }
+
+  function scrollToBottom(behavior: ScrollBehavior = 'smooth') {
+    const element = conversationScrollRef.current
+    if (!element) return
+
+    element.scrollTo({
+      top: element.scrollHeight,
+      behavior,
+    })
+
+    nearBottomRef.current = true
+    setIsNearBottom(true)
+    setResponseFinishedAway(false)
+  }
 
   async function refreshConversations(): Promise<Conversation[]> {
     const next = await repository.list()
@@ -165,6 +198,16 @@ export default function App() {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    if (!nearBottomRef.current) return
+
+    const frame = window.requestAnimationFrame(() => {
+      scrollToBottom(isGenerating ? 'auto' : 'smooth')
+    })
+
+    return () => window.cancelAnimationFrame(frame)
+  }, [messages, isGenerating])
 
   useEffect(() => {
     let cancelled = false
@@ -236,6 +279,7 @@ export default function App() {
     setPrompt('')
     setMessages((current) => [...current, userMessage, assistantMessage])
     setIsGenerating(true)
+    setResponseFinishedAway(false)
 
     await repository.saveMessage(userMessage)
 
@@ -291,6 +335,12 @@ export default function App() {
       await refreshConversations()
       abortController.current = null
       setIsGenerating(false)
+
+      if (nearBottomRef.current) {
+        window.requestAnimationFrame(() => scrollToBottom('smooth'))
+      } else {
+        setResponseFinishedAway(true)
+      }
     }
   }
 
@@ -485,7 +535,12 @@ export default function App() {
           </div>
         </header>
 
-        <section className="conversation" aria-live="polite">
+        <section
+          className="conversation"
+          aria-live="polite"
+          ref={conversationScrollRef}
+          onScroll={updateScrollState}
+        >
           {isLoading ? (
             <p className="loading-copy">Opening your local Keep…</p>
           ) : (
@@ -502,6 +557,15 @@ export default function App() {
                 <p>{message.content || '…'}</p>
               </article>
             ))
+          )}
+          {!isNearBottom && (
+            <button
+              className={`scroll-latest-button ${responseFinishedAway ? 'finished' : ''}`}
+              type="button"
+              onClick={() => scrollToBottom()}
+            >
+              {responseFinishedAway ? '↓ Anne finished' : '↓ Latest'}
+            </button>
           )}
         </section>
 
