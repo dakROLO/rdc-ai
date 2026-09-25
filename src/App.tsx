@@ -95,6 +95,7 @@ export default function App() {
   const nearBottomRef = useRef(true)
   const [isNearBottom, setIsNearBottom] = useState(true)
   const [responseFinishedAway, setResponseFinishedAway] = useState(false)
+  const [showRoadmap, setShowRoadmap] = useState(false)
 
   const selectedProvider =
     providerRegistry.get(selectedProviderId) ?? providerRegistry.require(defaultProviderId)
@@ -468,6 +469,15 @@ export default function App() {
           ))}
         </section>
 
+        <button
+          className="roadmap-button"
+          type="button"
+          onClick={() => setShowRoadmap(true)}
+        >
+          <span>◆</span>
+          Build Roadmap
+        </button>
+
         <div className="boundary-card">
           <strong>Inside the Keep</strong>
           <span>Conversations are stored on this device.</span>
@@ -618,6 +628,41 @@ export default function App() {
           </p>
         </section>
       </main>
+
+      {showRoadmap && (
+        <div
+          className="roadmap-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label="CrownKeep sprint roadmap"
+          onClick={() => setShowRoadmap(false)}
+        >
+          <div className="roadmap-modal-panel" onClick={(event) => event.stopPropagation()}>
+            <div className="roadmap-modal-header">
+              <div>
+                <p className="eyebrow">CrownKeep build plan</p>
+                <h2>Sprint Roadmap</h2>
+              </div>
+              <button
+                type="button"
+                className="roadmap-close"
+                onClick={() => setShowRoadmap(false)}
+                aria-label="Close roadmap"
+              >
+                ×
+              </button>
+            </div>
+            <img
+              className="roadmap-image"
+              src="/crownkeep-sprints.svg"
+              alt="CrownKeep sprint roadmap showing completed, active, next, and planned phases"
+            />
+            <p className="roadmap-note">
+              The visual is shared with the repository README. Detailed sprint definitions remain in docs/ROADMAP.md.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
