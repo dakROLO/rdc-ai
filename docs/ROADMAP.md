@@ -49,7 +49,7 @@ Exit criteria:
 
 ## Phase 1 — Local Conversation Core
 
-### Sprint 1.1 — Domain + local persistence — **IN PROGRESS**
+### Sprint 1.1 — Domain + local persistence — **COMPLETE**
 
 **Outcome:** Conversations survive reloads without cloud services.
 
@@ -68,7 +68,7 @@ Exit criteria:
 - multiple conversations can be created/opened;
 - no network service is required.
 
-### Sprint 1.2 — Provider-neutral streaming chat
+### Sprint 1.2 — Provider-neutral streaming chat — **IN PROGRESS**
 
 **Outcome:** The UI can stream from any provider implementing the common contract.
 
