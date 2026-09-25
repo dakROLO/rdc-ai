@@ -641,3 +641,39 @@ foundry server logs -f
 ```
 
 If direct Foundry inference works but CrownKeep remains stuck, troubleshoot CrownKeep's request/stream handling rather than the model runtime.
+
+
+---
+
+## Sprint 2.2A validation checklist
+
+After updating the repository:
+
+```powershell
+git pull
+npm install
+npm run dev
+```
+
+With Foundry Local running and a model loaded:
+
+1. Open CrownKeep and confirm the top-right Local AI control is compact when closed.
+2. Expand it and verify Provider and Model selectors are available.
+3. With `qwen2.5-0.5b-instruct-generic-cpu`, confirm the Device field reads **CPU**.
+4. Send a short prompt through Foundry Local.
+5. Open **Local AI → Diagnostics** and verify:
+   - Last result becomes `complete`;
+   - First token has a duration;
+   - Total time has a duration;
+   - Prompt/completion tokens populate when Foundry includes usage in SSE;
+   - Output rate displays in tok/s when completion-token usage is available.
+6. Collapse the conversation navigation rail using the sidebar control.
+7. Refresh the page and confirm the collapsed/expanded preference is retained.
+8. Reopen the navigation and confirm existing conversations remain accessible.
+9. Resize to a narrow window and check that Local AI controls, messages, and composer do not clip horizontally.
+
+Notes:
+
+- Mock providers may show dashes for token counts because they do not emit provider usage metadata.
+- Device display is a runtime hint inferred from model variant identifiers when Foundry exposes CPU/GPU/NPU in the ID; CrownKeep does not treat that label as proof of useful acceleration.
+- Performance guidance uses observed response behavior. A slow GPU-labeled variant on a virtual host should be treated as a candidate for CPU comparison rather than automatically preferred.
