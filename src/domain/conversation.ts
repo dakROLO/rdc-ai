@@ -25,4 +25,9 @@ export interface Message {
   providerId?: string
   modelId?: string
   inferenceLocation?: InferenceLocation
+  /**
+   * When true, the message remains visible in local history but is omitted from
+   * future inference requests until the user restores it.
+   */
+  excludedFromContext?: boolean
 }
