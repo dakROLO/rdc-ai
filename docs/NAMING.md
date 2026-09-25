@@ -148,3 +148,20 @@ Brand intent:
 - subtle royal/king lineage;
 - modern product, not medieval novelty;
 - strong enough to stand independently while being shared by Royal Digital Clarity.
+
+
+---
+
+## Assistant identity — 2026-09-24
+
+**Anne** is the selected assistant identity for CrownKeep.
+
+Reasoning:
+
+- one syllable;
+- natural to say and type;
+- strong royal history without sounding theatrical;
+- calm and familiar enough for a privacy-first assistant;
+- works naturally in interface language such as **Message Anne**, **Anne is thinking locally**, and **Ask Anne**.
+
+This is now an accepted product decision rather than an exploratory naming candidate.
