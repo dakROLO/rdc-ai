@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="CrownKeep">
+  <defs>
+    <linearGradient id="frame" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2EE6B8"/>
+      <stop offset="0.48" stop-color="#115E4F"/>
+      <stop offset="1" stop-color="#C97F5B"/>
+    </linearGradient>
+    <linearGradient id="keep" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2EE6B8"/>
+      <stop offset="1" stop-color="#115E4F"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="118" fill="#0F1F1E"/>
+  <rect x="58" y="58" width="396" height="396" rx="106" fill="none" stroke="url(#frame)" stroke-width="24"/>
+  <rect x="102" y="102" width="308" height="308" rx="82" fill="#0B1716" stroke="#115E4F" stroke-width="10"/>
+  <path d="M158 196 L205 150 L256 190 L307 150 L354 196 L354 223 L158 223 Z" fill="#E8E4DA"/>
+  <path d="M164 221 H348 V354 Q348 382 320 382 H192 Q164 382 164 354 Z" fill="none" stroke="url(#keep)" stroke-width="24"/>
+  <rect x="210" y="278" width="92" height="104" rx="18" fill="#0F1F1E"/>
+  <circle cx="256" cy="255" r="10" fill="#C97F5B"/>
+</svg>
