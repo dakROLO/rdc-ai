@@ -94,6 +94,7 @@ The first real Windows-local integration expects Foundry Local on a stable loopb
 ```powershell
 foundry server restart --port 39839 --idle-timeout 0
 foundry model download phi-4-mini
+foundry model load phi-4-mini
 foundry server status
 ```
 
