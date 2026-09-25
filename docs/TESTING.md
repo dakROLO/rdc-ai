@@ -772,3 +772,49 @@ Use the same AVD/model where a 1,004 prompt-token request produced about 10.5 se
 7. Confirm Anne can still reason over message timing without printing internal timeline markup.
 8. Confirm the conversation and Local AI panel scrollbars use CrownKeep jade/graphite styling.
 9. If Prompt tokens are >= 750 and first-token time remains high, use **⊘ Context** on older messages and repeat the normal question to measure the reduction.
+
+
+---
+
+## Phase 3.1A iPhone capability validation
+
+Branch:
+
+```text
+phase-3-iphone-local-ai
+```
+
+### Desktop regression
+
+On Windows:
+
+1. check out the Phase 3 branch;
+2. run `npm install`;
+3. run `npm run dev`;
+4. confirm Foundry Local and existing conversations still behave normally;
+5. confirm no iPhone-only provider replaces Foundry on desktop.
+
+### iPhone Safari/PWA capability state
+
+Before the native host exists:
+
+1. serve CrownKeep over an iPhone-accessible HTTPS/LAN development path as appropriate for the test;
+2. open CrownKeep in Safari or its PWA shell;
+3. confirm CrownKeep recognizes iOS;
+4. confirm local iPhone AI is reported as unavailable in browser-only mode;
+5. confirm the UI explains that the native CrownKeep host is required for Apple on-device AI;
+6. confirm saved local conversations remain accessible even though the native model is unavailable.
+
+### Native-host contract
+
+When the first Xcode host is added, validate:
+
+1. the host injects/exposes `window.crownKeepNativeAI`;
+2. `AppleFoundationModelsProvider` becomes available automatically;
+3. model availability maps correctly for:
+   - available;
+   - device not eligible;
+   - Apple Intelligence not enabled;
+   - model not ready;
+4. no unavailable state silently routes the conversation to cloud;
+5. the first native response returns through the same `AIProvider` conversation flow used on Windows.
