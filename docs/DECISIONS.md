@@ -357,3 +357,31 @@ A later Windows desktop host will implement those lifecycle actions natively whi
 This avoids coupling conversation/provider logic to PowerShell or a particular desktop wrapper and provides a stable seam for moving from today's developer workflow to a downloadable Windows application.
 
 Observed model performance remains part of setup validation so CrownKeep can avoid preferring a poorly performing device variant merely because it is labeled GPU.
+
+
+---
+
+## ADR-0020 — Native Apple Foundation Models is the primary iPhone local provider
+
+**Status:** Accepted  
+**Date:** 2026-09-25
+
+### Decision
+
+Use Apple's Foundation Models framework through a native iPhone host as CrownKeep's primary iPhone local-inference path.
+
+Keep the shared React conversation UI and provider-neutral `AIProvider` model.
+
+The native host exposes local inference through `NativeAIHost`, and `AppleFoundationModelsProvider` adapts that bridge into the same conversation system used on Windows.
+
+Safari/PWA mode must explicitly report when native Apple local AI is unavailable rather than pretending that the browser has access to the on-device Foundation Model.
+
+WebLLM/WebGPU remains a fallback/experimental path, not the default iPhone architecture.
+
+### Reason
+
+The native framework exposes the device's Apple on-device language model, availability reasons, context information, and session APIs directly. This avoids requiring CrownKeep to download and manage a separate browser model on capable iPhones and gives the native app a clearer local-first lifecycle.
+
+### Constraint
+
+This decision does not permit silent cloud fallback. If the Apple on-device model is unavailable, CrownKeep must surface that state and preserve the user's explicit choice boundary.
