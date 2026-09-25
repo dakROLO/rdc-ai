@@ -10,8 +10,12 @@ interface FoundryLocalProviderOptions {
   endpoint?: string
 }
 
-interface FoundryStatusResponse {
-  Endpoints?: string[]
+interface OpenAIModelRecord {
+  id: string
+}
+
+interface OpenAIModelList {
+  data?: OpenAIModelRecord[]
 }
 
 interface StreamDelta {
@@ -21,6 +25,8 @@ interface StreamDelta {
     }
   }>
 }
+
+type ApiMode = 'v1' | 'legacy'
 
 function normalizeEndpoint(value: string): string {
   const trimmed = value.trim().replace(/\/+$/, '')
@@ -42,6 +48,21 @@ async function assertOk(response: Response, operation: string): Promise<Response
   )
 }
 
+function parseModelNames(payload: unknown): string[] {
+  if (Array.isArray(payload)) {
+    return payload.filter((value): value is string => typeof value === 'string')
+  }
+
+  if (payload && typeof payload === 'object' && 'data' in payload) {
+    const records = (payload as OpenAIModelList).data ?? []
+    return records
+      .map((record) => record.id)
+      .filter((value): value is string => typeof value === 'string' && value.length > 0)
+  }
+
+  return []
+}
+
 export class FoundryLocalProvider implements AIProvider {
   readonly id = 'foundry-local'
   readonly displayName = 'Anne · Foundry Local'
@@ -49,6 +70,7 @@ export class FoundryLocalProvider implements AIProvider {
 
   private readonly endpointCandidates: string[]
   private activeEndpoint?: string
+  private apiMode?: ApiMode
 
   constructor(options: FoundryLocalProviderOptions = {}) {
     const configured =
@@ -68,17 +90,37 @@ export class FoundryLocalProvider implements AIProvider {
           ]
   }
 
-  private async resolveEndpoint(): Promise<string> {
-    if (this.activeEndpoint) return this.activeEndpoint
+  private async probeEndpoint(endpoint: string): Promise<ApiMode> {
+    const currentResponse = await fetch(`${endpoint}/v1/models`)
+
+    if (currentResponse.ok) {
+      return 'v1'
+    }
+
+    const legacyResponse = await fetch(`${endpoint}/openai/status`)
+
+    if (legacyResponse.ok) {
+      return 'legacy'
+    }
+
+    throw new Error(
+      `Foundry Local answered at ${endpoint}, but neither /v1/models nor the legacy /openai/status API is available.`,
+    )
+  }
+
+  private async resolveEndpoint(): Promise<{ endpoint: string; mode: ApiMode }> {
+    if (this.activeEndpoint && this.apiMode) {
+      return { endpoint: this.activeEndpoint, mode: this.apiMode }
+    }
 
     const failures: string[] = []
 
     for (const endpoint of this.endpointCandidates) {
       try {
-        const response = await fetch(`${endpoint}/openai/status`)
-        await assertOk(response, 'Foundry Local status check')
+        const mode = await this.probeEndpoint(endpoint)
         this.activeEndpoint = endpoint
-        return endpoint
+        this.apiMode = mode
+        return { endpoint, mode }
       } catch (error) {
         failures.push(
           `${endpoint}: ${error instanceof Error ? error.message : 'unreachable'}`,
@@ -87,27 +129,25 @@ export class FoundryLocalProvider implements AIProvider {
     }
 
     throw new Error(
-      `Could not reach Foundry Local. Tried ${failures.join(' | ')}`,
+      `Could not reach a supported Foundry Local API. Tried ${failures.join(' | ')}`,
     )
   }
 
   async getAvailability(): Promise<ProviderAvailability> {
     try {
-      const endpoint = await this.resolveEndpoint()
-      const response = await fetch(`${endpoint}/openai/status`)
-      await assertOk(response, 'Foundry Local status check')
-
-      const status = (await response.json()) as FoundryStatusResponse
-      const advertised = status.Endpoints?.join(', ')
+      const { endpoint, mode } = await this.resolveEndpoint()
 
       return {
         available: true,
-        detail: advertised
-          ? `Foundry Local is reachable at ${advertised}.`
-          : `Foundry Local is reachable at ${endpoint}.`,
+        detail:
+          mode === 'v1'
+            ? `Foundry Local OpenAI API is reachable at ${endpoint}/v1.`
+            : `Foundry Local legacy API is reachable at ${endpoint}.`,
       }
     } catch (error) {
       this.activeEndpoint = undefined
+      this.apiMode = undefined
+
       return {
         available: false,
         detail:
@@ -119,11 +159,17 @@ export class FoundryLocalProvider implements AIProvider {
   }
 
   async listModels(): Promise<AIModel[]> {
-    const endpoint = await this.resolveEndpoint()
-    const response = await fetch(`${endpoint}/openai/models`)
+    const { endpoint, mode } = await this.resolveEndpoint()
+    const url =
+      mode === 'v1'
+        ? `${endpoint}/v1/models`
+        : `${endpoint}/openai/models`
+
+    const response = await fetch(url)
     await assertOk(response, 'Foundry Local model discovery')
 
-    const modelNames = (await response.json()) as string[]
+    const payload = (await response.json()) as unknown
+    const modelNames = parseModelNames(payload)
 
     return modelNames.map((name) => ({
       id: name,
@@ -131,25 +177,17 @@ export class FoundryLocalProvider implements AIProvider {
     }))
   }
 
-  private async ensureModelLoaded(modelId: string): Promise<string> {
-    const endpoint = await this.resolveEndpoint()
-    const response = await fetch(
-      `${endpoint}/openai/load/${encodeURIComponent(modelId)}?ttl=3600`,
-    )
-    await assertOk(response, `Loading Foundry Local model ${modelId}`)
-    return endpoint
-  }
-
   async *streamChat(
     request: ChatRequest,
     signal?: AbortSignal,
   ): AsyncIterable<ChatChunk> {
-    const endpoint = await this.ensureModelLoaded(request.modelId)
+    const { endpoint } = await this.resolveEndpoint()
 
     const response = await fetch(`${endpoint}/v1/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Accept: 'text/event-stream',
       },
       body: JSON.stringify({
         model: request.modelId,
@@ -158,6 +196,12 @@ export class FoundryLocalProvider implements AIProvider {
       }),
       signal,
     })
+
+    if (response.status === 404) {
+      throw new Error(
+        `Foundry Local could not find model "${request.modelId}". Load it first with: foundry model load <model-alias>`,
+      )
+    }
 
     await assertOk(response, 'Foundry Local chat completion')
 
@@ -203,16 +247,6 @@ export class FoundryLocalProvider implements AIProvider {
         }
 
         if (done) break
-      }
-
-      const finalLine = buffer.trim()
-      if (finalLine.startsWith('data:')) {
-        const data = finalLine.slice(5).trim()
-        if (data && data !== '[DONE]') {
-          const parsed = JSON.parse(data) as StreamDelta
-          const text = parsed.choices?.[0]?.delta?.content ?? ''
-          if (text) yield { text }
-        }
       }
 
       yield { text: '', done: true }
