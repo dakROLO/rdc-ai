@@ -703,3 +703,276 @@ textarea::placeholder {
     width: calc(100% - 20px);
   }
 }
+
+
+/* Responsive layout hardening */
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  min-width: 320px;
+}
+
+.app-shell {
+  width: 100%;
+  grid-template-columns: clamp(240px, 24vw, 300px) minmax(0, 1fr);
+}
+
+.workspace,
+.topbar,
+.conversation,
+.composer-wrap,
+.composer,
+.message {
+  min-width: 0;
+}
+
+.workspace {
+  overflow-x: hidden;
+}
+
+.topbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 430px);
+  align-items: start;
+}
+
+.provider-area {
+  width: 100%;
+  max-width: 430px;
+  justify-self: end;
+  display: grid;
+  gap: 8px;
+}
+
+.provider-selectors {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  width: 100%;
+}
+
+.provider-selectors label {
+  min-width: 0;
+}
+
+.provider-selectors select {
+  width: 100%;
+  max-width: none;
+}
+
+.provider-pill {
+  justify-content: center;
+}
+
+.conversation {
+  width: 100%;
+  max-width: 920px;
+  padding: 28px 24px 20px;
+  overflow-x: hidden;
+}
+
+.message {
+  width: fit-content;
+  max-width: min(740px, 88%);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.message p {
+  overflow-wrap: anywhere;
+}
+
+.composer-wrap {
+  width: 100%;
+}
+
+@media (max-width: 1100px) {
+  .app-shell {
+    grid-template-columns: 250px minmax(0, 1fr);
+  }
+
+  .topbar {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 16px 20px;
+  }
+
+  .provider-area {
+    max-width: none;
+    justify-self: stretch;
+  }
+
+  .provider-help {
+    text-align: left;
+  }
+
+  .conversation {
+    padding-inline: 18px;
+  }
+
+  .message {
+    max-width: 92%;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    height: 100dvh;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .sidebar {
+    height: auto;
+    max-height: none;
+    min-height: 0;
+    padding: max(8px, env(safe-area-inset-top)) 10px 8px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 10px;
+  }
+
+  .brand-lockup {
+    min-width: 0;
+  }
+
+  .brand-lockup .muted {
+    display: none;
+  }
+
+  .brand-mark {
+    width: 38px;
+    height: 38px;
+  }
+
+  .sidebar h1 {
+    font-size: 1rem;
+  }
+
+  .new-chat-button {
+    width: auto;
+    align-self: center;
+    padding: 9px 12px;
+    white-space: nowrap;
+  }
+
+  .conversation-nav {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 7px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    max-height: 66px;
+    padding: 0 0 2px;
+  }
+
+  .conversation-row {
+    flex: 0 0 min(210px, 68vw);
+  }
+
+  .conversation-open {
+    padding: 7px 9px;
+  }
+
+  .conversation-open small {
+    margin-top: 1px;
+  }
+
+  .workspace {
+    height: 100%;
+    min-height: 0;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .topbar {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .conversation-title .eyebrow {
+    margin-bottom: 2px;
+  }
+
+  .topbar h2 {
+    max-width: 100%;
+    font-size: 1rem;
+  }
+
+  .provider-area {
+    gap: 6px;
+  }
+
+  .provider-selectors {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .provider-selectors label > span {
+    font-size: 0.56rem;
+  }
+
+  .provider-selectors select {
+    padding: 6px 26px 6px 8px;
+    font-size: 0.78rem;
+  }
+
+  .provider-pill {
+    padding: 6px 9px;
+    font-size: 0.7rem;
+  }
+
+  .provider-help {
+    display: none;
+  }
+
+  .conversation {
+    width: 100%;
+    max-width: none;
+    padding: 14px 12px 12px;
+  }
+
+  .message {
+    max-width: 94%;
+    padding: 12px 13px;
+    border-radius: 14px;
+  }
+
+  .message p {
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+
+  .composer-wrap {
+    padding: 7px 10px max(10px, env(safe-area-inset-bottom));
+  }
+
+  .cloud-row {
+    margin-bottom: 6px;
+  }
+
+  .composer {
+    padding: 10px;
+  }
+
+  textarea {
+    max-height: 120px;
+  }
+
+  .privacy-note {
+    display: none;
+  }
+
+  .composer-footer {
+    gap: 8px;
+  }
+
+  .composer-footer > span {
+    max-width: none;
+    font-size: 0.62rem;
+  }
+}
