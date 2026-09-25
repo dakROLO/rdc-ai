@@ -92,3 +92,14 @@ None identified.
 - Legacy version-1 messages are migrated to deterministic sequence positions on database upgrade.
 - Sprint 1.2 is complete; Sprint 2.1 is active.
 - `FoundryLocalProvider` now implements health, cached-model discovery, model load, and SSE streaming through the documented local REST API.
+
+
+## Foundry Local API compatibility finding — 2026-09-24
+
+- The development machine's current Foundry Local daemon returned HTTP 404 for the root path and the older `/openai/status` and `/openai/models` management routes.
+- Current Microsoft Foundry Local examples use the OpenAI-compatible `/v1` service surface for external clients.
+- CrownKeep now probes `/v1/models` first and falls back to the older management surface only when available.
+- CrownKeep development also uses a Vite same-origin proxy to `http://127.0.0.1:39839` to avoid browser CORS becoming part of the local inference test.
+- The current CLI requires a model to be loaded separately for this vertical slice; use `foundry model load phi-4-mini`.
+- Conversation-history scrolling was changed so the app frame remains fixed and only the message pane scrolls.
+- A floating **Latest** button appears when the user scrolls away from the bottom; after generation completes while away, it changes to **Anne finished**.
