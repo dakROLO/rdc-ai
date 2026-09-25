@@ -67,6 +67,42 @@ function formatTokenRate(run: InferenceRunStats | null): string {
   return `${(run.completionTokens / (run.totalMs / 1000)).toFixed(1)} tok/s`
 }
 
+function buildTemporalContext(conversation: Conversation): string {
+  const now = new Date()
+  const timeZone =
+    Intl.DateTimeFormat().resolvedOptions().timeZone || 'Device local time zone'
+  const localNow = new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'full',
+    timeStyle: 'long',
+  }).format(now)
+
+  return [
+    'CrownKeep temporal context:',
+    `- Current device-local date/time: ${localNow}`,
+    `- Device IANA time zone: ${timeZone}`,
+    `- Current UTC timestamp: ${now.toISOString()}`,
+    `- This conversation was created at: ${conversation.createdAt}`,
+    '- Historical messages below are prefixed with their original persisted timestamps.',
+    '- Use these timestamps when interpreting today, yesterday, recently, last N minutes/hours, or the timing/order of prior messages.',
+  ].join('\n')
+}
+
+function messageForInference(message: Message): string {
+  return `[Message timestamp: ${message.createdAt}]\n${message.content}`
+}
+
+function formatMessageTime(value: string): string {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(date)
+}
+
 function modelStorageKey(providerId: string): string {
   return `crownkeep.modelId.${providerId}`
 }
@@ -366,11 +402,15 @@ export default function App() {
     })
 
     try {
+      const contextMessages = [...messages, userMessage].filter(
+        (message) => !message.excludedFromContext && message.content.trim(),
+      )
       const requestMessages = [
         { role: 'system' as const, content: ANNE_SYSTEM_PROMPT },
-        ...[...messages, userMessage].map((message) => ({
+        { role: 'system' as const, content: buildTemporalContext(conversation) },
+        ...contextMessages.map((message) => ({
           role: message.role,
-          content: message.content,
+          content: messageForInference(message),
         })),
       ]
 
@@ -505,6 +545,20 @@ export default function App() {
     }
 
     await openConversation(remaining[0])
+  }
+
+  async function toggleMessageContext(message: Message) {
+    if (isGenerating || !message.content.trim()) return
+
+    const excluded = !message.excludedFromContext
+    await repository.setMessageContextExcluded(message.id, excluded)
+    setMessages((current) =>
+      current.map((item) =>
+        item.id === message.id
+          ? { ...item, excludedFromContext: excluded || undefined }
+          : item,
+      ),
+    )
   }
 
   function stopGeneration() {
@@ -758,16 +812,40 @@ export default function App() {
             <p className="loading-copy">Opening your local Keep…</p>
           ) : (
             messages.map((message) => (
-              <article className={`message ${message.role}`} key={message.id}>
+              <article
+                className={`message ${message.role} ${message.excludedFromContext ? 'context-excluded' : ''}`}
+                key={message.id}
+              >
                 <div className="message-meta">
                   <strong>{message.role === 'user' ? 'You' : 'Anne'}</strong>
-                  {message.role === 'assistant' && (
-                    <span title={`${message.providerId ?? 'unknown'} · ${message.modelId ?? 'unknown'}`}>
-                      ◆ {message.inferenceLocation === 'cloud' ? 'Cloud' : 'Local'}
-                    </span>
-                  )}
+                  <div className="message-meta-actions">
+                    <time dateTime={message.createdAt} title={new Date(message.createdAt).toString()}>
+                      {formatMessageTime(message.createdAt)}
+                    </time>
+                    {message.role === 'assistant' && (
+                      <span title={`${message.providerId ?? 'unknown'} · ${message.modelId ?? 'unknown'}`}>
+                        ◆ {message.inferenceLocation === 'cloud' ? 'Cloud' : 'Local'}
+                      </span>
+                    )}
+                    <button
+                      className="message-context-button"
+                      type="button"
+                      onClick={() => void toggleMessageContext(message)}
+                      disabled={isGenerating || !message.content.trim()}
+                      title={
+                        message.excludedFromContext
+                          ? 'Include this message in future Anne context'
+                          : 'Keep this message in history but omit it from future Anne context'
+                      }
+                    >
+                      {message.excludedFromContext ? '↺ Include' : '⊘ Context'}
+                    </button>
+                  </div>
                 </div>
                 <p>{message.content || '…'}</p>
+                {message.excludedFromContext && (
+                  <small className="context-state">Excluded from future inference context</small>
+                )}
               </article>
             ))
           )}
