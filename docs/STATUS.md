@@ -195,3 +195,20 @@ Conclusion: on virtualized Windows hosts, CrownKeep must benchmark observed exec
 - The AVD test also established that virtual WebGPU model selection can be dramatically slower than an explicitly forced CPU variant.
 - Sprint 2.1 exit criteria are satisfied. **Sprint 2.1 is complete; Sprint 2.2 is active.**
 - Sprint 2.2 should focus on execution-device visibility, observed performance instrumentation, model guidance, startup/provider diagnostics, and UX hardening rather than basic connectivity.
+
+
+## Next action package — Sprint 2.2A Windows local experience hardening
+
+Immediate goal: make CrownKeep explain what local runtime/model it is using, how well it is performing, and what the user should do next without requiring Task Manager or Foundry CLI logs.
+
+Planned work:
+
+1. Add a compact Local AI status/control surface that can replace the always-visible provider/model controls.
+2. Surface provider health, selected model, model variant/device when available, and local/private state.
+3. Capture per-response performance telemetry that CrownKeep can observe directly: request start, first streamed token, completion time, output character/token estimate, and cancellation/error state.
+4. Show a small post-response performance summary in diagnostics rather than cluttering normal chat.
+5. Add model-performance guidance for obvious poor-runtime cases; do not trust a GPU label alone.
+6. Preserve the current manual Foundry/CLI setup for engineering validation while keeping the UI/runtime abstractions compatible with a later embedded Foundry Local SDK.
+7. After diagnostics are stable, move conversation navigation into a collapsible surface and then address Projects separately.
+
+Do not begin Windows installer/Tauri packaging in this package. Packaging remains a later distribution milestone after the local runtime UX and contracts are stable.
