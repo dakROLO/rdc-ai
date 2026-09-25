@@ -6,6 +6,12 @@
 
 The product is designed around one durable conversation experience that can use device-local AI whenever practical and later move explicitly to RDC-hosted cloud AI without binding a conversation to a single model.
 
+## Roadmap
+
+![CrownKeep Sprint Roadmap](public/crownkeep-sprints.svg)
+
+The visual above is shared with the CrownKeep app. Detailed sprint definitions and exit criteria live in [docs/ROADMAP.md](docs/ROADMAP.md).
+
 ## Current status
 
 **Phase 2 — Windows Local AI / Sprint 2.1 — Foundry Local connectivity** is in progress.
@@ -113,3 +119,22 @@ The application contains a future `ContextProvider` interface but does not conne
 ## License
 
 A public-source license has not yet been selected. Until one is chosen, normal copyright applies.
+
+
+## End a local development session
+
+If you are finished with local AI for the day, the simplest cleanup is:
+
+```powershell
+foundry server stop
+```
+
+That stops the Foundry Local daemon and local inference service.
+
+If you want to keep the daemon running but free the loaded model from memory:
+
+```powershell
+foundry model unload phi-4-mini
+```
+
+Downloaded model files remain in the Foundry cache, so unloading or stopping the server does not require re-downloading the model next time.
