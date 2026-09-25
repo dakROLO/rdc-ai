@@ -115,3 +115,12 @@ None identified.
 - New-chat welcome text no longer incorrectly claims the mock provider when Foundry Local is selected later.
 - Responsive layout hardening added for narrow portrait windows and medium-width desktop windows.
 - Message cards now wrap aggressively and retain horizontal breathing room instead of touching/clipping the right edge.
+
+
+## Shared roadmap visual — 2026-09-24
+
+- Added `public/crownkeep-sprints.svg` as the shared at-a-glance project roadmap.
+- The README now renders that SVG directly.
+- CrownKeep now exposes a **Build Roadmap** viewer using the same SVG asset.
+- `docs/ROADMAP.md` remains the detailed source of sprint scope and exit criteria.
+- Added README guidance for ending a Foundry Local session: stop the server when finished, or unload the model if the server should remain running.
