@@ -1,4 +1,5 @@
 import {
+  type DragEvent as ReactDragEvent,
   type FormEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   useEffect,
@@ -217,6 +218,7 @@ export default function App() {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [projectFilter, setProjectFilter] = useState('all')
+  const [dragProjectTarget, setDragProjectTarget] = useState<string | null>(null)
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [prompt, setPrompt] = useState('')
@@ -259,6 +261,13 @@ export default function App() {
     () => new Map(projects.map((project) => [project.id, project])),
     [projects],
   )
+  const activeProject = activeConversation?.projectId
+    ? projectById.get(activeConversation.projectId)
+    : undefined
+  const selectedFilterProject =
+    projectFilter !== 'all' && projectFilter !== 'unassigned'
+      ? projectById.get(projectFilter)
+      : undefined
   const visibleConversations = useMemo(() => {
     if (projectFilter === 'all') return conversations
     if (projectFilter === 'unassigned') {
@@ -731,6 +740,45 @@ export default function App() {
     if (projectFilter === project.id) setProjectFilter('unassigned')
   }
 
+  async function assignConversationProject(
+    conversation: Conversation,
+    projectId?: string,
+  ) {
+    if (isGenerating) return
+
+    await repository.assignConversationToProject(conversation.id, projectId)
+    const next = await refreshConversations()
+    const updated = next.find((item) => item.id === conversation.id)
+
+    if (updated && activeConversation?.id === conversation.id) {
+      setActiveConversation(updated)
+    }
+  }
+
+  async function handleProjectDrop(
+    event: ReactDragEvent<HTMLElement>,
+    projectId?: string,
+  ) {
+    event.preventDefault()
+    const conversationId = event.dataTransfer.getData('text/crownkeep-conversation')
+    setDragProjectTarget(null)
+    if (!conversationId) return
+
+    const conversation = conversations.find((item) => item.id === conversationId)
+    if (!conversation) return
+
+    await assignConversationProject(conversation, projectId)
+  }
+
+  async function changeActiveConversationProject(projectId: string) {
+    const conversation = activeConversation
+    if (!conversation) return
+    await assignConversationProject(
+      conversation,
+      projectId === 'unassigned' ? undefined : projectId,
+    )
+  }
+
   async function moveConversationToProject(conversation: Conversation) {
     if (isGenerating) return
 
@@ -748,23 +796,19 @@ export default function App() {
     const title = value.trim()
 
     if (!title) {
-      await repository.assignConversationToProject(conversation.id)
-    } else {
-      const project = projects.find(
-        (item) => item.title.toLocaleLowerCase() === title.toLocaleLowerCase(),
-      )
-      if (!project) {
-        window.alert('Project not found. Use one of the listed project names.')
-        return
-      }
-      await repository.assignConversationToProject(conversation.id, project.id)
+      await assignConversationProject(conversation)
+      return
     }
 
-    const next = await refreshConversations()
-    const updated = next.find((item) => item.id === conversation.id)
-    if (updated && activeConversation?.id === conversation.id) {
-      setActiveConversation(updated)
+    const project = projects.find(
+      (item) => item.title.toLocaleLowerCase() === title.toLocaleLowerCase(),
+    )
+    if (!project) {
+      window.alert('Project not found. Use one of the listed project names.')
+      return
     }
+
+    await assignConversationProject(conversation, project.id)
   }
 
   async function renameConversation(conversation: Conversation) {
@@ -954,17 +998,60 @@ export default function App() {
         <section className="project-nav" aria-label="Projects">
           <div className="nav-heading-row">
             <p className="nav-heading">Projects</p>
-            <button
-              type="button"
-              className="nav-mini-button"
-              onClick={() => void createProject()}
-              disabled={isGenerating}
-              title="New project"
-              aria-label="New project"
-            >
-              +
-            </button>
+            <div className="project-heading-actions">
+              {selectedFilterProject && (
+                <>
+                  <button
+                    type="button"
+                    className="nav-mini-button project-manage-button"
+                    onClick={() => void renameProject(selectedFilterProject)}
+                    disabled={isGenerating}
+                    title="Rename selected project"
+                    aria-label="Rename selected project"
+                  >
+                    ✎
+                  </button>
+                  <button
+                    type="button"
+                    className="nav-mini-button project-manage-button"
+                    onClick={() => void deleteProject(selectedFilterProject)}
+                    disabled={isGenerating}
+                    title="Delete selected project"
+                    aria-label="Delete selected project"
+                  >
+                    ×
+                  </button>
+                </>
+              )}
+              <button
+                type="button"
+                className="nav-mini-button"
+                onClick={() => void createProject()}
+                disabled={isGenerating}
+                title="New project"
+                aria-label="New project"
+              >
+                +
+              </button>
+            </div>
           </div>
+
+          <select
+            className="project-filter-select"
+            value={projectFilter}
+            onChange={(event) => setProjectFilter(event.target.value)}
+            aria-label="Project filter"
+          >
+            <option value="all">All chats ({conversations.length})</option>
+            <option value="unassigned">
+              Unassigned ({conversations.filter((conversation) => !conversation.projectId).length})
+            </option>
+            {projects.map((project) => (
+              <option value={project.id} key={project.id}>
+                {project.title} ({conversations.filter((conversation) => conversation.projectId === project.id).length})
+              </option>
+            ))}
+          </select>
 
           <button
             className={`project-filter ${projectFilter === 'all' ? 'active' : ''}`}
@@ -976,9 +1063,15 @@ export default function App() {
           </button>
 
           <button
-            className={`project-filter ${projectFilter === 'unassigned' ? 'active' : ''}`}
+            className={`project-filter ${projectFilter === 'unassigned' ? 'active' : ''} ${dragProjectTarget === 'unassigned' ? 'drop-target' : ''}`}
             type="button"
             onClick={() => setProjectFilter('unassigned')}
+            onDragOver={(event) => {
+              event.preventDefault()
+              setDragProjectTarget('unassigned')
+            }}
+            onDragLeave={() => setDragProjectTarget(null)}
+            onDrop={(event) => void handleProjectDrop(event)}
           >
             <span>Unassigned</span>
             <small>{conversations.filter((conversation) => !conversation.projectId).length}</small>
@@ -987,10 +1080,16 @@ export default function App() {
           {projects.map((project) => (
             <div className="project-row" key={project.id}>
               <button
-                className={`project-filter ${projectFilter === project.id ? 'active' : ''}`}
+                className={`project-filter ${projectFilter === project.id ? 'active' : ''} ${dragProjectTarget === project.id ? 'drop-target' : ''}`}
                 type="button"
                 onClick={() => setProjectFilter(project.id)}
-                title={project.title}
+                onDragOver={(event) => {
+                  event.preventDefault()
+                  setDragProjectTarget(project.id)
+                }}
+                onDragLeave={() => setDragProjectTarget(null)}
+                onDrop={(event) => void handleProjectDrop(event, project.id)}
+                title={`${project.title} — drop a conversation here to move it`}
               >
                 <span>{project.title}</span>
                 <small>
@@ -1030,6 +1129,15 @@ export default function App() {
             <div
               className={`conversation-row ${activeConversation?.id === conversation.id ? 'active' : ''}`}
               key={conversation.id}
+              draggable={!isGenerating}
+              onDragStart={(event) => {
+                event.dataTransfer.effectAllowed = 'move'
+                event.dataTransfer.setData(
+                  'text/crownkeep-conversation',
+                  conversation.id,
+                )
+              }}
+              onDragEnd={() => setDragProjectTarget(null)}
             >
               <button
                 className="conversation-open"
@@ -1099,6 +1207,31 @@ export default function App() {
           <div className="conversation-title">
             <p className="eyebrow">Anne · Local assistant</p>
             <h2>{activeConversation?.title ?? 'Opening CrownKeep…'}</h2>
+            {activeConversation && (
+              <label className="active-project-control">
+                <span>Project</span>
+                <select
+                  value={activeConversation.projectId ?? 'unassigned'}
+                  onChange={(event) =>
+                    void changeActiveConversationProject(event.target.value)
+                  }
+                  disabled={isGenerating}
+                  title="Move this conversation to a project"
+                >
+                  <option value="unassigned">Unassigned</option>
+                  {projects.map((project) => (
+                    <option value={project.id} key={project.id}>
+                      {project.title}
+                    </option>
+                  ))}
+                </select>
+                <small>
+                  {activeProject
+                    ? `Stored in ${activeProject.title}`
+                    : 'Not assigned to a project'}
+                </small>
+              </label>
+            )}
           </div>
 
           <div className="provider-area">
