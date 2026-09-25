@@ -121,6 +121,7 @@ Deliverables:
 - cancellation;
 - basic performance instrumentation;
 - startup/provider diagnostics;
+- first-run local AI setup that detects/starts Foundry Local, recommends a model, downloads/loads it, benchmarks observed performance, and persists the working choice;
 - execution-device/model-variant visibility;
 - CPU-only model performance warning and smaller-model fallback guidance;
 - time-to-first-token benchmark / observed-performance check so virtual GPU labels are not trusted blindly;
