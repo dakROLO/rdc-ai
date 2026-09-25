@@ -112,7 +112,7 @@ Exit criteria:
 
 ### Sprint 2.2 — Windows local experience hardening — **IN PROGRESS**
 
-#### Sprint 2.2A — Local AI diagnostics and control surface — **NEXT**
+#### Sprint 2.2A — Local AI diagnostics and control surface — **IMPLEMENTED · VALIDATION PENDING**
 
 Focus:
 
@@ -124,6 +124,17 @@ Focus:
 - keep all diagnostics optional so normal chat remains clean.
 
 Defer installer/native-shell work until these provider/runtime contracts are stable.
+
+#### Sprint 2.2B — Runtime lifecycle + first-run setup — **NEXT AFTER VALIDATION**
+
+Focus:
+
+- define the normal-user local runtime lifecycle behind the provider interface;
+- design first-run Foundry/model setup without requiring PowerShell in the final product;
+- model recommendation based on observed performance rather than catalog labels alone;
+- startup/reconnect/retry behavior;
+- idle/unload behavior and resource release;
+- preserve the current CLI path as an engineering diagnostic only.
 
 **Outcome:** Foundry Local is usable as the normal Windows provider.
 
