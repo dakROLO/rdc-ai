@@ -677,3 +677,54 @@ Notes:
 - Mock providers may show dashes for token counts because they do not emit provider usage metadata.
 - Device display is a runtime hint inferred from model variant identifiers when Foundry exposes CPU/GPU/NPU in the ID; CrownKeep does not treat that label as proof of useful acceleration.
 - Performance guidance uses observed response behavior. A slow GPU-labeled variant on a virtual host should be treated as a candidate for CPU comparison rather than automatically preferred.
+
+
+---
+
+## Temporal context and fixed-origin validation
+
+CrownKeep development is pinned to `http://localhost:5173`.
+
+If another Vite process already owns port 5173, `npm run dev` should now fail instead of silently switching to 5174. This protects the IndexedDB origin used by local conversations.
+
+If 5173 is occupied, identify the process:
+
+```powershell
+Get-NetTCPConnection -LocalPort 5173 -ErrorAction SilentlyContinue |
+  Select-Object LocalAddress,LocalPort,State,OwningProcess
+```
+
+Then inspect or stop the owning process if it is an old CrownKeep/Vite session:
+
+```powershell
+Get-Process -Id <PID>
+Stop-Process -Id <PID>
+```
+
+Do not kill an unknown process without first checking what it is.
+
+### Temporal context test
+
+1. Start CrownKeep on port 5173.
+2. Create a new conversation.
+3. Ask Anne: `What is today's date and what time zone are you using?`
+4. Confirm the answer is based on the device-supplied current date/time rather than model training knowledge.
+5. Send two or three messages a few minutes apart.
+6. Ask: `What have we discussed in the last few minutes?`
+7. Confirm Anne can use the persisted message timestamps in the active conversation.
+
+### Context exclusion test
+
+1. In an existing conversation, use **⊘ Context** on one message.
+2. Confirm the message remains visible and is marked **Excluded from future inference context**.
+3. Send a follow-up question that would otherwise depend on that message.
+4. Confirm the excluded message is not sent in the next inference request.
+5. Use **↺ Include** to restore the message.
+6. Refresh CrownKeep and verify the exclusion/restoration state persists.
+
+Important distinctions:
+
+- Deleting a conversation permanently removes that conversation from this device.
+- **⊘ Context** preserves the local history but omits that message from future inference requests.
+- Other conversations are not automatically part of the active conversation's model context.
+- Cross-conversation local recall is a separate future capability.
