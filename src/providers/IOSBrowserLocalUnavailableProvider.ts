@@ -27,6 +27,7 @@ export class IOSBrowserLocalUnavailableProvider implements AIProvider {
     _request: ChatRequest,
     _signal?: AbortSignal,
   ): AsyncIterable<ChatChunk> {
+    yield* []
     throw new Error(
       'Native Apple on-device AI is unavailable in the browser-only iPhone host.',
     )
