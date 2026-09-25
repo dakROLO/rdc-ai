@@ -25,7 +25,7 @@ Exit criteria:
 - local development can start from the README;
 - no real RDC customer data or production secrets are present.
 
-### Sprint 0.2 — Application shell — **IN PROGRESS**
+### Sprint 0.2 — Application shell — **VALIDATION PENDING**
 
 **Outcome:** A minimal installable PWA runs on Windows and iPhone-compatible browsers.
 
@@ -49,7 +49,7 @@ Exit criteria:
 
 ## Phase 1 — Local Conversation Core
 
-### Sprint 1.1 — Domain + local persistence
+### Sprint 1.1 — Domain + local persistence — **IN PROGRESS**
 
 **Outcome:** Conversations survive reloads without cloud services.
 
