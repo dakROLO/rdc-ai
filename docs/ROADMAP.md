@@ -319,14 +319,19 @@ Deliverables:
 
 ### Sprint 7.2 — Installability + release workflow
 
-**Outcome:** Repeatable Windows/iPhone installation and deployment paths exist.
+**Outcome:** CrownKeep can be downloaded and installed by a normal Windows user without requiring PowerShell or a separately managed Foundry CLI, while repeatable iPhone installation/deployment paths also exist.
 
 Deliverables:
 
+- downloadable Windows setup executable;
+- native desktop shell around the existing React UI where required for local runtime ownership;
+- embedded Foundry Local SDK integration for normal-user installs;
+- first-run model download/benchmark/setup flow;
+- code-signing and Windows trust/reputation plan;
 - release/versioning approach;
-- CI build/test workflow;
+- CI build/test/release workflow;
 - deployment environment conventions;
-- install documentation;
+- install/update documentation;
 - backup/export strategy for local conversation data.
 
 ---
@@ -359,7 +364,7 @@ Exit criteria:
 - agents;
 - voice/transcription;
 - Ollama;
-- native wrappers unless justified by a concrete capability gap.
+- additional native wrappers beyond the Windows desktop distribution path unless justified by a concrete capability gap.
 
 
 ---
