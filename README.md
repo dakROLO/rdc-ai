@@ -8,7 +8,7 @@ The product is designed around one durable conversation experience that can use 
 
 ## Current status
 
-**Phase 1 — Local Conversation Core / Sprint 1.2 — Provider-neutral streaming chat** is in progress.
+**Phase 2 — Windows Local AI / Sprint 2.1 — Foundry Local connectivity** is in progress.
 
 Current build:
 
@@ -19,7 +19,9 @@ Current build:
 - provider registry and provider/model selection;
 - development provider switching without changing conversations;
 - Enter-to-send and Shift+Enter newline behavior;
-- mock local streaming provider;
+- mock local streaming providers;
+- first real Microsoft Foundry Local REST provider;
+- deterministic message ordering across IndexedDB reloads;
 - responsive Windows/mobile browser UI;
 - future cloud controls intentionally disabled;
 - no RDC customer data connection.
@@ -84,6 +86,18 @@ npm run build
 ```
 
 See [Testing Guide](docs/TESTING.md) for the current sprint acceptance procedure.
+
+### Foundry Local development
+
+The first real Windows-local integration expects Foundry Local on a stable loopback port:
+
+```powershell
+foundry server restart --port 39839 --idle-timeout 0
+foundry model download phi-4-mini
+foundry server status
+```
+
+Then run CrownKeep and choose **Anne · Foundry Local**.
 
 ## Core architectural rule
 
