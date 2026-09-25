@@ -1,4 +1,4 @@
-# RDC AI — Testing Guide
+# CrownKeep — Testing Guide
 
 This guide is the executable test plan for the current sprint. It should evolve into the public installation/use documentation as the product matures.
 
@@ -319,3 +319,59 @@ Each assistant message retains its own provider/model metadata even when the con
 ### Cancellation regression
 
 Start a streamed response and use **Stop**. Confirm the conversation remains usable and can continue afterward.
+
+
+---
+
+## Message-order regression test
+
+This specifically validates the IndexedDB version-2 sequence migration.
+
+1. Pull the latest `main`.
+2. Open a conversation created before the ordering fix.
+3. Refresh the page.
+4. Confirm each user message appears before the Anne response it triggered.
+5. Send three short messages quickly.
+6. Refresh again.
+7. Confirm the order remains exactly the same.
+
+New messages use an explicit per-conversation sequence and no longer rely only on millisecond timestamps.
+
+---
+
+## Sprint 2.1 — Foundry Local first real-model test
+
+### Prepare Foundry Local
+
+Use a second PowerShell window:
+
+```powershell
+foundry server restart --port 39839 --idle-timeout 0
+foundry model download phi-4-mini
+foundry server status
+```
+
+The status endpoint should show `http://localhost:39839`.
+
+CrownKeep's first development integration uses that fixed loopback endpoint. The endpoint can be overridden with `VITE_FOUNDRY_LOCAL_ENDPOINT`.
+
+### Run CrownKeep
+
+```powershell
+git pull
+npm install
+npm run dev
+```
+
+Then:
+
+1. Open CrownKeep.
+2. Select **Anne · Foundry Local** as Provider.
+3. Confirm the status changes from unavailable to **Inside the Keep**.
+4. Confirm the downloaded model appears in the Model selector.
+5. Select it.
+6. Ask Anne a simple question.
+7. Confirm the answer streams rather than appearing all at once.
+8. Refresh and confirm the conversation remains in correct order.
+
+CrownKeep calls Foundry Local directly on the PC. No Azure or cloud inference is involved in this test.
