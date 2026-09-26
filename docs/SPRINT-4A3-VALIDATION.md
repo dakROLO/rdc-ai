@@ -133,6 +133,19 @@ Observed winner:
 
 This is an expected outcome under the adaptive policy: CrownKeep should select the fastest measured path rather than prefer a GPU-labelled variant by assumption. The RTX 5070 remains a candidate signal, not a forced execution choice.
 
+### Physical laptop retest — Balanced benchmark
+
+The repaired Balanced benchmark completed successfully on the primary Windows laptop using `mistral-nemo-12b-instruct`.
+
+Observed winner:
+
+- execution provider: `CUDAExecutionProvider`
+- first token: **811 ms**
+- observed generation rate: **39.0 tok/s**
+- result: accepted as the fastest measured Balanced path for this device
+
+This is strong evidence that the adaptive policy is working as intended: the same laptop selected CPU for Quick Phi-4 Mini and CUDA for the heavier Balanced model based on measured results rather than a host-level GPU preference.
+
 ## Known implementation limits
 
 - RAM filtering uses disk-size × 1.5 + 2 GB as a conservative estimate, not a guarantee of peak memory or VRAM fit. Native load failures remain benchmark failures.
