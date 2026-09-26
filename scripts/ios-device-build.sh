@@ -102,3 +102,12 @@ echo "Launching CrownKeep…"
 xcrun devicectl device process launch   --device "$DEVICE_ID"   "$BUNDLE_ID"
 
 echo "CrownKeep launched on the paired iPhone."
+
+if [[ "${CROWNKEEP_SLEEP_AFTER:-0}" == "1" ]]; then
+  echo "Returning the Mac to sleep in 5 seconds…"
+  sleep 5
+  /usr/bin/osascript -e 'tell application "System Events" to sleep' || {
+    echo "CrownKeep deployed successfully, but the Mac could not be put to sleep automatically."
+    exit 0
+  }
+fi
