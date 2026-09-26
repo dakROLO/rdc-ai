@@ -9,9 +9,10 @@
     "lint": "oxlint",
     "typecheck": "tsc -b",
     "preview": "vite preview",
-    "desktop:dev": "tauri dev",
-    "desktop:build": "tauri build",
-    "tauri": "tauri"
+    "desktop:dev": "npm run desktop:prepare && tauri dev",
+    "desktop:build": "npm run desktop:prepare && tauri build",
+    "tauri": "tauri",
+    "desktop:prepare": "tauri icon public/crownkeep-mark.svg"
   },
   "dependencies": {
     "react": "^19.3.0",
