@@ -2158,3 +2158,30 @@ body {
     max-width: 108px;
   }
 }
+
+
+.diagnostics-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.diagnostics-heading-row > strong {
+  color: var(--stone);
+  font-size: 0.76rem;
+}
+
+.diagnostics-close-button {
+  border: 1px solid rgba(232, 228, 218, 0.14);
+  border-radius: 8px;
+  padding: 5px 9px;
+  background: rgba(232, 228, 218, 0.05);
+  color: var(--stone);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.diagnostics-close-button:hover {
+  border-color: rgba(46, 230, 184, 0.42);
+}
