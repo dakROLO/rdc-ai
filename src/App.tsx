@@ -602,20 +602,42 @@ export default function App() {
       isGenerating ||
       runtimeSleeping ||
       providerAvailability?.available !== false ||
-      !setupRecord?.healthy
+      modelCandidates.length === 0
     ) {
       return
     }
 
+    const preferred = preferredNativeModelId()
+    const normalizedPreferred = normalizeRuntimeModelKey(preferred)
+
+    const candidate =
+      modelCandidates.find(
+        (item) =>
+          item.cached &&
+          (normalizeRuntimeModelKey(item.id) === normalizedPreferred ||
+            item.alias.toLocaleLowerCase() === preferred.toLocaleLowerCase()),
+      ) ??
+      modelCandidates.find(
+        (item) =>
+          item.cached &&
+          item.alias.toLocaleLowerCase() ===
+            DEFAULT_WINDOWS_MODEL_ALIAS.toLocaleLowerCase(),
+      ) ??
+      modelCandidates.find((item) => item.cached)
+
+    if (!candidate) return
+
     autoRestoreAttemptedRef.current = true
-    void prepareNativeLocalAi(setupRecord.modelId, { quiet: true })
+    localStorage.setItem(PREFERRED_WINDOWS_MODEL_KEY, candidate.id)
+    setRuntimeActionMessage(`Restoring ${candidate.alias} from the local cache…`)
+    void prepareNativeLocalAi(candidate.id, { quiet: true })
   }, [
     isGenerating,
     isRuntimeActionRunning,
+    modelCandidates,
     providerAvailability,
     runtimeSleeping,
     selectedProviderId,
-    setupRecord,
   ])
 
   useEffect(() => {
@@ -654,6 +676,10 @@ export default function App() {
       void refreshModelAnalyst()
     }
   }, [selectedProviderId, providerRefreshNonce])
+
+  function normalizeRuntimeModelKey(value: string): string {
+    return value.split(':')[0].trim().toLocaleLowerCase()
+  }
 
   function preferredNativeModelId(): string {
     return (
