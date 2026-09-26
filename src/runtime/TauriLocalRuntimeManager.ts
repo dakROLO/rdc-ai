@@ -140,6 +140,10 @@ export class TauriLocalRuntimeManager implements LocalRuntimeManager {
     return invokeAction('crownkeep_foundry_unload_model', { modelId })
   }
 
+  removeCachedModel(modelId: string): Promise<RuntimeActionResult> {
+    return invokeAction('crownkeep_foundry_remove_cached_model', { modelId })
+  }
+
   listModelCandidates(): Promise<RuntimeModelCandidate[]> {
     return invoke<NativeFoundryModelCandidate[]>('crownkeep_foundry_models')
   }
