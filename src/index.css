@@ -2411,7 +2411,7 @@ body {
   letter-spacing: 0.06em;
 }
 
-@media (min-width: 761px) and (max-width: 1180px) {
+@media (min-width: 761px) and (max-width: 1320px) {
   .topbar {
     padding: 14px 18px;
     gap: 12px;
