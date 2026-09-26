@@ -74,6 +74,7 @@ export interface LocalRuntimeManager {
   start(): Promise<RuntimeActionResult>
   stop(): Promise<RuntimeActionResult>
   installModel(modelId: string): Promise<RuntimeActionResult>
+  activateModel(modelId: string): Promise<RuntimeActionResult>
   loadModel(modelId: string): Promise<RuntimeActionResult>
   unloadModel(modelId: string): Promise<RuntimeActionResult>
   listModelCandidates(): Promise<RuntimeModelCandidate[]>
