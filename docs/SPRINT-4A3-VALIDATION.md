@@ -66,6 +66,18 @@ Observed on the primary Windows laptop:
 - while beginning the `Phi-4-mini-reasoning-generic-gpu:3` download, the native CrownKeep process exited with Windows `0xc0000005 (STATUS_ACCESS_VIOLATION)`;
 - the earlier Vite `ECONNREFUSED` messages occurred while the embedded Foundry web service was not yet listening and are not, by themselves, evidence of the access-violation cause.
 
+### Crash recovery observation
+
+After restarting CrownKeep following the native access violation:
+
+- the application launched normally and existing local state remained available;
+- CrownKeep restored the previously verified cached `Phi-4-mini-instruct-generic-cpu:5` model;
+- Local AI health returned to **Ready** and the setup remained **Verified**;
+- the two successfully downloaded reasoning variants (`phi-4-mini-reasoning-openvino-gpu` and `phi-4-mini-reasoning-cuda-gpu`) remained visible in the model list;
+- CrownKeep displayed **"Hardware or runtime changed. Previous measurements are stale"** immediately after restart.
+
+The stale-profile warning exposes a fingerprint design issue. `crownkeep_device_profile` currently hashes a live list of Foundry/ONNX/WinML DLLs loaded into the CrownKeep process. That list can change with runtime lifecycle state even when the physical hardware, driver, Foundry installation, and compatible execution providers have not changed. The fingerprint should use stable runtime/version inputs rather than the process's currently loaded module set.
+
 ### Required follow-up before retry
 
 1. Add real model-download progress to the CrownKeep UI, including percentage and current model/variant so a long benchmark can be left running and checked later.
