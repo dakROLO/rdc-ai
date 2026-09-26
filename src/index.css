@@ -2672,9 +2672,38 @@ body {
 /* Local model families and dictation share the compact host layout. */
 .model-role { border-top: 1px solid var(--border, #31524b); padding-top: .5rem; }
 .model-family { display: grid; gap: .45rem; padding: .8rem 0; overflow-wrap: anywhere; }
+.model-family.recommended {
+  margin-top: .35rem;
+  padding: .85rem;
+  border: 1px solid rgba(46, 230, 184, .16);
+  border-radius: 12px;
+  background: rgba(46, 230, 184, .035);
+}
+.model-family-heading { display: flex; align-items: center; justify-content: space-between; gap: .6rem; }
+.model-recommended-badge {
+  border: 1px solid rgba(46, 230, 184, .24);
+  border-radius: 999px;
+  padding: .18rem .45rem;
+  color: #9eead6;
+  font-size: .62rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
 .model-family > span { font-size: .8rem; opacity: .85; }
 .model-family details { font-size: .75rem; }
+.more-models { border-top: 1px solid var(--border, #31524b); padding-top: .7rem; }
+.more-models > summary { cursor: pointer; font-weight: 800; color: var(--stone); }
+.model-progress { display: grid; gap: .35rem; }
+.model-progress progress,
+.dictation-progress progress {
+  width: 100%;
+  height: .55rem;
+  accent-color: var(--jade-glow);
+}
+.model-progress small,
+.dictation-progress small { color: var(--muted); font-size: .68rem; }
 .dictation-control { display: flex; align-items: center; flex-wrap: wrap; gap: .35rem; max-width: 24rem; }
 .dictation-control > span { font-size: .72rem; flex-basis: 100%; }
+.dictation-progress { display: grid; grid-template-columns: minmax(8rem, 1fr) auto; align-items: center; gap: .45rem; width: 100%; }
 .composer-actions { flex-wrap: wrap; }
 @media (max-width: 700px) { .dictation-control { max-width: 14rem; } }
