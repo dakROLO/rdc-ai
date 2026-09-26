@@ -657,8 +657,8 @@ export default function App() {
 
   function preferredNativeModelId(): string {
     return (
-      setupRecord?.modelId ||
       localStorage.getItem(PREFERRED_WINDOWS_MODEL_KEY) ||
+      setupRecord?.modelId ||
       DEFAULT_WINDOWS_MODEL_ALIAS
     )
   }
@@ -968,9 +968,6 @@ export default function App() {
         }
         saveLocalAiSetupRecord(record)
         setSetupRecord(record)
-        if (provider.id === 'foundry-local') {
-          localStorage.setItem(PREFERRED_WINDOWS_MODEL_KEY, selectedModelId)
-        }
       }
 
       await repository.saveMessage({ ...assistantMessage, content: assistantContent })
@@ -1006,9 +1003,6 @@ export default function App() {
     if (isGenerating) return
     setSelectedModelId(modelId)
     localStorage.setItem(modelStorageKey(selectedProviderId), modelId)
-    if (selectedProviderId === 'foundry-local') {
-      localStorage.setItem(PREFERRED_WINDOWS_MODEL_KEY, modelId)
-    }
   }
 
   async function createProject() {
@@ -1207,7 +1201,6 @@ export default function App() {
 
       saveLocalAiSetupRecord(record)
       setSetupRecord(record)
-      localStorage.setItem(PREFERRED_WINDOWS_MODEL_KEY, selectedModelId)
 
       setLastRun({
         providerId: selectedProviderId,
