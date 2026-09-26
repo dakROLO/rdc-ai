@@ -1432,6 +1432,18 @@ export default function App() {
                 <details className="diagnostics-disclosure">
                   <summary>Diagnostics</summary>
                   <div className="diagnostics-panel">
+                    <div className="diagnostics-heading-row">
+                      <strong>Local AI diagnostics</strong>
+                      <button
+                        type="button"
+                        className="diagnostics-close-button"
+                        onClick={(event) =>
+                          event.currentTarget.closest('details')?.removeAttribute('open')
+                        }
+                      >
+                        Close
+                      </button>
+                    </div>
                     <div className="diagnostics-grid">
                       <div><span>Last result</span><strong>{lastRun?.outcome ?? 'No run yet'}</strong></div>
                       <div><span>First token</span><strong>{formatDuration(lastRun?.firstTokenMs)}</strong></div>
