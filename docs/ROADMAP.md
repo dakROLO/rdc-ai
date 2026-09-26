@@ -179,7 +179,7 @@ Deliverables:
 - Apple availability-state mapping for device eligibility, Apple Intelligence state, and model readiness;
 - first Swift `CrownKeepFoundationModelsService` scaffold using `SystemLanguageModel` and `LanguageModelSession`.
 
-#### Sprint 3.1B — Minimal native iPhone host — **NEXT**
+#### Sprint 3.1B — Minimal native iPhone host — **IMPLEMENTED · DEVICE VALIDATION PENDING**
 
 Deliverables:
 
