@@ -100,6 +100,26 @@ The first recovered normal-chat response also repeated the injected **CrownKeep 
 
 Do not treat the laptop model-selection acceptance gate as passed until the UI-selected model and the actual native loaded model are guaranteed to agree.
 
+### Windows dictation observation
+
+Physical laptop dictation reached the microphone permission and recording flow but then remained indefinitely at **Transcribing…** with no transcript returned.
+
+Code review shows this path currently has several acceptance gaps:
+
+- first-use Whisper download occurs inside the native `crownkeep_transcribe` command with `model.download(None::<fn(f64)>)`, so the UI receives no download percentage and reports only **Transcribing…** even when it may actually be downloading a speech model;
+- the native speech command emits no stage/progress events for resolve, download, chat-model release, speech-model load, transcription, speech-model unload, or chat-model restore;
+- the frontend `invoke('crownkeep_transcribe')` has no transcription timeout, so a stalled native download/load/transcribe can leave the composer locked indefinitely;
+- pressing Cancel during native transcription only invalidates the frontend epoch and releases microphone resources; it does not cancel or time out the in-flight native Tauri command. The UI can therefore remain logically blocked until native work eventually returns;
+- the speech path temporarily unloads the active chat model and later reloads it, so failure recovery needs explicit physical validation after any timeout/cancel condition.
+
+Required fix before Windows dictation can pass:
+
+1. expose native speech stage/progress events, including model alias/variant and real download percentage when downloading;
+2. distinguish **Downloading speech model**, **Loading**, **Transcribing**, and **Restoring chat model** in the composer UI;
+3. add a bounded native/frontend timeout and a safe recovery path;
+4. make Cancel visibly mean either immediate cancellation when supported or **Cancel requested / finishing cleanup** when the native operation cannot be preempted;
+5. verify the prior chat model is restored after success, failure, timeout, and cancellation.
+
 ## Known implementation limits
 
 - RAM filtering uses disk-size × 1.5 + 2 GB as a conservative estimate, not a guarantee of peak memory or VRAM fit. Native load failures remain benchmark failures.
