@@ -294,7 +294,36 @@ Exit criteria:
 - runtime/model failures surface through CrownKeep without corrupting conversations;
 - the browser build remains capability-aware and does not pretend to own native lifecycle actions.
 
-### Sprint 4A.3 — Stable desktop storage + installer proof
+### Sprint 4A.3 — Local Platform Convergence / Pause Point — **PLANNED**
+
+**Outcome:** Converge the validated Windows, iPhone, and AVD local-first paths into one device-aware baseline before beginning cloud work.
+
+Detailed sprint contract: [Sprint 4A.3 — Local Platform Convergence](SPRINT-4A3-LOCAL-PLATFORM-CONVERGENCE.md).
+
+Focus:
+
+- collapse the Foundry catalog into useful model families/roles instead of exposing a massive raw variant list;
+- use model aliases for normal selection and retain full variants only for diagnostics/advanced control;
+- benchmark a **Quick**, **Balanced**, and **Experimental/Deep** local portfolio on the primary Windows laptop;
+- add local voice dictation through a shared speech-input contract;
+- use Foundry Local Whisper on Windows and native Apple Speech on iPhone;
+- bring the physical iPhone forward onto the current shared build and revalidate Apple Foundation Models, projects, persistence, streaming, and compact mobile UX;
+- bring the AVD forward onto the current shared build and persist a constrained CPU-first profile based on observed performance rather than virtual GPU labels;
+- validate idle unload/wake and non-blocking startup across device-appropriate profiles;
+- update repository documentation, merge the validated convergence branch to `main`, clean stale contained phase branches, and mark a local-baseline pause point.
+
+Exit criteria:
+
+- primary Windows, physical iPhone, and AVD all run the current shared CrownKeep baseline;
+- Windows shows a short useful model recommendation set with observed benchmark evidence;
+- local dictation reaches the composer on Windows and iPhone;
+- AVD remains interactive using a device-appropriate CPU profile;
+- no silent cloud fallback is introduced;
+- validated work is merged to `main` and documented without relying on chat history.
+
+---
+
+### Sprint 4A.4 — Stable desktop storage + installer proof
 
 **Outcome:** CrownKeep behaves like an installed Windows product rather than a development web origin.
 
