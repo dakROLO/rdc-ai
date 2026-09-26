@@ -216,9 +216,73 @@ Exit criteria:
 
 ---
 
-## Phase 4 — RDC Cloud Identity & API Foundation
+## Phase 4A — Windows Product Host — **ACTIVE**
 
-### Sprint 4.1 — Entra authentication
+### Sprint 4A.1 — Native shell proof
+
+**Outcome:** The existing CrownKeep React application runs unchanged inside a Windows native desktop host and can prove the native host boundary without breaking browser development.
+
+Deliverables:
+
+- Tauri 2 shell around the existing Vite/React application;
+- fixed development URL/origin compatible with the existing local-storage assumptions;
+- native host identity command exposed to the React layer;
+- runtime-manager selection between browser development and native Windows host;
+- no Foundry Local lifecycle ownership yet;
+- browser/PWA mode remains functional.
+
+Exit criteria:
+
+- `npm run desktop:dev` opens CrownKeep in a native Windows window;
+- CrownKeep reports that the native Windows host is connected;
+- existing conversations/projects render normally;
+- existing Foundry Local browser-development path still works outside Tauri;
+- normal web build/lint/typecheck remain green.
+
+### Sprint 4A.2 — Embedded Foundry Local lifecycle
+
+**Outcome:** The Windows host owns the local runtime/model lifecycle so a normal user does not need to operate the Foundry CLI.
+
+Deliverables:
+
+- integrate the official Foundry Local Rust SDK with Windows WinML support;
+- inspect compatible models for the current hardware;
+- acquire/install a selected model;
+- load/unload model lifecycle;
+- runtime start/stop or equivalent host-owned lifecycle;
+- expose lifecycle operations through the existing `LocalRuntimeManager` contract;
+- retain observed-performance verification before persisting a recommended model choice.
+
+Exit criteria:
+
+- a clean Windows test host can reach a ready local-model state from CrownKeep without manual Foundry CLI commands;
+- runtime/model failures surface through CrownKeep without corrupting conversations;
+- the browser build remains capability-aware and does not pretend to own native lifecycle actions.
+
+### Sprint 4A.3 — Stable desktop storage + installer proof
+
+**Outcome:** CrownKeep behaves like an installed Windows product rather than a development web origin.
+
+Deliverables:
+
+- stable desktop application storage/origin validation;
+- local conversation/project migration/export strategy from the browser-development origin;
+- first Windows setup executable proof;
+- CrownKeep icon/product metadata;
+- install/update/uninstall behavior documented;
+- code-signing/reputation plan documented before public distribution.
+
+Exit criteria:
+
+- install on a second Windows machine does not require Vite, PowerShell, or a separately managed Foundry CLI;
+- local conversations survive normal application restart/update behavior;
+- uninstall/data-retention behavior is explicit.
+
+---
+
+## Phase 4B — RDC Cloud Identity & API Foundation
+
+### Sprint 4B.1 — Entra authentication
 
 **Outcome:** Cloud features can authenticate an RDC user without coupling local chat to sign-in.
 
@@ -236,7 +300,7 @@ Exit criteria:
 - authenticated API calls can obtain a scoped token;
 - secrets are not present in the client.
 
-### Sprint 4.2 — Minimal Azure API foundation
+### Sprint 4B.2 — Minimal Azure API foundation
 
 **Outcome:** A small RDC-hosted API exists as the cloud boundary.
 
