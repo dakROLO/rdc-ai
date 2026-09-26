@@ -126,6 +126,42 @@ fn normalized_model_key(value: &str) -> String {
         .to_ascii_lowercase()
 }
 
+
+fn run_foundry_cache_remove(model_id: &str) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    use std::os::windows::process::CommandExt;
+
+    fn run(args: &[&str]) -> Result<std::process::Output, String> {
+        let mut command = std::process::Command::new("foundry");
+        #[cfg(target_os = "windows")]
+        command.creation_flags(0x08000000);
+        command
+            .args(args)
+            .output()
+            .map_err(|error| format!("Could not start Foundry Local CLI: {error}"))
+    }
+
+    let first = run(&["cache", "remove", model_id, "--force"])?;
+    if first.status.success() {
+        return Ok(());
+    }
+
+    // Newer preview builds renamed remove to rm; support both forms.
+    let second = run(&["cache", "rm", model_id, "--force"])?;
+    if second.status.success() {
+        return Ok(());
+    }
+
+    let first_error = String::from_utf8_lossy(&first.stderr).trim().to_string();
+    let second_error = String::from_utf8_lossy(&second.stderr).trim().to_string();
+    Err(format!(
+        "Foundry Local could not remove cached model '{}'. remove: {} rm: {}",
+        model_id,
+        if first_error.is_empty() { "command failed" } else { first_error.as_str() },
+        if second_error.is_empty() { "command failed" } else { second_error.as_str() },
+    ))
+}
+
 async fn resolve_model(alias_or_id: &str) -> Result<std::sync::Arc<foundry_local_sdk::Model>, String> {
     let manager = foundry_manager()?;
     let catalog = manager.catalog();
@@ -742,16 +778,125 @@ async fn crownkeep_foundry_load_model(model_id: String) -> Result<FoundryActionR
 
 #[tauri::command]
 async fn crownkeep_foundry_unload_model(model_id: String) -> Result<FoundryActionResult, String> {
+    let _guard = FOUNDRY_LIFECYCLE_LOCK.lock().await;
+    let manager = foundry_manager()?;
     let model = resolve_model(&model_id).await?;
+
+    let loaded = manager
+        .catalog()
+        .get_loaded_models()
+        .await
+        .map_err(|error| format!("Could not inspect loaded Foundry models: {error}"))?;
+
+    let target_loaded = loaded
+        .iter()
+        .any(|item| normalized_model_key(item.id()) == normalized_model_key(model.id()));
+
+    if !target_loaded {
+        return Ok(FoundryActionResult {
+            supported: true,
+            detail: format!("Foundry Local model '{}' is already unloaded.", model.id()),
+        });
+    }
+
+    let service_was_running = !manager
+        .urls()
+        .map_err(|error| format!("Could not inspect Foundry Local service state: {error}"))?
+        .is_empty();
+
+    if service_was_running {
+        manager
+            .stop_web_service()
+            .await
+            .map_err(|error| format!("Could not pause Foundry Local before unloading: {error}"))?;
+    }
 
     model
         .unload()
         .await
         .map_err(|error| format!("Could not unload Foundry Local model '{model_id}': {error}"))?;
 
+    let remaining = manager
+        .catalog()
+        .get_loaded_models()
+        .await
+        .map_err(|error| format!("Model unloaded, but remaining load state could not be inspected: {error}"))?;
+
+    if service_was_running && !remaining.is_empty() {
+        manager
+            .start_web_service()
+            .await
+            .map_err(|error| format!("Model unloaded, but Foundry Local service could not restart: {error}"))?;
+    }
+
     Ok(FoundryActionResult {
         supported: true,
         detail: format!("Unloaded Foundry Local model '{}'.", model.id()),
+    })
+}
+
+#[tauri::command]
+async fn crownkeep_foundry_remove_cached_model(
+    app: tauri::AppHandle,
+    model_id: String,
+) -> Result<FoundryActionResult, String> {
+    let _guard = FOUNDRY_LIFECYCLE_LOCK.lock().await;
+    let manager = foundry_manager()?;
+    let model = resolve_model(&model_id).await?;
+
+    let loaded = manager
+        .catalog()
+        .get_loaded_models()
+        .await
+        .map_err(|error| format!("Could not inspect loaded Foundry models: {error}"))?;
+
+    if loaded
+        .iter()
+        .any(|item| normalized_model_key(item.id()) == normalized_model_key(model.id()))
+    {
+        return Err(format!(
+            "Unload '{}' before deleting it from this device.",
+            model.alias()
+        ));
+    }
+
+    if !model
+        .is_cached()
+        .await
+        .map_err(|error| format!("Could not inspect cache state for '{}': {error}", model.id()))?
+    {
+        return Ok(FoundryActionResult {
+            supported: true,
+            detail: format!("Foundry Local model '{}' is not cached.", model.id()),
+        });
+    }
+
+    emit_operation_progress(
+        &app,
+        "removing-cache",
+        format!("Deleting {} from this device…", model.alias()),
+        Some(model.id().to_string()),
+        Some(model.alias().to_string()),
+        None,
+    );
+
+    let requested = model.id().to_string();
+    tauri::async_runtime::spawn_blocking(move || run_foundry_cache_remove(&requested))
+        .await
+        .map_err(|error| format!("Cache cleanup task failed: {error}"))??;
+
+    emit_operation_progress(
+        &app,
+        "cache-removed",
+        format!("{} was deleted from this device.", model.alias()),
+        Some(model.id().to_string()),
+        Some(model.alias().to_string()),
+        Some(100.0),
+    );
+
+    Ok(FoundryActionResult {
+        supported: true,
+        detail: format!("Deleted cached Foundry Local model '{}'.", model.id()),
     })
 }
 
@@ -770,7 +915,8 @@ pub fn run() {
             crownkeep_foundry_install_model,
             crownkeep_foundry_activate_model,
             crownkeep_foundry_load_model,
-            crownkeep_foundry_unload_model
+            crownkeep_foundry_unload_model,
+            crownkeep_foundry_remove_cached_model
         ])
         .run(tauri::generate_context!())
         .expect("error while running CrownKeep");
