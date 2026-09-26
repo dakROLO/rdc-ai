@@ -128,6 +128,10 @@ export class TauriLocalRuntimeManager implements LocalRuntimeManager {
     return invokeAction('crownkeep_foundry_install_model', { modelId })
   }
 
+  activateModel(modelId: string): Promise<RuntimeActionResult> {
+    return invokeAction('crownkeep_foundry_activate_model', { modelId })
+  }
+
   loadModel(modelId: string): Promise<RuntimeActionResult> {
     return invokeAction('crownkeep_foundry_load_model', { modelId })
   }
