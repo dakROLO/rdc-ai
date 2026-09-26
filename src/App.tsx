@@ -71,6 +71,7 @@ const DEFAULT_TITLE = 'New conversation'
 const PROVIDER_STORAGE_KEY = 'crownkeep.providerId'
 const SIDEBAR_STORAGE_KEY = 'crownkeep.sidebarCollapsed'
 const LOCAL_AI_SETUP_STORAGE_KEY = 'crownkeep.localAiSetup'
+const DEFAULT_WINDOWS_MODEL_ALIAS = 'phi-4-mini'
 
 interface LocalAiSetupRecord {
   providerId: string
@@ -261,6 +262,8 @@ export default function App() {
   const [providerRefreshNonce, setProviderRefreshNonce] = useState(0)
   const [isRuntimeCheckRunning, setIsRuntimeCheckRunning] = useState(false)
   const [runtimeCheckError, setRuntimeCheckError] = useState<string | null>(null)
+  const [isRuntimeActionRunning, setIsRuntimeActionRunning] = useState(false)
+  const [runtimeActionMessage, setRuntimeActionMessage] = useState<string | null>(null)
   const [setupRecord, setSetupRecord] = useState<LocalAiSetupRecord | null>(
     () => readLocalAiSetupRecord(),
   )
@@ -528,6 +531,87 @@ export default function App() {
     window.addEventListener('focus', handleFocus)
     return () => window.removeEventListener('focus', handleFocus)
   }, [selectedProviderId])
+
+  async function prepareNativeLocalAi() {
+    if (
+      localRuntimeManager.mode !== 'embedded' ||
+      isRuntimeActionRunning ||
+      isGenerating
+    ) {
+      return
+    }
+
+    setIsRuntimeActionRunning(true)
+    setRuntimeCheckError(null)
+    setRuntimeActionMessage(
+      `Preparing ${DEFAULT_WINDOWS_MODEL_ALIAS}. First setup may download local runtime components and the model.`,
+    )
+
+    try {
+      const installResult = await localRuntimeManager.installModel(
+        DEFAULT_WINDOWS_MODEL_ALIAS,
+      )
+      setRuntimeActionMessage(installResult.detail)
+
+      const loadResult = await localRuntimeManager.loadModel(
+        DEFAULT_WINDOWS_MODEL_ALIAS,
+      )
+      setRuntimeActionMessage(loadResult.detail)
+
+      const startResult = await localRuntimeManager.start()
+      setRuntimeActionMessage(startResult.detail)
+      setProviderRefreshNonce((current) => current + 1)
+    } catch (error) {
+      setRuntimeCheckError(
+        error instanceof Error
+          ? error.message
+          : 'CrownKeep could not prepare local AI.',
+      )
+    } finally {
+      setIsRuntimeActionRunning(false)
+    }
+  }
+
+  async function stopNativeLocalAi() {
+    if (
+      localRuntimeManager.mode !== 'embedded' ||
+      isRuntimeActionRunning ||
+      isGenerating
+    ) {
+      return
+    }
+
+    setIsRuntimeActionRunning(true)
+    setRuntimeCheckError(null)
+    setRuntimeActionMessage('Stopping CrownKeep local AI…')
+
+    try {
+      const stopResult = await localRuntimeManager.stop()
+      setRuntimeActionMessage(stopResult.detail)
+
+      try {
+        const unloadResult = await localRuntimeManager.unloadModel(
+          DEFAULT_WINDOWS_MODEL_ALIAS,
+        )
+        setRuntimeActionMessage(
+          `${stopResult.detail} ${unloadResult.detail}`,
+        )
+      } catch {
+        // The service is already stopped; a model may not have been loaded by
+        // CrownKeep in this process. Do not turn a successful stop into an error.
+      }
+
+      setProviderRefreshNonce((current) => current + 1)
+    } catch (error) {
+      setRuntimeCheckError(
+        error instanceof Error
+          ? error.message
+          : 'CrownKeep could not stop local AI.',
+      )
+    } finally {
+      setIsRuntimeActionRunning(false)
+    }
+  }
 
   async function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -1417,6 +1501,42 @@ export default function App() {
                       </button>
                     )}
 
+                    {localRuntimeManager.mode === 'embedded' &&
+                      localRuntimeManager.capabilities.canStartRuntime && (
+                        <div className="runtime-native-actions">
+                          {providerAvailability?.available &&
+                          runtimeSnapshot?.state === 'ready' ? (
+                            <button
+                              type="button"
+                              className="runtime-native-button secondary"
+                              onClick={() => void stopNativeLocalAi()}
+                              disabled={isGenerating || isRuntimeActionRunning}
+                            >
+                              {isRuntimeActionRunning
+                                ? 'Working…'
+                                : 'Stop local AI'}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="runtime-native-button"
+                              onClick={() => void prepareNativeLocalAi()}
+                              disabled={isGenerating || isRuntimeActionRunning}
+                            >
+                              {isRuntimeActionRunning
+                                ? 'Preparing local AI…'
+                                : `Prepare ${DEFAULT_WINDOWS_MODEL_ALIAS}`}
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                    {runtimeActionMessage && (
+                      <p className="runtime-setup-note healthy">
+                        {runtimeActionMessage}
+                      </p>
+                    )}
+
                     {setupRecommendation && (
                       <p className={`runtime-setup-note ${setupRecord?.healthy ? 'healthy' : 'warning'}`}>
                         {setupRecommendation}
@@ -1434,8 +1554,8 @@ export default function App() {
                       {localRuntimeManager.mode === 'external-development'
                         ? 'Development mode: CrownKeep can inspect the runtime, but Foundry/model lifecycle is still managed outside the browser. The Windows desktop build will own these steps.'
                         : localRuntimeManager.capabilities.canStartRuntime
-                          ? 'CrownKeep manages the local runtime on this device.'
-                          : 'Native Windows host connected. Foundry Local lifecycle control is the next Phase 4A slice.'}
+                          ? 'CrownKeep manages the Foundry Local runtime and model lifecycle on this device.'
+                          : 'Native Windows host connected.'}
                     </p>
                   </section>
                 )}
