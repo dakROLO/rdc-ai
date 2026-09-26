@@ -8,7 +8,7 @@ Phase 4A — Windows Product Host
 
 ## Active sprint
 
-Sprint 4A.1 — Native shell proof.
+Sprint 4A.2 — Embedded Foundry Local lifecycle.
 
 ## Completed
 
