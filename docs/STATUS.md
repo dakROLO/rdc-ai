@@ -546,3 +546,20 @@ Fixes delivered:
 - the outer Local AI / Inside the Keep panel now has an explicit Close control in addition to the Diagnostics Close control.
 
 Device validation pending.
+
+
+## Windows + iPhone local baseline accepted — 2026-09-25
+
+User accepted the current basic local experience on both supported development paths.
+
+Validated baseline:
+
+- Windows CrownKeep local chat works through Microsoft Foundry Local;
+- iPhone CrownKeep runs the shared React UI in the native host;
+- **Anne · Apple On-Device** is healthy on physical iPhone;
+- Apple responses stream through the provider-neutral CrownKeep conversation path;
+- mobile project/conversation controls, JavaScript dialogs, Local AI panel closing, diagnostics, and creative follow-up behavior are functioning at the current basic-validation level;
+- wireless Mac → iPhone build/sign/install/launch workflow is operational, with retries for transient CoreDevice drops;
+- conversations remain provider-neutral and local-first.
+
+This establishes the first shared **Windows + iPhone local baseline** suitable for merging into `main`. Cloud identity, sync, explicit cloud escalation, RAG, agents, and live RDC data remain later phases.
