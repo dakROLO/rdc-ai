@@ -2497,3 +2497,174 @@ body {
   color: var(--stone);
   font-size: 0.68rem;
 }
+
+
+/* Device-aware model analysis + Windows panel refinement */
+.model-analyst-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.runtime-native-button.analyst-button {
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  font-size: 0.68rem;
+}
+
+.device-analysis-card {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(46, 230, 184, 0.14);
+  border-radius: 10px;
+  padding: 9px;
+  background: rgba(17, 94, 79, 0.07);
+}
+
+.device-analysis-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.device-analysis-summary span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  border: 1px solid rgba(232, 228, 218, 0.06);
+  border-radius: 8px;
+  padding: 7px 8px;
+  color: var(--muted);
+  font-size: 0.65rem;
+  overflow-wrap: anywhere;
+}
+
+.device-analysis-summary strong {
+  color: var(--stone);
+  font-size: 0.59rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.execution-provider-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.execution-provider {
+  border: 1px solid rgba(232, 228, 218, 0.10);
+  border-radius: 999px;
+  padding: 4px 7px;
+  color: var(--muted);
+  background: rgba(232, 228, 218, 0.035);
+  font-size: 0.61rem;
+  overflow-wrap: anywhere;
+}
+
+.execution-provider.ready {
+  border-color: rgba(46, 230, 184, 0.22);
+  color: #b9d7cf;
+  background: rgba(46, 230, 184, 0.06);
+}
+
+.execution-provider.unavailable {
+  border-color: rgba(201, 127, 91, 0.22);
+  color: #e1aa8e;
+  background: rgba(201, 127, 91, 0.05);
+}
+
+.device-analysis-card > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.65rem;
+  line-height: 1.45;
+}
+
+@media (min-width: 761px) {
+  .topbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+    align-items: start;
+    gap: 16px;
+    padding: 14px 20px;
+  }
+
+  .conversation-title {
+    min-width: 0;
+  }
+
+  .provider-area {
+    width: 100%;
+    max-width: none;
+    justify-self: end;
+    align-self: start;
+  }
+
+  .local-ai-menu {
+    width: 100%;
+  }
+
+  .local-ai-panel {
+    position: fixed;
+    z-index: 90;
+    top: 68px;
+    right: 18px;
+    width: min(520px, calc(100vw - 36px));
+    max-height: calc(100dvh - 88px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+  .local-ai-panel-heading {
+    position: sticky;
+    z-index: 2;
+    top: -14px;
+    margin: -14px -14px 0;
+    padding: 13px 14px 10px;
+    border-bottom: 1px solid rgba(232, 228, 218, 0.07);
+    background: rgba(9, 25, 22, 0.985);
+    backdrop-filter: blur(18px);
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1320px) {
+  .topbar {
+    grid-template-columns: minmax(0, 1fr) minmax(250px, 330px);
+    padding: 12px 16px;
+  }
+
+  .provider-area {
+    width: 100%;
+    max-width: none;
+    flex: initial;
+  }
+
+  .active-project-control {
+    grid-template-columns: auto minmax(110px, 220px);
+  }
+
+  .local-ai-summary-copy small {
+    max-width: 230px;
+  }
+}
+
+@media (max-width: 620px) {
+  .device-analysis-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .model-analyst-heading {
+    display: grid;
+  }
+
+  .model-analyst-actions {
+    width: 100%;
+  }
+
+  .model-analyst-actions > button {
+    flex: 1 1 0;
+  }
+}
