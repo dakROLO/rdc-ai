@@ -688,3 +688,29 @@ Correction:
 - the next validation should begin with the external Foundry CLI server stopped and use **Prepare phi-4-mini** again.
 
 This keeps execution-provider tuning available for a later hardware-optimization slice without making it a prerequisite for basic CrownKeep self-managed local AI.
+
+
+## Sprint 4A.2A physical validation succeeded — 2026-09-26
+
+The first CrownKeep-owned Foundry Local lifecycle was successfully validated on the primary Windows development machine with the external Foundry CLI server stopped.
+
+Observed native sequence:
+
+- CrownKeep resolved the bootstrap alias `phi-4-mini`;
+- the SDK selected `Phi-4-mini-instruct-generic-cpu:5`;
+- CrownKeep downloaded the model into its application-managed cache;
+- CrownKeep loaded the model through the native Foundry Local SDK;
+- CrownKeep started its embedded OpenAI-compatible service at `http://127.0.0.1:39839`;
+- the existing Foundry provider discovered the running model through the local API;
+- Local AI setup reported Runtime connected, Model selected, and Verify passed;
+- Anne generated a verified response inside the native Windows application without manual `foundry server` or `foundry model load` commands.
+
+The initial application-owned model download took several minutes. This is expected first-run behavior. The downloaded model remains cached on disk across app restarts.
+
+Current shutdown behavior:
+
+- **Stop local AI** is optional and is useful when the user wants to keep CrownKeep open while freeing the local inference runtime/model;
+- closing the current single-window CrownKeep desktop application terminates the Tauri process, which also terminates CrownKeep's embedded Foundry service and releases the loaded model/runtime from memory;
+- closing CrownKeep does not remove the downloaded model from its application-managed cache.
+
+This completes the core 4A.2A proof: CrownKeep can prepare and run Windows local AI without requiring normal-user Foundry CLI lifecycle commands.
