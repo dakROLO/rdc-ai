@@ -18,15 +18,8 @@ BUNDLE_ID="com.royaldigitalclarity.crownkeep.dev"
 DERIVED="${CROWNKEEP_DERIVED_DATA:-/tmp/CrownKeepDerived}"
 APP="$DERIVED/Build/Products/Debug-iphoneos/CrownKeepNative.app"
 
-TEAM_ID="${CROWNKEEP_TEAM_ID:-}"
+TEAM_ID="${CROWNKEEP_TEAM_ID:-QJ9HLPX482}"
 DEVICE_ID="${CROWNKEEP_DEVICE_ID:-}"
-
-if [[ -z "$TEAM_ID" ]]; then
-  echo "CROWNKEEP_TEAM_ID is required."
-  echo "Find it with:"
-  echo "  security find-identity -v -p codesigning"
-  exit 2
-fi
 
 if [[ -z "$DEVICE_ID" ]]; then
   echo "CROWNKEEP_DEVICE_ID is required."
@@ -59,6 +52,19 @@ if [[ ! -f "$ROOT/dist/index.html" ]]; then
   echo "CrownKeep web build did not produce dist/index.html"
   exit 5
 fi
+
+ICON_SOURCE="$ROOT/public/icons/crownkeep-512.png"
+ICON_DIR="$ROOT/native/ios/CrownKeepNative/CrownKeepNative/Assets.xcassets/AppIcon.appiconset"
+ICON_OUTPUT="$ICON_DIR/AppIcon-1024.png"
+
+if [[ ! -f "$ICON_SOURCE" ]]; then
+  echo "CrownKeep icon source not found at $ICON_SOURCE"
+  exit 6
+fi
+
+mkdir -p "$ICON_DIR"
+echo "Preparing CrownKeep iOS app icon…"
+sips -z 1024 1024 "$ICON_SOURCE" --out "$ICON_OUTPUT" >/dev/null
 
 rm -rf "$DERIVED"
 
