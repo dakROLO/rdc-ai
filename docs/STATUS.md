@@ -714,3 +714,24 @@ Current shutdown behavior:
 - closing CrownKeep does not remove the downloaded model from its application-managed cache.
 
 This completes the core 4A.2A proof: CrownKeep can prepare and run Windows local AI without requiring normal-user Foundry CLI lifecycle commands.
+
+
+## Phase 4A.2B productization direction — 2026-09-26
+
+Restart validation confirmed CrownKeep's application-managed model cache persists across app restarts:
+
+- `phi-4-mini` resolved to `Phi-4-mini-instruct-generic-cpu:5`;
+- native preparation reported `download-model skipped cached=true`;
+- load/start completed without repeating the several-minute first-run model download.
+
+New product requirements captured from physical Windows use:
+
+- automatically restore the last verified cached local model on CrownKeep startup;
+- make the desktop top/header layout behave better at medium window widths;
+- render fenced code responses as dedicated code blocks with a Copy action;
+- expose a local Foundry model analyst/catalog experience so the user can inspect and choose models/variants;
+- benchmark observed performance before remembering a preferred local model;
+- support timed idle unload of the local model to release resources while CrownKeep stays open;
+- show a clear sleeping indicator that can reload the model and continue the same conversation.
+
+These requirements stay inside the provider/runtime boundaries and do not change conversation identity.
