@@ -290,6 +290,7 @@ async fn crownkeep_foundry_models() -> Result<Vec<FoundryModelCandidate>, String
         for variant in model.variants() {
             let info = variant.info();
             let runtime = info.runtime.as_ref();
+            let cached = variant.is_cached().await.unwrap_or(info.cached);
             candidates.push(FoundryModelCandidate {
                 id: info.id.clone(),
                 alias: info.alias.clone(),
@@ -297,7 +298,7 @@ async fn crownkeep_foundry_models() -> Result<Vec<FoundryModelCandidate>, String
                     .display_name
                     .clone()
                     .unwrap_or_else(|| info.name.clone()),
-                cached: info.cached,
+                cached,
                 loaded: loaded_ids.contains(&info.id),
                 device: runtime.map(|value| format!("{:?}", value.device_type)),
                 execution_provider: runtime.map(|value| value.execution_provider.clone()),
