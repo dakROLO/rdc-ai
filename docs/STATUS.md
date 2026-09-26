@@ -674,3 +674,17 @@ Important validation boundary:
 - stop the externally managed Foundry CLI server before testing this slice so port 39839 is free;
 - the SDK uses CrownKeep's application-owned cache by default, so the first native preparation may download model/runtime assets even if a CLI-managed copy already exists;
 - successful validation means CrownKeep reaches a ready Anne response without running `foundry server restart`, `foundry model download`, or `foundry model load` manually.
+
+
+## 4A.2 first-run model preparation correction — 2026-09-26
+
+First physical validation of the native **Prepare phi-4-mini** flow failed before the local OpenAI service became reachable. The UI surfaced an execution-provider setup failure while the Vite proxy continued to receive expected `ECONNREFUSED 127.0.0.1:39839` responses because the embedded service never reached the start stage.
+
+Correction:
+
+- removed the unconditional `download_and_register_eps(None)` call, which attempted to download/register every discovered execution provider before model preparation;
+- retained the SDK's Windows `winml` feature and allow the model/SDK path to select the appropriate runtime normally;
+- added native terminal stage logging for SDK initialization, model resolution, cache inspection, model download, model load, and embedded-service start;
+- the next validation should begin with the external Foundry CLI server stopped and use **Prepare phi-4-mini** again.
+
+This keeps execution-provider tuning available for a later hardware-optimization slice without making it a prerequisite for basic CrownKeep self-managed local AI.
