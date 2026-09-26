@@ -409,3 +409,19 @@ Next device validation:
 5. create/send a chat and confirm the answer comes from the phone's Foundation Model;
 6. confirm local conversations persist across app relaunch;
 7. capture any narrow-layout/safe-area/storage issues before native streaming work.
+
+
+## iOS signing and branded icon hardening — 2026-09-25
+
+Physical-device signing revealed that the identifier shown in the development certificate name (`QS3773YNR5`) was not the Apple Development Team ID. Xcode saved the actual CrownKeep development team as `QJ9HLPX482`.
+
+Changes delivered:
+
+- persisted the Xcode-selected development team in the native project;
+- updated the device-build script to default to `QJ9HLPX482` while still allowing an explicit override;
+- added a native `Assets.xcassets/AppIcon.appiconset`;
+- wired `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon` into Debug and Release;
+- device builds now generate a 1024×1024 iOS app icon from the canonical CrownKeep logo at `public/icons/crownkeep-512.png`;
+- the generated 1024 icon is ignored by Git because it is reproducible from the committed CrownKeep source icon.
+
+Device validation pending: pull the current Phase 3 branch, redeploy to Rolo15, confirm the full CrownKeep UI/native Anne bridge, and confirm the branded CrownKeep icon appears on the iPhone Home Screen.
