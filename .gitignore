@@ -16,3 +16,6 @@ Thumbs.db
 
 # Generated from the canonical CrownKeep PWA icon during iOS device builds.
 native/ios/CrownKeepNative/CrownKeepNative/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png
+
+# Tauri/Rust build output
+src-tauri/target/
