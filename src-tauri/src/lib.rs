@@ -644,11 +644,10 @@ async fn crownkeep_foundry_activate_model(
             }
         }
 
-        if !model
-            .is_loaded()
-            .await
-            .map_err(|error| format!("Could not inspect target model load state: {error}"))?
-        {
+        let target_already_loaded = previous
+            .iter()
+            .any(|loaded| normalized_model_key(loaded.id()) == normalized_model_key(model.id()));
+        if !target_already_loaded {
             emit_operation_progress(
                 &app,
                 "loading",
