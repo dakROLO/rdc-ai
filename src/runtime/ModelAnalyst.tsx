@@ -10,6 +10,7 @@ import {
   PROFILE_KEY,
   PREFERRED_PROFILE_KEY,
   readResults,
+  taskOf,
   viableVariants,
 } from './modelPolicy.ts'
 import type {
@@ -216,7 +217,7 @@ export function ModelAnalyst({
     const abort = new AbortController()
     controller.current = abort
 
-    const previous = candidates.find((item) => item.loaded && item.modelType !== 'speech')
+    const previous = candidates.find((item) => item.loaded && taskOf(item) === 'chat')
     let accumulated = readResults(localStorage)
     const measured: BenchmarkResult[] = []
     let selected = false
