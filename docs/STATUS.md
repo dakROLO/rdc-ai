@@ -774,3 +774,24 @@ Implemented on the Windows product-host branch; physical validation pending.
 
 - generated `src-tauri/gen/` artifacts are ignored.
 - `package-lock.json` and `src-tauri/Cargo.lock` remain candidates to intentionally commit from a generated Windows build for reproducible installer work in Sprint 4A.3.
+
+
+## Auto-restore startup trigger correction — 2026-09-26
+
+Physical restart testing showed that CrownKeep's Local Model Analyst could see the cached `phi-4-mini` CPU variant, but automatic startup still did not run. No native Foundry stage logs were emitted, proving that the restore trigger itself was blocked before model resolution.
+
+Root cause:
+
+- automatic restore was gated by the prior `LocalAiSetupRecord.healthy` browser/provider record;
+- the native Foundry catalog already had enough information to prove that a cached model was available;
+- therefore a stale/missing setup record could prevent startup even when the native cache was healthy.
+
+Correction:
+
+- startup restore now waits for the native Foundry catalog inspection;
+- when the provider is down and a cached native model exists, CrownKeep matches the preferred model by normalized native/provider ID or alias;
+- if the preferred value is stale, CrownKeep falls back to the cached `phi-4-mini` alias and then to the first cached candidate;
+- the matched native variant ID is persisted and loaded automatically;
+- prior verification/performance data remains advisory rather than controlling whether the runtime is allowed to start.
+
+This makes the native catalog the source of truth for Windows local-model restore.
