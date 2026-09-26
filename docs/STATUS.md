@@ -735,3 +735,42 @@ New product requirements captured from physical Windows use:
 - show a clear sleeping indicator that can reload the model and continue the same conversation.
 
 These requirements stay inside the provider/runtime boundaries and do not change conversation identity.
+
+
+## Sprint 4A.2B/C implementation package — 2026-09-26
+
+Implemented on the Windows product-host branch; physical validation pending.
+
+### Automatic restore and resource sleep
+
+- CrownKeep remembers the last verified Foundry model/variant.
+- When the native Windows app opens and the saved model is healthy/cached but the embedded service is stopped, CrownKeep automatically restores the model/runtime in the background.
+- Conversation storage opens independently; local AI startup is not allowed to block access to chat history.
+- Local AI can unload after an idle period while the app remains open.
+- Idle unload is configurable: Never, 5, 15, 30, or 60 minutes.
+- A sleeping Local AI state is visible in the top status pill; clicking it wakes the remembered model.
+- Manual **Sleep local AI** remains available to release model/runtime resources while keeping CrownKeep open.
+
+### Code output
+
+- Anne is instructed to use fenced Markdown blocks for copyable commands/config/code.
+- CrownKeep recognizes fenced code blocks in assistant messages.
+- Each code block renders in a dedicated panel with language label and Copy action.
+
+### Local Model Analyst
+
+- Added a native Foundry catalog command that exposes model variants, alias/display name, cached/loaded status, device, execution provider, file size, and context length where available.
+- The Local AI panel includes a **Local Model Analyst** section.
+- The user can inspect candidates, select a model/variant, download it when required, load it, start the CrownKeep-owned runtime, and then verify observed performance.
+- Preferred model/variant is persisted separately from generic provider selection so startup can restore the known-good choice.
+- Model decisions remain performance-informed rather than assuming GPU/NPU labels are faster.
+
+### Responsive desktop polish
+
+- Added a compact medium-width Windows header layout through 1320px viewport width.
+- Local AI status/project/title controls use less vertical space before the mobile layout activates.
+
+### Repo hygiene
+
+- generated `src-tauri/gen/` artifacts are ignored.
+- `package-lock.json` and `src-tauri/Cargo.lock` remain candidates to intentionally commit from a generated Windows build for reproducible installer work in Sprint 4A.3.
