@@ -227,6 +227,7 @@ export function ModelAnalyst({
       for (const candidate of paths) {
         if (abort.signal.aborted) break
         index += 1
+        const wasCached = candidate.cached
         const record: BenchmarkResult = {
           fingerprint: profile.fingerprint,
           alias,
@@ -234,6 +235,7 @@ export function ModelAnalyst({
           executionProvider: candidate.executionProvider,
           device: candidate.device,
           cached: candidate.cached,
+          downloadedDuringBenchmark: !wasCached,
           supportsToolCalling: candidate.supportsToolCalling,
           timestamp: new Date().toISOString(),
           totalMs: 0,
