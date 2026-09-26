@@ -195,12 +195,25 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
             .compactMap { $0["content"] as? String }
             .joined(separator: "\n\n")
 
-        let transcript = messages
-            .filter { ($0["role"] as? String) != "system" }
+        let conversationMessages = messages.filter {
+            ($0["role"] as? String) != "system"
+        }
+
+        guard let currentUserIndex = conversationMessages.lastIndex(where: {
+            ($0["role"] as? String) == "user"
+        }),
+        let currentPrompt = conversationMessages[currentUserIndex]["content"] as? String
+        else {
+            streamError(streamId: streamId, message: "No current user prompt was supplied.")
+            return
+        }
+
+        let priorConversation = conversationMessages[..<currentUserIndex]
             .compactMap { item -> String? in
                 guard
                     let role = item["role"] as? String,
-                    let content = item["content"] as? String
+                    let content = item["content"] as? String,
+                    !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 else {
                     return nil
                 }
@@ -209,6 +222,31 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
                 return "\(label): \(content)"
             }
             .joined(separator: "\n\n")
+
+        let prompt: String
+        if priorConversation.isEmpty {
+            prompt = currentPrompt
+        } else {
+            prompt = """
+            Previous conversation context:
+            \(priorConversation)
+
+            Current user request:
+            \(currentPrompt)
+
+            Respond directly to the current user request. Use the previous conversation only as context. Do not repeat an earlier Anne response unless the user explicitly asks you to repeat it.
+            """
+        }
+
+        let normalizedPrompt = currentPrompt.lowercased()
+        let creativeRequestMarkers = [
+            "story", "fiction", "fictional", "imagine", "creative",
+            "brainstorm", "roleplay", "role-play", "hypothetical",
+            "make up", "invent"
+        ]
+        let isCreativeRequest = creativeRequestMarkers.contains {
+            normalizedPrompt.contains($0)
+        }
 
         generationTasks[streamId]?.cancel()
 
@@ -223,8 +261,18 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
                         : instructions
                 )
 
+                var generationOptions = GenerationOptions()
+                if isCreativeRequest {
+                    generationOptions.temperature = 0.9
+                    generationOptions.samplingMode = .random(
+                        probabilityThreshold: 0.9,
+                        seed: nil
+                    )
+                }
+
                 let stream = session.streamResponse(
-                    to: transcript.isEmpty ? "Hello." : transcript
+                    to: prompt,
+                    options: generationOptions
                 )
 
                 var previousSnapshot = ""
@@ -254,6 +302,19 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
                 }
 
                 guard !Task.isCancelled else { return }
+
+                let usage = session.usage
+                self.streamChunk(
+                    streamId: streamId,
+                    chunk: [
+                        "text": "",
+                        "usage": [
+                            "promptTokens": usage.input.totalTokenCount,
+                            "completionTokens": usage.output.totalTokenCount,
+                            "totalTokens": usage.totalTokenCount
+                        ]
+                    ]
+                )
                 self.streamComplete(streamId: streamId)
             } catch is CancellationError {
                 // CrownKeep already treats the aborted request as stopped.
