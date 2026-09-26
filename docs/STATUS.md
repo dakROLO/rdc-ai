@@ -425,3 +425,30 @@ Changes delivered:
 - the generated 1024 icon is ignored by Git because it is reproducible from the committed CrownKeep source icon.
 
 Device validation pending: pull the current Phase 3 branch, redeploy to Rolo15, confirm the full CrownKeep UI/native Anne bridge, and confirm the branded CrownKeep icon appears on the iPhone Home Screen.
+
+
+## Wireless SSH deployment validated — 2026-09-25
+
+The CrownKeep iPhone build now installs and launches successfully on physical device `Rolo15` from the Windows PC through SSH to the Mac.
+
+Important signing behavior discovered:
+
+- Xcode GUI signing works normally;
+- non-interactive SSH sessions do not automatically unlock the macOS login keychain;
+- when the keychain remains locked, `codesign` can fail with `errSecInternalComponent` even though the certificate and provisioning profile are valid;
+- running `security unlock-keychain ~/Library/Keychains/login.keychain-db` in the same SSH session before the device-build script resolves the signing failure without storing the password in Git or the command line.
+
+Validated deployment flow:
+
+```text
+Windows PC
+  → SSH to Mac
+  → unlock login keychain
+  → build CrownKeep React UI
+  → generate branded iOS app icon
+  → Xcode build/sign
+  → wireless install to Rolo15
+  → launch CrownKeep
+```
+
+Next validation target: confirm the installed build renders the full CrownKeep UI, shows the branded app icon, uses **Anne · Apple On-Device**, persists local conversations, and returns a real Apple Foundation Models response through the native bridge.
