@@ -32,6 +32,20 @@ struct FoundryRuntimeStatus {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
+struct FoundryModelCandidate {
+    id: String,
+    alias: String,
+    display_name: String,
+    cached: bool,
+    loaded: bool,
+    device: Option<String>,
+    execution_provider: Option<String>,
+    file_size_mb: Option<u64>,
+    context_length: Option<u64>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct FoundryActionResult {
     supported: bool,
     detail: String,
@@ -115,6 +129,62 @@ async fn crownkeep_foundry_status() -> Result<FoundryRuntimeStatus, String> {
             })
             .collect(),
     })
+}
+
+#[tauri::command]
+async fn crownkeep_foundry_models() -> Result<Vec<FoundryModelCandidate>, String> {
+    use std::collections::HashSet;
+
+    let manager = foundry_manager()?;
+    let catalog = manager.catalog();
+
+    let models = catalog
+        .get_models()
+        .await
+        .map_err(|error| format!("Foundry Local catalog discovery failed: {error}"))?;
+
+    let loaded = catalog
+        .get_loaded_models()
+        .await
+        .map_err(|error| format!("Foundry Local loaded-model discovery failed: {error}"))?;
+
+    let loaded_ids: HashSet<String> = loaded
+        .iter()
+        .map(|model| model.id().to_string())
+        .collect();
+
+    let mut candidates = Vec::new();
+
+    for model in models {
+        for variant in model.variants() {
+            let info = variant.info();
+            let runtime = info.runtime.as_ref();
+            candidates.push(FoundryModelCandidate {
+                id: info.id.clone(),
+                alias: info.alias.clone(),
+                display_name: info
+                    .display_name
+                    .clone()
+                    .unwrap_or_else(|| info.name.clone()),
+                cached: info.cached,
+                loaded: loaded_ids.contains(&info.id),
+                device: runtime.map(|value| format!("{:?}", value.device_type)),
+                execution_provider: runtime.map(|value| value.execution_provider.clone()),
+                file_size_mb: info.file_size_mb,
+                context_length: info.context_length,
+            });
+        }
+    }
+
+    candidates.sort_by(|left, right| {
+        right
+            .cached
+            .cmp(&left.cached)
+            .then_with(|| left.alias.cmp(&right.alias))
+            .then_with(|| left.id.cmp(&right.id))
+    });
+
+    Ok(candidates)
 }
 
 #[tauri::command]
@@ -275,6 +345,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             crownkeep_host_info,
             crownkeep_foundry_status,
+            crownkeep_foundry_models,
             crownkeep_foundry_start,
             crownkeep_foundry_stop,
             crownkeep_foundry_install_model,
