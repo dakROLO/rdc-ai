@@ -2707,3 +2707,20 @@ body {
 .dictation-progress { display: grid; grid-template-columns: minmax(8rem, 1fr) auto; align-items: center; gap: .45rem; width: 100%; }
 .composer-actions { flex-wrap: wrap; }
 @media (max-width: 700px) { .dictation-control { max-width: 14rem; } }
+
+
+.runtime-operation-progress {
+  display: grid;
+  grid-template-columns: minmax(8rem, 1fr) auto;
+  align-items: center;
+  gap: .45rem;
+}
+.runtime-operation-progress progress {
+  width: 100%;
+  height: .55rem;
+  accent-color: var(--jade-glow);
+}
+.runtime-operation-progress small {
+  color: var(--muted);
+  font-size: .68rem;
+}
