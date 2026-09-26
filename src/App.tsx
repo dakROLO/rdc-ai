@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 import { ModelAnalyst } from './runtime/ModelAnalyst.tsx'
 import { readPreferred, taskOf } from './runtime/modelPolicy.ts'
 import type { DeviceProfile } from './runtime/modelPolicy.ts'
@@ -82,6 +83,14 @@ const LOCAL_AI_SETUP_STORAGE_KEY = 'crownkeep.localAiSetup'
 const DEFAULT_WINDOWS_MODEL_ALIAS = 'phi-4-mini'
 const PREFERRED_WINDOWS_MODEL_KEY = 'crownkeep.preferredWindowsModel'
 const IDLE_UNLOAD_MINUTES_KEY = 'crownkeep.idleUnloadMinutes'
+
+interface FoundryOperationProgress {
+  stage: string
+  message: string
+  modelId?: string
+  alias?: string
+  percent?: number
+}
 
 interface LocalAiSetupRecord {
   providerId: string
@@ -345,6 +354,7 @@ export default function App() {
   const [runtimeCheckError, setRuntimeCheckError] = useState<string | null>(null)
   const [isRuntimeActionRunning, setIsRuntimeActionRunning] = useState(false)
   const [runtimeActionMessage, setRuntimeActionMessage] = useState<string | null>(null)
+  const [runtimeOperation, setRuntimeOperation] = useState<FoundryOperationProgress | null>(null)
   const [runtimeSleeping, setRuntimeSleeping] = useState(false)
   const [idleUnloadMinutes, setIdleUnloadMinutes] = useState(() => {
     const stored = Number(localStorage.getItem(IDLE_UNLOAD_MINUTES_KEY) ?? '15')
@@ -752,6 +762,24 @@ export default function App() {
     if (localRuntimeManager.mode === 'embedded') void refreshFingerprint()
   }, [])
 
+  useEffect(() => {
+    if (localRuntimeManager.mode !== 'embedded') return
+
+    const subscription = listen<FoundryOperationProgress>(
+      'crownkeep-foundry-operation-progress',
+      (event) => {
+        setRuntimeOperation(event.payload)
+        setRuntimeActionMessage(event.payload.message)
+      },
+    )
+
+    return () => {
+      void subscription.then((unlisten) => unlisten())
+    }
+  }, [])
+
+
+
   function normalizeRuntimeModelKey(value: string): string {
     return value.split(':')[0].trim().toLocaleLowerCase()
   }
@@ -784,6 +812,7 @@ export default function App() {
 
     setIsRuntimeActionRunning(true)
     setRuntimeCheckError(null)
+    setRuntimeOperation(null)
     setRuntimeSleeping(false)
     if (!options.quiet) {
       setRuntimeActionMessage(
@@ -849,6 +878,7 @@ export default function App() {
     if (!modelId || isRuntimeActionRunning || isGenerating || speechBusy || isRuntimeCheckRunning) return
     setIsRuntimeActionRunning(true)
     setRuntimeCheckError(null)
+    setRuntimeOperation(null)
     setRuntimeActionMessage(`Switching local AI to ${modelId}…`)
     try {
       await localRuntimeManager.activateModel(modelId)
@@ -1718,7 +1748,7 @@ export default function App() {
                   </label>
 
                   <label>
-                    <span>Model</span>
+                    <span>Active model</span>
                     <select
                       value={selectedModelId}
                       onChange={(event) => handleModelChange(event.target.value)}
@@ -1932,6 +1962,13 @@ export default function App() {
                       <p className="runtime-setup-note healthy">
                         {runtimeActionMessage}
                       </p>
+                    )}
+
+                    {runtimeOperation?.percent !== undefined && isRuntimeActionRunning && (
+                      <div className="runtime-operation-progress" role="status" aria-live="polite">
+                        <progress max={100} value={runtimeOperation.percent} />
+                        <small>{Math.round(runtimeOperation.percent)}%</small>
+                      </div>
                     )}
 
                     {setupRecommendation && (
