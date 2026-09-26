@@ -77,6 +77,7 @@ export interface LocalRuntimeManager {
   activateModel(modelId: string): Promise<RuntimeActionResult>
   loadModel(modelId: string): Promise<RuntimeActionResult>
   unloadModel(modelId: string): Promise<RuntimeActionResult>
+  removeCachedModel(modelId: string): Promise<RuntimeActionResult>
   listModelCandidates(): Promise<RuntimeModelCandidate[]>
   analyzeDevice(): Promise<RuntimeDeviceAnalysis>
 }
