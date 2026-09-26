@@ -360,3 +360,52 @@ UX note:
 Provider/model dropdowns are useful during development, but the native iPhone release should automatically prefer Apple On-Device when available and move manual provider/model selection into an advanced Local AI settings surface.
 
 Latest Phase 3 branch CI is green after fixing the Apple provider's TypeScript syntax compatibility and the iPhone-unavailable provider lint warning.
+
+
+## Physical iPhone proof — 2026-09-25
+
+User successfully built, signed, installed, and launched the first CrownKeep native app on physical iPhone `Rolo15` over the paired Mac/Xcode environment.
+
+Validated:
+
+- Xcode 27.0 / iPhoneOS SDK 27.0;
+- Personal Team development signing;
+- wireless device visibility from Xcode;
+- CrownKeep native app installation on the physical iPhone;
+- `SystemLanguageModel.default` reported available;
+- **Ask Anne on this iPhone** successfully returned a real Foundation Models response on-device.
+
+Known packaging polish:
+
+- the proof app currently uses the default blank app icon; CrownKeep branded iOS app icon assets are still required.
+
+Conclusion:
+
+The native Apple Foundation Models theory is proven on the user's actual iPhone. Phase 3 can move from native-model feasibility into integration of the shared CrownKeep UI.
+
+
+## Shared CrownKeep iPhone host integration — IMPLEMENTED · DEVICE VALIDATION PENDING
+
+The Phase 3 branch now contains the first complete integration slice:
+
+- the native iPhone app hosts the existing CrownKeep React UI in `WKWebView`;
+- the production React build is packaged inside the application bundle under `dist`;
+- a stable `crownkeep://app` scheme serves the bundled UI and assets;
+- the native host injects `window.crownKeepNativeAI` before the React application initializes;
+- `AppleFoundationModelsProvider` calls the injected native bridge;
+- Swift maps provider availability and model discovery to `SystemLanguageModel.default`;
+- Swift translates CrownKeep system/history messages into a `LanguageModelSession` request;
+- the first integration returns a complete native response as one provider chat chunk;
+- cancellation plumbing is represented and native generation tasks can be cancelled;
+- the native host skips browser service-worker registration;
+- `scripts/ios-device-build.sh` now builds the React UI before Xcode packages, signs, installs, and launches the app.
+
+Next device validation:
+
+1. pull current `phase-3-iphone-local-ai` on the Mac;
+2. rerun the SSH deployment script;
+3. confirm the installed app now renders the normal CrownKeep conversation UI;
+4. confirm provider is **Anne · Apple On-Device**;
+5. create/send a chat and confirm the answer comes from the phone's Foundation Model;
+6. confirm local conversations persist across app relaunch;
+7. capture any narrow-layout/safe-area/storage issues before native streaming work.
