@@ -309,3 +309,48 @@ For the first device vertical slice, the native host may return a complete non-s
 After the bridge works, Sprint 3.2 will add native streaming, cancellation, token/context instrumentation, and mobile resource handling.
 
 WebLLM/WebGPU remains an optional fallback/experimental provider rather than the primary iPhone implementation.
+
+
+## Phase 4A Windows product host
+
+CrownKeep's Windows productization path preserves the existing React conversation application and adds a native desktop host only for capabilities the browser cannot own reliably.
+
+Target shape:
+
+```text
+CrownKeep React UI
+        |
+        +---- AIProvider ----------------------> conversation inference
+        |
+        +---- LocalRuntimeManager
+                     |
+                     +-- browser development -> BrowserLocalRuntimeManager
+                     |
+                     +-- Windows desktop -----> TauriLocalRuntimeManager
+                                                    |
+                                                    v
+                                               Tauri/Rust host
+                                                    |
+                                      Phase 4A.2: Foundry Local Rust SDK
+                                                    |
+                                               Windows WinML
+```
+
+Sprint 4A.1 exposes only a native host identity command. It intentionally does not start/stop Foundry Local or install/load/unload models yet.
+
+The first native command is:
+
+```text
+crownkeep_host_info
+```
+
+The TypeScript runtime selector chooses `TauriLocalRuntimeManager` only when the frontend is actually running inside Tauri. Ordinary browser/PWA development continues to use `BrowserLocalRuntimeManager`.
+
+### Windows host invariants
+
+1. The React conversation/domain/provider layer remains shared.
+2. The native host owns OS/runtime lifecycle capabilities, not conversation identity.
+3. Browser mode remains usable for engineering and regression testing.
+4. Native runtime actions are surfaced through `LocalRuntimeManager`, not direct UI shell commands.
+5. Foundry Local SDK integration must not require Azure or cloud credentials.
+6. The installed product must eventually use a stable local storage location/origin and explicitly handle migration/export from browser-development storage.
