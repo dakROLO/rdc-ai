@@ -18,12 +18,24 @@ interface CrownKeepHostInfo {
   runtimeControlAvailable: boolean
 }
 
-function notWired(action: string): Promise<RuntimeActionResult> {
-  return Promise.resolve({
-    supported: false,
-    detail:
-      `${action} is not wired in the Phase 4A.1 host-shell proof yet. The native CrownKeep host is connected; Foundry Local lifecycle ownership is the next slice.`,
-  })
+interface NativeFoundryModelSummary {
+  id: string
+  alias: string
+}
+
+interface NativeFoundryRuntimeStatus {
+  sdkReady: boolean
+  serviceUrls: string[]
+  catalogModelCount: number
+  cachedModels: NativeFoundryModelSummary[]
+  loadedModels: NativeFoundryModelSummary[]
+}
+
+async function invokeAction(
+  command: string,
+  args?: Record<string, unknown>,
+): Promise<RuntimeActionResult> {
+  return invoke<RuntimeActionResult>(command, args)
 }
 
 export class TauriLocalRuntimeManager implements LocalRuntimeManager {
@@ -31,11 +43,11 @@ export class TauriLocalRuntimeManager implements LocalRuntimeManager {
   readonly displayName = 'CrownKeep Windows host'
   readonly mode = 'embedded' as const
   readonly capabilities = {
-    canStartRuntime: false,
-    canStopRuntime: false,
-    canInstallModels: false,
-    canLoadModels: false,
-    canUnloadModels: false,
+    canStartRuntime: true,
+    canStopRuntime: true,
+    canInstallModels: true,
+    canLoadModels: true,
+    canUnloadModels: true,
   }
 
   async inspect(
@@ -43,26 +55,39 @@ export class TauriLocalRuntimeManager implements LocalRuntimeManager {
     availability?: ProviderAvailability | null,
     models?: AIModel[],
   ): Promise<RuntimeSnapshot> {
-    const host = await invoke<CrownKeepHostInfo>('crownkeep_host_info')
+    const [host, nativeStatus] = await Promise.all([
+      invoke<CrownKeepHostInfo>('crownkeep_host_info'),
+      invoke<NativeFoundryRuntimeStatus>('crownkeep_foundry_status'),
+    ])
+
     const resolvedAvailability =
       availability ?? (await provider.getAvailability())
+    const resolvedModels =
+      resolvedAvailability.available
+        ? (models ?? (await provider.listModels()))
+        : []
+
+    const loadedText = nativeStatus.loadedModels.length > 0
+      ? ` Loaded: ${nativeStatus.loadedModels.map((model) => model.alias).join(', ')}.`
+      : ''
+    const cachedText = nativeStatus.cachedModels.length > 0
+      ? ` Cached: ${nativeStatus.cachedModels.length}.`
+      : ''
 
     if (!resolvedAvailability.available) {
       return {
         state: 'unavailable',
         detail:
-          `Native CrownKeep host connected on ${host.platform}/${host.arch}, but the selected local AI provider is not ready. ${resolvedAvailability.detail ?? ''}`.trim(),
+          `Native CrownKeep host v${host.version} connected on ${host.platform}/${host.arch}. Foundry Local SDK is ready with ${nativeStatus.catalogModelCount} compatible catalog models, but CrownKeep's embedded OpenAI service is not currently reachable.${cachedText}${loadedText}`,
         models: [],
       }
     }
-
-    const resolvedModels = models ?? (await provider.listModels())
 
     if (resolvedModels.length === 0) {
       return {
         state: 'model-required',
         detail:
-          `Native CrownKeep host connected on ${host.platform}/${host.arch}. Foundry Local is reachable, but no chat model is currently available.`,
+          `Native CrownKeep host v${host.version} connected. CrownKeep owns the Foundry Local lifecycle, but no loaded chat model is currently exposed to the local API.${cachedText}${loadedText}`,
         models: [],
       }
     }
@@ -70,29 +95,29 @@ export class TauriLocalRuntimeManager implements LocalRuntimeManager {
     return {
       state: 'ready',
       detail:
-        `Native CrownKeep host v${host.version} connected on ${host.platform}/${host.arch}. ${resolvedAvailability.detail ?? 'Local AI is ready.'}`,
+        `Native CrownKeep host v${host.version} connected on ${host.platform}/${host.arch}. CrownKeep owns the Foundry Local lifecycle. ${resolvedAvailability.detail ?? 'Local AI is ready.'}${loadedText}`,
       models: resolvedModels,
     }
   }
 
   start(): Promise<RuntimeActionResult> {
-    return notWired('Starting the local runtime')
+    return invokeAction('crownkeep_foundry_start')
   }
 
   stop(): Promise<RuntimeActionResult> {
-    return notWired('Stopping the local runtime')
+    return invokeAction('crownkeep_foundry_stop')
   }
 
-  installModel(_modelId: string): Promise<RuntimeActionResult> {
-    return notWired('Installing a local model')
+  installModel(modelId: string): Promise<RuntimeActionResult> {
+    return invokeAction('crownkeep_foundry_install_model', { modelId })
   }
 
-  loadModel(_modelId: string): Promise<RuntimeActionResult> {
-    return notWired('Loading a local model')
+  loadModel(modelId: string): Promise<RuntimeActionResult> {
+    return invokeAction('crownkeep_foundry_load_model', { modelId })
   }
 
-  unloadModel(_modelId: string): Promise<RuntimeActionResult> {
-    return notWired('Unloading a local model')
+  unloadModel(modelId: string): Promise<RuntimeActionResult> {
+    return invokeAction('crownkeep_foundry_unload_model', { modelId })
   }
 }
 
