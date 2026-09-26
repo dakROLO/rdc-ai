@@ -43,3 +43,51 @@ Sprint 3.2 enhancement after the host bridge is proven.
 The Apple Foundation Models path requires a supported OS/device and the
 on-device model to be available. CrownKeep must surface the actual availability
 reason rather than silently falling back to cloud.
+\n\n---\n\n# CrownKeep Native iPhone Proof
+
+This Xcode project is the first physical-device milestone for CrownKeep Phase 3.
+
+It intentionally does only three things:
+
+1. launches as a native iPhone app;
+2. reports Apple Foundation Models availability;
+3. sends one real local prompt through `LanguageModelSession`.
+
+It does **not** yet host the full CrownKeep React UI or bridge
+`window.crownKeepNativeAI`. That comes after this physical-device proof is
+green.
+
+## Build from Xcode
+
+Open:
+
+```text
+native/ios/CrownKeepNative/CrownKeepNative.xcodeproj
+```
+
+Select your Apple development team, choose the paired iPhone, and Run.
+
+## Build/install from SSH
+
+From the repository root on the Mac:
+
+```bash
+chmod +x scripts/ios-device-build.sh
+xcrun devicectl list devices
+security find-identity -v -p codesigning
+```
+
+Then:
+
+```bash
+CROWNKEEP_TEAM_ID=<TEAM_ID> \
+CROWNKEEP_DEVICE_ID=<DEVICE_ID> \
+./scripts/ios-device-build.sh
+```
+
+The script builds a Debug iphoneos app with automatic signing, installs it with
+`devicectl`, and launches the bundle on the paired device.
+
+If signing has never been configured on the Mac, open the project in Xcode once,
+sign into Xcode, choose the target's Signing & Capabilities tab, select your
+Personal Team, and run once from Xcode before relying on the SSH script.
