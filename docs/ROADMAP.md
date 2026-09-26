@@ -218,7 +218,7 @@ Exit criteria:
 
 ## Phase 4A — Windows Product Host — **ACTIVE**
 
-### Sprint 4A.1 — Native shell proof
+### Sprint 4A.1 — Native shell proof — **COMPLETE**
 
 **Outcome:** The existing CrownKeep React application runs unchanged inside a Windows native desktop host and can prove the native host boundary without breaking browser development.
 
