@@ -2471,3 +2471,29 @@ body {
     padding: 10px 11px;
   }
 }
+
+
+.idle-unload-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.idle-unload-control > span {
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.idle-unload-control select {
+  min-width: 118px;
+  border: 1px solid rgba(46, 230, 184, 0.18);
+  border-radius: 8px;
+  padding: 6px 28px 6px 8px;
+  background: #102925;
+  color: var(--stone);
+  font-size: 0.68rem;
+}
