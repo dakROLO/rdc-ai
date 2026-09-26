@@ -5,6 +5,13 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Support common Homebrew/Node locations in non-interactive SSH shells.
 export PATH="/opt/homebrew/opt/node@22/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+# Support user-local NVM installs in non-interactive SSH shells.
+export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+if [[ -s "$NVM_DIR/nvm.sh" ]]; then
+  # shellcheck disable=SC1090
+  . "$NVM_DIR/nvm.sh"
+fi
 PROJECT="$ROOT/native/ios/CrownKeepNative/CrownKeepNative.xcodeproj"
 SCHEME="CrownKeepNative"
 BUNDLE_ID="com.royaldigitalclarity.crownkeep.dev"
