@@ -91,3 +91,20 @@ The script builds a Debug iphoneos app with automatic signing, installs it with
 If signing has never been configured on the Mac, open the project in Xcode once,
 sign into Xcode, choose the target's Signing & Capabilities tab, select your
 Personal Team, and run once from Xcode before relying on the SSH script.
+
+
+## Shared CrownKeep UI integration
+
+After the physical Foundation Models proof succeeded, the native host was advanced to load the real CrownKeep React UI.
+
+The device deployment script now:
+
+1. installs web dependencies when needed;
+2. runs `npm run build`;
+3. packages `dist/` into the native application;
+4. builds/signs the iOS target;
+5. installs and launches CrownKeep on the paired iPhone.
+
+The native app serves bundled assets from `crownkeep://app` through a `WKURLSchemeHandler` and injects the `NativeAIHost` JavaScript contract at document start.
+
+The first real integration is intentionally non-streaming on the Swift side: one completed Apple Foundation Models response is emitted as one CrownKeep provider chunk. This proves the full UI/provider/native path before native response streaming is added.
