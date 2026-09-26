@@ -24,7 +24,7 @@ import { IOSBrowserLocalUnavailableProvider } from './providers/IOSBrowserLocalU
 import { MockProvider } from './providers/MockProvider.ts'
 import { ProviderRegistry } from './providers/ProviderRegistry.ts'
 import { getMobileCapabilitySnapshot } from './mobile/MobileCapability.ts'
-import { browserLocalRuntimeManager } from './runtime/BrowserLocalRuntimeManager.ts'
+import { localRuntimeManager } from './runtime/runtimeManager.ts'
 import type { RuntimeSnapshot } from './runtime/LocalRuntimeManager.ts'
 import { IndexedDbConversationRepository } from './storage/IndexedDbConversationRepository.ts'
 import { createId } from './utils/id.ts'
@@ -487,7 +487,7 @@ export default function App() {
 
       setSelectedModelId(nextModel)
 
-      const snapshot = await browserLocalRuntimeManager.inspect(
+      const snapshot = await localRuntimeManager.inspect(
         provider,
         availability,
         availableModels,
@@ -1431,9 +1431,11 @@ export default function App() {
                     )}
 
                     <p className="runtime-management-note">
-                      {browserLocalRuntimeManager.mode === 'external-development'
+                      {localRuntimeManager.mode === 'external-development'
                         ? 'Development mode: CrownKeep can inspect the runtime, but Foundry/model lifecycle is still managed outside the browser. The Windows desktop build will own these steps.'
-                        : 'CrownKeep manages the local runtime on this device.'}
+                        : localRuntimeManager.capabilities.canStartRuntime
+                          ? 'CrownKeep manages the local runtime on this device.'
+                          : 'Native Windows host connected. Foundry Local lifecycle control is the next Phase 4A slice.'}
                     </p>
                   </section>
                 )}
