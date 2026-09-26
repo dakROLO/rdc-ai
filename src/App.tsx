@@ -255,6 +255,7 @@ export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     () => localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true',
   )
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [lastRun, setLastRun] = useState<InferenceRunStats | null>(null)
   const [runtimeSnapshot, setRuntimeSnapshot] = useState<RuntimeSnapshot | null>(null)
   const [providerRefreshNonce, setProviderRefreshNonce] = useState(0)
@@ -393,6 +394,7 @@ export default function App() {
     setActiveConversation(conversation)
     setMessages([welcome])
     setPrompt('')
+    setMobileNavOpen(false)
   }
 
   async function openConversation(conversation: Conversation): Promise<void> {
@@ -401,6 +403,7 @@ export default function App() {
     setActiveConversation(conversation)
     setMessages(nextMessages)
     setPrompt('')
+    setMobileNavOpen(false)
   }
 
   useEffect(() => {
@@ -976,7 +979,7 @@ export default function App() {
   }
 
   return (
-    <div className={`app-shell ${sidebarCollapsed ? 'nav-collapsed' : ''}`}>
+    <div className={`app-shell ${sidebarCollapsed ? 'nav-collapsed' : ''} ${mobileNavOpen ? 'mobile-nav-open' : ''}`}>
       <aside className="sidebar">
         <div className="brand-row">
           <div className="brand-lockup">
@@ -1008,7 +1011,22 @@ export default function App() {
           <span className="nav-label">New Chat</span>
         </button>
 
-        <section className="project-nav" aria-label="Projects">
+        <button
+          className="mobile-nav-toggle"
+          type="button"
+          onClick={() => setMobileNavOpen((current) => !current)}
+          aria-expanded={mobileNavOpen}
+          aria-controls="mobile-navigation"
+        >
+          <span>{mobileNavOpen ? 'Hide' : 'Chats & Projects'}</span>
+          <span aria-hidden="true">{mobileNavOpen ? '⌃' : '⌄'}</span>
+        </button>
+
+        <section
+          id="mobile-navigation"
+          className={`project-nav ${mobileNavOpen ? 'mobile-open' : ''}`}
+          aria-label="Projects"
+        >
           <div className="nav-heading-row">
             <p className="nav-heading">Projects</p>
             <div className="project-heading-actions">
@@ -1133,7 +1151,10 @@ export default function App() {
           ))}
         </section>
 
-        <section className="conversation-nav" aria-label="Conversations">
+        <section
+          className={`conversation-nav ${mobileNavOpen ? 'mobile-open' : ''}`}
+          aria-label="Conversations"
+        >
           <p className="nav-heading">Conversations</p>
           {visibleConversations.length === 0 && (
             <p className="nav-empty">No conversations here yet.</p>
