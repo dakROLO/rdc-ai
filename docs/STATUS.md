@@ -482,3 +482,24 @@ Root cause / fixes delivered:
 - the iOS icon build now rasterizes the canonical `public/crownkeep-mark.svg` instead of relying primarily on the older PNG asset.
 
 Device revalidation required for all five fixes.
+
+
+## iPhone device validation round 2 — 2026-09-25
+
+Additional physical-device findings:
+
+- deleting the development-signed CrownKeep app caused iOS to request developer/publisher approval again; routine test deployments should update the installed app in place rather than delete it unless icon-cache testing requires a clean install;
+- real CrownKeep UI and Apple on-device provider continue to work;
+- user observed some Apple responses that felt truncated or repetitive, including weak continuation after a short follow-up;
+- Diagnostics could expand but lacked an explicit Close action.
+
+Hardening delivered for the next build:
+
+- added an explicit Diagnostics Close control;
+- Anne instructions now explicitly permit fictional/creative work when requested and treat short follow-ups as continuation intent;
+- native Apple prompting now separates previous conversation context from the current user request instead of passing the entire labeled transcript as one undifferentiated prompt;
+- creative requests receive a higher-temperature randomized sampling configuration while ordinary requests retain Apple's default generation behavior;
+- Apple session input/output/total token usage is sent back through the native bridge so CrownKeep diagnostics can distinguish model behavior from UI/bridge truncation;
+- device deployment supports optional `CROWNKEEP_SLEEP_AFTER=1` to return the Mac to sleep only after a successful install/launch.
+
+Exact prompt/response transcript is still useful if the Apple model continues to truncate or repeat after this build.
