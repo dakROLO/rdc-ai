@@ -30,6 +30,26 @@ echo "Project: $PROJECT"
 echo "Device:  $DEVICE_ID"
 echo "Team:    $TEAM_ID"
 
+cd "$ROOT"
+
+if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
+  echo "Node.js and npm are required on the Mac to build the shared CrownKeep UI."
+  exit 4
+fi
+
+if [[ ! -d "$ROOT/node_modules" ]]; then
+  echo "Installing CrownKeep web dependencies…"
+  npm install
+fi
+
+echo "Building CrownKeep React UI…"
+npm run build
+
+if [[ ! -f "$ROOT/dist/index.html" ]]; then
+  echo "CrownKeep web build did not produce dist/index.html"
+  exit 5
+fi
+
 rm -rf "$DERIVED"
 
 xcodebuild   -project "$PROJECT"   -scheme "$SCHEME"   -configuration Debug   -destination "generic/platform=iOS"   -derivedDataPath "$DERIVED"   DEVELOPMENT_TEAM="$TEAM_ID"   CODE_SIGN_STYLE=Automatic   -allowProvisioningUpdates   build
