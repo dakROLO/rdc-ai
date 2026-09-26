@@ -51,6 +51,29 @@ On the paired Mac, update the same branch and use the existing `scripts/ios-devi
 | Rolo15 current-branch parity + native dictation | Pending physical device |
 | Merge / contained stale branches / baseline tag | Blocked on the above device gates |
 
+## Physical laptop validation — attempt 1 (2026-09-26)
+
+**Result: failed; stop further model-path benchmarking until the native crash is addressed.**
+
+Observed on the primary Windows laptop:
+
+- device analysis completed and detected 32,173 MB system RAM, Intel Core Ultra 9 275HX, Intel Graphics, and NVIDIA GeForce RTX 5070 Laptop GPU;
+- execution-provider registration completed for CUDAExecutionProvider, WebGpuExecutionProvider, OpenVINOExecutionProvider, and NvTensorRTRTXExecutionProvider;
+- refreshed catalog reported 118 accelerated variants and 48 CPU variants;
+- the Quick section still exposes too many model families for normal product use and needs a curated recommended shortlist with the remainder behind More models / Advanced;
+- the selected benchmark run was `phi-4-mini-reasoning` and began comparing four paths;
+- OpenVINO and CUDA variants downloaded and loaded successfully;
+- while beginning the `Phi-4-mini-reasoning-generic-gpu:3` download, the native CrownKeep process exited with Windows `0xc0000005 (STATUS_ACCESS_VIOLATION)`;
+- the earlier Vite `ECONNREFUSED` messages occurred while the embedded Foundry web service was not yet listening and are not, by themselves, evidence of the access-violation cause.
+
+### Required follow-up before retry
+
+1. Add real model-download progress to the CrownKeep UI, including percentage and current model/variant so a long benchmark can be left running and checked later.
+2. Preserve current progress/state when the Local AI panel is closed and reopened; do not make the progress display event-only.
+3. Investigate the native access violation during repeated multi-variant download/load/unload benchmarking. Treat this as a native lifecycle/SDK crash until a narrower cause is proven.
+4. Revisit role classification: reasoning-family models such as `phi-4-mini-reasoning` should not crowd the default Quick shortlist merely because their size is small.
+5. After the crash is fixed, repeat the laptop acceptance flow beginning with the intended `phi-4-mini` family before testing heavier models.
+
 ## Known implementation limits
 
 - RAM filtering uses disk-size × 1.5 + 2 GB as a conservative estimate, not a guarantee of peak memory or VRAM fit. Native load failures remain benchmark failures.
