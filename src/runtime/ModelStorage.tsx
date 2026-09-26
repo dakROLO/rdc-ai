@@ -74,7 +74,7 @@ export function ModelStorage({
   const selectedVoiceAlias =
     localStorage.getItem('crownkeep.speechAlias')?.toLowerCase() ?? ''
 
-  const trackedBenchmarkCleanup = useMemo(() => {
+  const measuredLosers = useMemo(() => {
     if (!profile) return []
     return cached.filter((candidate) => {
       if (candidate.loaded || winnerIds.has(candidate.id)) return false
@@ -87,8 +87,7 @@ export function ModelStorage({
       return results.some(
         (result) =>
           result.fingerprint === profile.fingerprint &&
-          result.variantId === candidate.id &&
-          result.downloadedDuringBenchmark === true,
+          result.variantId === candidate.id,
       )
     })
   }, [cached, profile, results, selectedVoiceAlias, winnerIds])
@@ -145,20 +144,20 @@ export function ModelStorage({
     }
   }
 
-  async function cleanTrackedBenchmarkDownloads() {
-    if (busy || trackedBenchmarkCleanup.length === 0) return
-    const total = trackedBenchmarkCleanup.reduce(
+  async function cleanMeasuredBenchmarkLosers() {
+    if (busy || measuredLosers.length === 0) return
+    const total = measuredLosers.reduce(
       (sum, candidate) => sum + (candidate.fileSizeMb ?? 0),
       0,
     )
     const label =
       total > 0
         ? `about ${formatSize(total)}`
-        : `${trackedBenchmarkCleanup.length} cached variant(s)`
+        : `${measuredLosers.length} cached variant(s)`
 
     if (
       !window.confirm(
-        `Delete ${trackedBenchmarkCleanup.length} losing benchmark download(s), freeing ${label}? Measured winners and the selected Voice model will be kept.`,
+        `Delete ${measuredLosers.length} cached benchmark loser(s), freeing ${label}? Measured winners and the selected Voice model will be kept. This can also remove a losing variant that was already cached before benchmarking.`,
       )
     ) {
       return
@@ -168,9 +167,9 @@ export function ModelStorage({
     setError('')
     let removed = 0
     try {
-      for (const candidate of trackedBenchmarkCleanup) {
+      for (const candidate of measuredLosers) {
         setMessage(
-          `Cleaning benchmark download ${removed + 1}/${trackedBenchmarkCleanup.length}: ${candidate.alias}…`,
+          `Cleaning benchmark download ${removed + 1}/${measuredLosers.length}: ${candidate.alias}…`,
         )
         await manager.removeCachedModel(candidate.id)
         removed += 1
@@ -206,15 +205,15 @@ export function ModelStorage({
         <div className="model-storage-actions">
           <button
             type="button"
-            disabled={busy || trackedBenchmarkCleanup.length === 0}
-            onClick={() => void cleanTrackedBenchmarkDownloads()}
+            disabled={busy || measuredLosers.length === 0}
+            onClick={() => void cleanMeasuredBenchmarkLosers()}
           >
-            Clean benchmark downloads
+            Clean measured benchmark losers
           </button>
           <span>
-            {trackedBenchmarkCleanup.length > 0
-              ? `${trackedBenchmarkCleanup.length} tracked losing download(s) can be removed safely.`
-              : 'No safely tracked benchmark-only downloads are ready for automatic cleanup.'}
+            {measuredLosers.length > 0
+              ? `${measuredLosers.length} measured losing variant(s) can be removed; winners and Voice stay protected.`
+              : 'No cached measured losers are currently available for cleanup.'}
           </span>
         </div>
 
