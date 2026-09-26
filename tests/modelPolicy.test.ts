@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { bestObserved, taskOf, groupFamilies, memoryFit, readResults, viableVariants } from '../src/runtime/modelPolicy.ts'
+import { bestObserved, taskOf, groupFamilies, memoryFit, readResults, roleOf, viableVariants } from '../src/runtime/modelPolicy.ts'
 import type { BenchmarkResult } from '../src/runtime/modelPolicy.ts'
 const cpu = { id: 'phi-cpu:5', alias: 'phi-4-mini', modelType: 'chat', displayName: 'Phi', cached: true, loaded: false, device: 'CPU', fileSizeMb: 2000 }
 const gpu = { ...cpu, id: 'phi-gpu:5', device: 'GPU' }
@@ -30,4 +30,10 @@ test('native text catalogs are chat-capable but embedding and unknown tasks are 
   assert.equal(taskOf({ ...cpu, modelType: 'text' }), 'chat')
   assert.equal(taskOf({ ...cpu, modelType: 'text', task: 'embeddings' }), 'other')
   assert.equal(taskOf({ ...cpu, modelType: 'unknown' }), 'other')
+})
+
+
+test('reasoning variants stay out of the default Quick role', () => {
+  assert.equal(roleOf({ ...cpu, alias: 'phi-4-mini-reasoning' }), 'Deep / Experimental')
+  assert.equal(roleOf({ ...cpu, alias: 'phi-4-mini' }), 'Quick')
 })
