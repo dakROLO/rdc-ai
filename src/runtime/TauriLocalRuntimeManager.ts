@@ -7,6 +7,7 @@ import type {
 import type {
   LocalRuntimeManager,
   RuntimeActionResult,
+  RuntimeDeviceAnalysis,
   RuntimeModelCandidate,
   RuntimeSnapshot,
 } from './LocalRuntimeManager.ts'
@@ -31,6 +32,8 @@ interface NativeFoundryRuntimeStatus {
   cachedModels: NativeFoundryModelSummary[]
   loadedModels: NativeFoundryModelSummary[]
 }
+
+interface NativeFoundryDeviceAnalysis extends RuntimeDeviceAnalysis {}
 
 interface NativeFoundryModelCandidate {
   id: string
@@ -135,6 +138,10 @@ export class TauriLocalRuntimeManager implements LocalRuntimeManager {
 
   listModelCandidates(): Promise<RuntimeModelCandidate[]> {
     return invoke<NativeFoundryModelCandidate[]>('crownkeep_foundry_models')
+  }
+
+  analyzeDevice(): Promise<RuntimeDeviceAnalysis> {
+    return invoke<NativeFoundryDeviceAnalysis>('crownkeep_foundry_analyze_device')
   }
 }
 
