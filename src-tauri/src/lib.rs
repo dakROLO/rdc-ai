@@ -5,6 +5,7 @@ mod speech;
 mod device;
 
 const FOUNDRY_WEB_URL: &str = "http://127.0.0.1:39839";
+static FOUNDRY_LIFECYCLE_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -74,6 +75,36 @@ struct FoundryDeviceAnalysis {
 struct FoundryActionResult {
     supported: bool,
     detail: String,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct FoundryOperationProgress {
+    stage: String,
+    message: String,
+    model_id: Option<String>,
+    alias: Option<String>,
+    percent: Option<f64>,
+}
+
+fn emit_operation_progress(
+    app: &tauri::AppHandle,
+    stage: &str,
+    message: impl Into<String>,
+    model_id: Option<String>,
+    alias: Option<String>,
+    percent: Option<f64>,
+) {
+    let _ = app.emit(
+        "crownkeep-foundry-operation-progress",
+        FoundryOperationProgress {
+            stage: stage.to_string(),
+            message: message.into(),
+            model_id,
+            alias,
+            percent,
+        },
+    );
 }
 
 fn foundry_manager() -> Result<&'static FoundryLocalManager, String> {
@@ -472,49 +503,213 @@ async fn crownkeep_foundry_stop() -> Result<FoundryActionResult, String> {
     })
 }
 
+async fn ensure_model_cached(
+    app: &tauri::AppHandle,
+    model: &std::sync::Arc<foundry_local_sdk::Model>,
+    requested_id: &str,
+) -> Result<(), String> {
+    let cached = model
+        .is_cached()
+        .await
+        .map_err(|error| format!("Could not inspect Foundry Local model cache state: {error}"))?;
+
+    if cached {
+        emit_operation_progress(
+            app,
+            "download-complete",
+            format!("{} is already downloaded.", model.alias()),
+            Some(model.id().to_string()),
+            Some(model.alias().to_string()),
+            Some(100.0),
+        );
+        return Ok(());
+    }
+
+    eprintln!(
+        "[CrownKeep/Foundry] stage=download-model begin alias={} id={}",
+        model.alias(),
+        model.id()
+    );
+
+    let progress_app = app.clone();
+    let progress_id = model.id().to_string();
+    let progress_alias = model.alias().to_string();
+    model
+        .download(Some(move |progress: f64| {
+            let clamped = progress.clamp(0.0, 100.0);
+            emit_operation_progress(
+                &progress_app,
+                "downloading",
+                format!("Downloading {} · {:.0}%", progress_alias, clamped),
+                Some(progress_id.clone()),
+                Some(progress_alias.clone()),
+                Some(clamped),
+            );
+        }))
+        .await
+        .map_err(|error| {
+            eprintln!("[CrownKeep/Foundry] stage=download-model failed: {error}");
+            format!("Could not download Foundry Local model '{requested_id}': {error}")
+        })?;
+
+    eprintln!("[CrownKeep/Foundry] stage=download-model complete");
+    emit_operation_progress(
+        app,
+        "download-complete",
+        format!("{} download complete.", model.alias()),
+        Some(model.id().to_string()),
+        Some(model.alias().to_string()),
+        Some(100.0),
+    );
+    Ok(())
+}
+
 #[tauri::command]
-async fn crownkeep_foundry_install_model(model_id: String) -> Result<FoundryActionResult, String> {
+async fn crownkeep_foundry_install_model(
+    app: tauri::AppHandle,
+    model_id: String,
+) -> Result<FoundryActionResult, String> {
     eprintln!("[CrownKeep/Foundry] stage=resolve-model requested={model_id}");
     let model = resolve_model(&model_id).await.map_err(|error| {
         eprintln!("[CrownKeep/Foundry] stage=resolve-model failed: {error}");
         error
     })?;
 
-    eprintln!(
-        "[CrownKeep/Foundry] stage=resolve-model selected alias={} id={}",
-        model.alias(),
-        model.id()
+    emit_operation_progress(
+        &app,
+        "preparing",
+        format!("Preparing {}…", model.alias()),
+        Some(model.id().to_string()),
+        Some(model.alias().to_string()),
+        None,
     );
-
-    let cached = model
-        .is_cached()
-        .await
-        .map_err(|error| {
-            eprintln!("[CrownKeep/Foundry] stage=inspect-cache failed: {error}");
-            format!("Could not inspect Foundry Local model cache state: {error}")
-        })?;
-
-    if !cached {
-        eprintln!(
-            "[CrownKeep/Foundry] stage=download-model begin alias={} id={}",
-            model.alias(),
-            model.id()
-        );
-        model
-            .download(None::<fn(f64)>)
-            .await
-            .map_err(|error| {
-                eprintln!("[CrownKeep/Foundry] stage=download-model failed: {error}");
-                format!("Could not download Foundry Local model '{model_id}': {error}")
-            })?;
-        eprintln!("[CrownKeep/Foundry] stage=download-model complete");
-    } else {
-        eprintln!("[CrownKeep/Foundry] stage=download-model skipped cached=true");
-    }
+    ensure_model_cached(&app, &model, &model_id).await?;
 
     Ok(FoundryActionResult {
         supported: true,
         detail: format!("Foundry Local model '{}' is available on this device.", model.alias()),
+    })
+}
+
+#[tauri::command]
+async fn crownkeep_foundry_activate_model(
+    app: tauri::AppHandle,
+    model_id: String,
+) -> Result<FoundryActionResult, String> {
+    let _guard = FOUNDRY_LIFECYCLE_LOCK.lock().await;
+    let manager = foundry_manager()?;
+    let model = resolve_model(&model_id).await?;
+    let previous = manager
+        .catalog()
+        .get_loaded_models()
+        .await
+        .map_err(|error| format!("Could not inspect loaded Foundry models: {error}"))?;
+    let service_was_running = !manager
+        .urls()
+        .map_err(|error| format!("Could not inspect Foundry service state: {error}"))?
+        .is_empty();
+
+    emit_operation_progress(
+        &app,
+        "stopping-service",
+        "Pausing local inference before changing models…",
+        Some(model.id().to_string()),
+        Some(model.alias().to_string()),
+        None,
+    );
+    if service_was_running {
+        manager
+            .stop_web_service()
+            .await
+            .map_err(|error| format!("Could not pause Foundry Local before model change: {error}"))?;
+    }
+
+    let result: Result<(), String> = async {
+        ensure_model_cached(&app, &model, &model_id).await?;
+
+        emit_operation_progress(
+            &app,
+            "unloading",
+            "Releasing the previous local model…",
+            Some(model.id().to_string()),
+            Some(model.alias().to_string()),
+            None,
+        );
+        for loaded in &previous {
+            if normalized_model_key(loaded.id()) != normalized_model_key(model.id()) {
+                loaded
+                    .unload()
+                    .await
+                    .map_err(|error| format!("Could not unload '{}': {error}", loaded.id()))?;
+            }
+        }
+
+        if !model
+            .is_loaded()
+            .await
+            .map_err(|error| format!("Could not inspect target model load state: {error}"))?
+        {
+            emit_operation_progress(
+                &app,
+                "loading",
+                format!("Loading {}…", model.alias()),
+                Some(model.id().to_string()),
+                Some(model.alias().to_string()),
+                None,
+            );
+            model
+                .load()
+                .await
+                .map_err(|error| format!("Could not load '{}': {error}", model.id()))?;
+        }
+
+        emit_operation_progress(
+            &app,
+            "starting-service",
+            "Starting local inference…",
+            Some(model.id().to_string()),
+            Some(model.alias().to_string()),
+            None,
+        );
+        manager
+            .start_web_service()
+            .await
+            .map_err(|error| format!("Could not start Foundry Local after model change: {error}"))?;
+        Ok(())
+    }
+    .await;
+
+    if let Err(error) = result {
+        let _ = model.unload().await;
+        for loaded in &previous {
+            let _ = loaded.load().await;
+        }
+        if service_was_running {
+            let _ = manager.start_web_service().await;
+        }
+        emit_operation_progress(
+            &app,
+            "error",
+            format!("Model change failed; previous model restored. {error}"),
+            Some(model.id().to_string()),
+            Some(model.alias().to_string()),
+            None,
+        );
+        return Err(error);
+    }
+
+    emit_operation_progress(
+        &app,
+        "ready",
+        format!("{} is ready.", model.alias()),
+        Some(model.id().to_string()),
+        Some(model.alias().to_string()),
+        Some(100.0),
+    );
+
+    Ok(FoundryActionResult {
+        supported: true,
+        detail: format!("Loaded Foundry Local model '{}'.", model.id()),
     })
 }
 
@@ -574,6 +769,7 @@ pub fn run() {
             crownkeep_foundry_start,
             crownkeep_foundry_stop,
             crownkeep_foundry_install_model,
+            crownkeep_foundry_activate_model,
             crownkeep_foundry_load_model,
             crownkeep_foundry_unload_model
         ])
