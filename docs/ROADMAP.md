@@ -308,7 +308,7 @@ Focus:
 - add local voice dictation through a shared speech-input contract;
 - use Foundry Local Whisper on Windows and native Apple Speech on iPhone;
 - bring the physical iPhone forward onto the current shared build and revalidate Apple Foundation Models, projects, persistence, streaming, and compact mobile UX;
-- bring the AVD forward onto the current shared build and persist a constrained CPU-first profile based on observed performance rather than virtual GPU labels;
+- run the same adaptive Windows analysis on the physical laptop and AVD so CrownKeep chooses the best observed execution path from the capabilities and benchmark results actually present, without host-type special cases;
 - validate idle unload/wake and non-blocking startup across device-appropriate profiles;
 - update repository documentation, merge the validated convergence branch to `main`, clean stale contained phase branches, and mark a local-baseline pause point.
 
@@ -317,7 +317,7 @@ Exit criteria:
 - primary Windows, physical iPhone, and AVD all run the current shared CrownKeep baseline;
 - Windows shows a short useful model recommendation set with observed benchmark evidence;
 - local dictation reaches the composer on Windows and iPhone;
-- AVD remains interactive using a device-appropriate CPU profile;
+- the same Windows selection policy is proven on both the laptop and AVD, even when the resulting execution provider/model differs;
 - no silent cloud fallback is introduced;
 - validated work is merged to `main` and documented without relying on chat history.
 
