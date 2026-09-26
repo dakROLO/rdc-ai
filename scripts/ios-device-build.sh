@@ -96,10 +96,46 @@ if [[ ! -d "$APP" ]]; then
 fi
 
 echo "Installing CrownKeep…"
-xcrun devicectl device install app   --device "$DEVICE_ID"   "$APP"
+INSTALL_OK=0
+for ATTEMPT in 1 2 3; do
+  if xcrun devicectl device install app --device "$DEVICE_ID" "$APP"; then
+    INSTALL_OK=1
+    break
+  fi
+
+  if [[ "$ATTEMPT" -lt 3 ]]; then
+    echo "Wireless device connection dropped during install (attempt $ATTEMPT/3)."
+    echo "Keep the iPhone awake/unlocked and on the same network; retrying in 5 seconds…"
+    sleep 5
+  fi
+done
+
+if [[ "$INSTALL_OK" -ne 1 ]]; then
+  echo "CrownKeep was built successfully, but wireless installation failed after 3 attempts."
+  echo "Current CoreDevice visibility:"
+  xcrun devicectl list devices || true
+  exit 7
+fi
 
 echo "Launching CrownKeep…"
-xcrun devicectl device process launch   --device "$DEVICE_ID"   "$BUNDLE_ID"
+LAUNCH_OK=0
+for ATTEMPT in 1 2 3; do
+  if xcrun devicectl device process launch --device "$DEVICE_ID" "$BUNDLE_ID"; then
+    LAUNCH_OK=1
+    break
+  fi
+
+  if [[ "$ATTEMPT" -lt 3 ]]; then
+    echo "Wireless device connection dropped during launch (attempt $ATTEMPT/3); retrying in 3 seconds…"
+    sleep 3
+  fi
+done
+
+if [[ "$LAUNCH_OK" -ne 1 ]]; then
+  echo "CrownKeep installed successfully, but automatic launch failed."
+  echo "Open CrownKeep manually on the iPhone or rerun the launch step."
+  exit 8
+fi
 
 echo "CrownKeep launched on the paired iPhone."
 
