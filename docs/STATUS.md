@@ -515,3 +515,18 @@ Fix:
 - wrap Apple token-usage collection in `if #available(iOS 27.0, *)`;
 - iOS 27 devices report prompt/completion/total tokens into CrownKeep Diagnostics;
 - iOS 26 devices continue local generation without token-usage diagnostics.
+
+
+## Transient wireless CoreDevice install failure hardening — 2026-09-25
+
+A physical iPhone deployment completed the full CrownKeep build successfully but failed during the wireless `devicectl device install app` step with a CoreDevice control-channel reset (`Connection reset by peer`).
+
+This is distinct from compilation, signing, or provisioning failure. The built app remained available in DerivedData.
+
+Hardening delivered:
+
+- device install now retries up to three times after transient wireless failures;
+- launch also retries up to three times;
+- retry guidance asks the user to keep the iPhone awake/unlocked and on the same network;
+- after repeated install failure, the script prints the current CoreDevice device list for diagnosis;
+- the Mac sleep-after-success step still runs only after both install and launch succeed.
