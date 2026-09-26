@@ -1291,6 +1291,21 @@ export default function App() {
               </summary>
 
               <div className="local-ai-panel">
+                <div className="local-ai-panel-heading">
+                  <strong>Inside the Keep</strong>
+                  <button
+                    type="button"
+                    className="local-ai-close-button"
+                    onClick={(event) =>
+                      event.currentTarget
+                        .closest('details.local-ai-menu')
+                        ?.removeAttribute('open')
+                    }
+                  >
+                    Close
+                  </button>
+                </div>
+
                 <div className="provider-selectors">
                   <label>
                     <span>Provider</span>
