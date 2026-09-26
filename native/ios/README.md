@@ -141,3 +141,16 @@ CROWNKEEP_DEVICE_ID=<device-id> bash scripts/ios-device-build.sh
 ```
 
 Set `CROWNKEEP_TEAM_ID` only when intentionally overriding the saved team.
+
+
+### Return the Mac to sleep after deployment
+
+Set `CROWNKEEP_SLEEP_AFTER=1` to ask the logged-in macOS user session to sleep five seconds after CrownKeep installs and launches successfully:
+
+```bash
+CROWNKEEP_DEVICE_ID=<device-id> CROWNKEEP_SLEEP_AFTER=1 bash scripts/ios-device-build.sh
+```
+
+This only runs after a successful deployment. It uses macOS System Events rather than storing an administrator password in the script.
+
+Waking a sleeping Mac is a separate network capability. Enable **Wake for network access** in macOS System Settings. Whether a Windows SSH attempt can wake the Mac directly depends on the Mac/network path; a Wake-on-LAN magic packet may still be needed.
