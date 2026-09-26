@@ -452,3 +452,33 @@ Windows PC
 ```
 
 Next validation target: confirm the installed build renders the full CrownKeep UI, shows the branded app icon, uses **Anne · Apple On-Device**, persists local conversations, and returns a real Apple Foundation Models response through the native bridge.
+
+
+## First full iPhone UI validation — 2026-09-25
+
+User validated the first shared-UI CrownKeep build on physical iPhone `Rolo15`.
+
+Passed:
+
+- native app launches the real CrownKeep React UI;
+- **Anne · Apple On-Device** is selected correctly;
+- Apple on-device model/provider availability is healthy;
+- Anne returns successful local responses through the Swift bridge.
+
+Issues found:
+
+- Home Screen icon rendered effectively black instead of showing the CrownKeep mark;
+- **New Project** did not open its naming dialog;
+- conversation rename did not open its editing dialog;
+- mobile project/navigation controls plus Local AI chrome consumed too much vertical space;
+- Apple responses arrived as one completed block instead of streaming.
+
+Root cause / fixes delivered:
+
+- project creation, rename, delete confirmation, and related browser dialogs use `window.prompt/confirm/alert`; the native `WKWebView` host now implements the required `WKUIDelegate` JavaScript dialog callbacks;
+- mobile Chats/Projects navigation is now collapsed behind a dedicated phone-only tray;
+- the active project selector and Local AI summary are compacted into a single short mobile header row, while detailed Local AI controls remain expandable;
+- the native Apple bridge now uses `LanguageModelSession.streamResponse(...)` and converts Foundation Models' cumulative partial snapshots into deltas for the existing CrownKeep provider stream;
+- the iOS icon build now rasterizes the canonical `public/crownkeep-mark.svg` instead of relying primarily on the older PNG asset.
+
+Device revalidation required for all five fixes.
