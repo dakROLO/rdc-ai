@@ -2,6 +2,9 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# Support common Homebrew/Node locations in non-interactive SSH shells.
+export PATH="/opt/homebrew/opt/node@22/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 PROJECT="$ROOT/native/ios/CrownKeepNative/CrownKeepNative.xcodeproj"
 SCHEME="CrownKeepNative"
 BUNDLE_ID="com.royaldigitalclarity.crownkeep.dev"
