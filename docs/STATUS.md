@@ -1,16 +1,14 @@
 # CrownKeep — Current Status
 
-**Updated:** 2026-09-24
+**Updated:** 2026-09-26
 
 ## Active phase
 
-Phase 2 — Windows Local AI
+Phase 3 complete — Windows + iPhone local baseline validated
 
 ## Active sprint
 
-Sprint 2.1 — Foundry Local connectivity
-
-Sprint 0.2 implementation is complete, with install/offline validation still pending.
+Next-phase planning — product continuity, cloud identity/sync, and Windows productization.
 
 ## Completed
 
