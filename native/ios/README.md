@@ -117,7 +117,7 @@ The first Xcode signing/provisioning run may modify the local `project.pbxproj`,
 If a later `git pull` refuses to continue because those files would be overwritten, preserve the local state before updating:
 
 ```bash
-git stash push -m "local Xcode signing setup" -- \
+git stash push -m local-Xcode-signing-setup -- \
   native/ios/CrownKeepNative/CrownKeepNative.xcodeproj/project.pbxproj \
   scripts/ios-device-build.sh
 
