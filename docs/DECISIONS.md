@@ -434,3 +434,40 @@ Tauri supports an existing Vite frontend while providing a Rust native host. Mic
 - Browser development must remain functional.
 - Do not add Foundry SDK lifecycle ownership until the Tauri shell/bridge proof is validated.
 - No real RDC customer data is introduced by this phase.
+
+
+---
+
+## ADR-0023 — Adaptive Windows model selection is capability- and benchmark-driven
+
+**Status:** Accepted  
+**Date:** 2026-09-26
+
+### Decision
+
+CrownKeep uses one Windows model-selection policy across physical PCs, laptops, virtual desktops, and other Windows hosts.
+
+The selection flow is:
+
+1. discover actual hardware and execution-provider capabilities;
+2. inspect compatible model families and variants;
+3. filter candidates by task, memory/resource fit, and required capabilities such as tool calling or speech;
+4. benchmark viable candidates using observed performance;
+5. recommend and persist the best observed result for the current machine/runtime fingerprint.
+
+The product must not choose a model or execution provider merely because the host is labeled `AVD`, `laptop`, `desktop`, or similar.
+
+Different hosts may produce different selected models or execution providers, but those outcomes must emerge from the same analysis rather than separate hard-coded host policies.
+
+### Reason
+
+Testing already showed that a virtual WebGPU path can be much slower than CPU on one Windows host, while the primary laptop exposes CUDA/TensorRT-capable NVIDIA acceleration. Host labels are therefore a poor proxy for usable local-AI capability.
+
+Observed performance and real runtime capability are the durable decision inputs.
+
+### Constraints
+
+- A catalog `GPU` label is only a candidate signal, not a recommendation.
+- Manual variant forcing remains an advanced diagnostic override, not the normal user path.
+- Re-analysis should occur when meaningful hardware, driver, execution-provider, or runtime characteristics change.
+- This decision applies to Windows model/runtime selection; iPhone continues to use its native Apple capability path behind the same shared product experience.
