@@ -2212,3 +2212,36 @@ body {
 .local-ai-close-button:hover {
   border-color: rgba(46, 230, 184, 0.42);
 }
+
+
+/* Phase 4A.2 native Foundry lifecycle controls */
+.runtime-native-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.runtime-native-button {
+  flex: 1;
+  border: 1px solid rgba(46, 230, 184, 0.34);
+  border-radius: 9px;
+  padding: 9px 11px;
+  background: rgba(17, 94, 79, 0.24);
+  color: var(--stone);
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.runtime-native-button:hover:not(:disabled) {
+  border-color: rgba(46, 230, 184, 0.58);
+  background: rgba(17, 94, 79, 0.34);
+}
+
+.runtime-native-button.secondary {
+  border-color: rgba(232, 228, 218, 0.14);
+  background: rgba(232, 228, 218, 0.05);
+}
+
+.runtime-native-button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
