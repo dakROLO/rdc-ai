@@ -864,3 +864,5 @@ Branch: `sprint-4a3-local-platform-convergence`.
 Validation at implementation time: local lint, TypeScript, production build, policy tests. Native CI and device tests must be recorded separately; a Linux web build is not evidence of a working Windows microphone or iPhone installation.
 
 Remaining gates: current Windows/laptop and AVD inference/benchmarks/dictation, `Rolo15` install/chat/dictation/persistence, native compilation, and the matrix in `docs/SPRINT-4A3-VALIDATION.md`. Merge, stale contained-branch deletion, and `v0.4-local-baseline` are intentionally pending those gates.
+
+Native CI caught an existing Foundation Models SDK compatibility gap: the iOS 26.5 runner has `GenerationOptions.sampling`, while the earlier device branch used the iOS 27 spelling. Use the compatible property and conditionally compile iOS 27 token-usage telemetry only when the project is built with a matching SDK. iOS 26 chat/dictation remains supported. CI also generates the branded icon before compilation.

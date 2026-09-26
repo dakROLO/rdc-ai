@@ -25,3 +25,7 @@ src-tauri/icons/
 
 # Tauri generated schemas / capability artifacts.
 src-tauri/gen/
+
+# Local browser test output
+test-results/
+playwright-report/

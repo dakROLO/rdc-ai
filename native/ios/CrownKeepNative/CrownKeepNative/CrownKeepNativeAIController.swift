@@ -325,7 +325,7 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
                 var generationOptions = GenerationOptions()
                 if isCreativeRequest {
                     generationOptions.temperature = 0.9
-                    generationOptions.samplingMode = .random(
+                    generationOptions.sampling = .random(
                         probabilityThreshold: 0.9,
                         seed: nil
                     )
@@ -364,6 +364,7 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
 
                 guard !Task.isCancelled else { return }
 
+                #if CROWNKEEP_IOS27_SDK
                 if #available(iOS 27.0, *) {
                     let usage = session.usage
                     self.streamChunk(
@@ -378,6 +379,8 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
                         ]
                     )
                 }
+
+                #endif
 
                 self.streamComplete(streamId: streamId)
             } catch is CancellationError {

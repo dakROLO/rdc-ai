@@ -175,6 +175,8 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.0;
+                "SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=iphoneos27*]" = "$(inherited) CROWNKEEP_IOS27_SDK";
+                "SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=iphonesimulator27*]" = "$(inherited) CROWNKEEP_IOS27_SDK";
 			};
 			name = Debug;
 		};
@@ -188,6 +190,8 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.0;
+                "SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=iphoneos27*]" = "$(inherited) CROWNKEEP_IOS27_SDK";
+                "SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=iphonesimulator27*]" = "$(inherited) CROWNKEEP_IOS27_SDK";
 			};
 			name = Release;
 		};
@@ -215,6 +219,8 @@
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
+                "SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=iphoneos27*]" = "$(inherited) CROWNKEEP_IOS27_SDK";
+                "SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=iphonesimulator27*]" = "$(inherited) CROWNKEEP_IOS27_SDK";
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
@@ -240,6 +246,8 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_VERSION = 5.0;
+                "SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=iphoneos27*]" = "$(inherited) CROWNKEEP_IOS27_SDK";
+                "SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=iphonesimulator27*]" = "$(inherited) CROWNKEEP_IOS27_SDK";
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
