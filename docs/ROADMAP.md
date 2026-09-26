@@ -254,7 +254,7 @@ Validated on the primary Windows development machine:
 - verified Anne response without manual Foundry CLI lifecycle commands;
 - application close releases the embedded runtime while preserving the downloaded model cache.
 
-#### Sprint 4A.2B — Automatic restore + normal-user startup — **NEXT**
+#### Sprint 4A.2B — Automatic restore + normal-user startup — **ACTIVE**
 
 Focus:
 
@@ -263,7 +263,20 @@ Focus:
 - preserve a visible Stop local AI resource-release action;
 - recover cleanly if the prior model/runtime cannot start;
 - persist the working model/variant after observed verification;
-- keep startup non-blocking so conversation history opens even if local AI preparation is still running.
+- keep startup non-blocking so conversation history opens even if local AI preparation is still running;
+- add idle unload/reload behavior so CrownKeep can free local model resources without closing the application.
+
+#### Sprint 4A.2C — Local AI product experience
+
+Focus:
+
+- responsive desktop header / Local AI layout at medium window widths;
+- fenced code-block rendering with per-block Copy action;
+- native Foundry catalog/model inspection;
+- local Model Analyst view for model/variant/device comparison;
+- observed benchmark flow before persisting the preferred model;
+- user-selectable local model rather than a permanently hard-coded bootstrap alias;
+- clear sleeping/loading/ready runtime indicator with one-click reload.
 
 Deliverables:
 
