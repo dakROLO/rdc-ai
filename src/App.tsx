@@ -26,6 +26,7 @@ import { ProviderRegistry } from './providers/ProviderRegistry.ts'
 import { getMobileCapabilitySnapshot } from './mobile/MobileCapability.ts'
 import { localRuntimeManager } from './runtime/runtimeManager.ts'
 import type {
+  RuntimeDeviceAnalysis,
   RuntimeModelCandidate,
   RuntimeSnapshot,
 } from './runtime/LocalRuntimeManager.ts'
@@ -315,6 +316,8 @@ export default function App() {
   })
   const [modelCandidates, setModelCandidates] = useState<RuntimeModelCandidate[]>([])
   const [analystModelId, setAnalystModelId] = useState('')
+  const [deviceAnalysis, setDeviceAnalysis] = useState<RuntimeDeviceAnalysis | null>(null)
+  const [isDeviceAnalysisRunning, setIsDeviceAnalysisRunning] = useState(false)
   const [copiedCodeKey, setCopiedCodeKey] = useState<string | null>(null)
   const autoRestoreAttemptedRef = useRef(false)
   const [setupRecord, setSetupRecord] = useState<LocalAiSetupRecord | null>(
@@ -825,6 +828,39 @@ export default function App() {
       )
     }
   }
+
+  async function analyzeNativeDevice() {
+    if (
+      localRuntimeManager.mode !== 'embedded' ||
+      isDeviceAnalysisRunning ||
+      isRuntimeActionRunning ||
+      isGenerating
+    ) {
+      return
+    }
+
+    setIsDeviceAnalysisRunning(true)
+    setRuntimeCheckError(null)
+    setRuntimeActionMessage(
+      'Analyzing this Windows device. CrownKeep may download/register compatible local execution providers.',
+    )
+
+    try {
+      const analysis = await localRuntimeManager.analyzeDevice()
+      setDeviceAnalysis(analysis)
+      setRuntimeActionMessage(analysis.detail)
+      await refreshModelAnalyst()
+    } catch (error) {
+      setRuntimeCheckError(
+        error instanceof Error
+          ? error.message
+          : 'CrownKeep could not analyze this device.',
+      )
+    } finally {
+      setIsDeviceAnalysisRunning(false)
+    }
+  }
+
 
   async function copyCode(content: string, key: string) {
     try {
@@ -1810,18 +1846,81 @@ export default function App() {
                             <div>
                               <strong>Foundry models on this device</strong>
                               <small>
-                                Cached models are listed first. CrownKeep will benchmark the model after you switch.
+                                Analyze this PC first to discover compatible execution providers and accelerated CPU/GPU/NPU variants. CrownKeep still uses observed performance to decide what actually feels best.
                               </small>
                             </div>
-                            <button
-                              type="button"
-                              className="runtime-refresh-button"
-                              onClick={() => void refreshModelAnalyst()}
-                              disabled={isRuntimeActionRunning}
-                            >
-                              Refresh
-                            </button>
+                            <div className="model-analyst-actions">
+                              <button
+                                type="button"
+                                className="runtime-refresh-button"
+                                onClick={() => void refreshModelAnalyst()}
+                                disabled={isRuntimeActionRunning || isDeviceAnalysisRunning}
+                              >
+                                Refresh
+                              </button>
+                              <button
+                                type="button"
+                                className="runtime-native-button analyst-button"
+                                onClick={() => void analyzeNativeDevice()}
+                                disabled={
+                                  isRuntimeActionRunning ||
+                                  isDeviceAnalysisRunning ||
+                                  isGenerating
+                                }
+                              >
+                                {isDeviceAnalysisRunning
+                                  ? 'Analyzing device…'
+                                  : 'Analyze this device'}
+                              </button>
+                            </div>
                           </div>
+
+                          {deviceAnalysis && (
+                            <div className="device-analysis-card">
+                              <div className="device-analysis-summary">
+                                <span>
+                                  <strong>Devices</strong>
+                                  {deviceAnalysis.devices.join(' · ') || 'CPU / default'}
+                                </span>
+                                <span>
+                                  <strong>Accelerated variants</strong>
+                                  {deviceAnalysis.acceleratedVariantCount}
+                                </span>
+                                <span>
+                                  <strong>CPU variants</strong>
+                                  {deviceAnalysis.cpuVariantCount}
+                                </span>
+                              </div>
+
+                              {deviceAnalysis.executionProviders.length > 0 && (
+                                <div className="execution-provider-list">
+                                  {deviceAnalysis.executionProviders.map((provider) => (
+                                    <span
+                                      className={
+                                        provider.registered
+                                          ? 'execution-provider ready'
+                                          : 'execution-provider unavailable'
+                                      }
+                                      key={provider.name}
+                                      title={
+                                        provider.registrationAttempted
+                                          ? provider.registrationSucceeded
+                                            ? 'Registered by CrownKeep'
+                                            : 'Registration attempt failed'
+                                          : provider.registered
+                                            ? 'Already registered'
+                                            : 'Not registered'
+                                      }
+                                    >
+                                      {provider.name}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+
+                              <p>{deviceAnalysis.detail}</p>
+                            </div>
+                          )}
 
                           <label className="model-analyst-select">
                             <span>Candidate</span>
