@@ -76,7 +76,7 @@ const SIDEBAR_STORAGE_KEY = 'crownkeep.sidebarCollapsed'
 const LOCAL_AI_SETUP_STORAGE_KEY = 'crownkeep.localAiSetup'
 const DEFAULT_WINDOWS_MODEL_ALIAS = 'phi-4-mini'
 const PREFERRED_WINDOWS_MODEL_KEY = 'crownkeep.preferredWindowsModel'
-const WINDOWS_IDLE_UNLOAD_MS = 15 * 60 * 1000
+const IDLE_UNLOAD_MINUTES_KEY = 'crownkeep.idleUnloadMinutes'
 
 interface LocalAiSetupRecord {
   providerId: string
@@ -309,6 +309,10 @@ export default function App() {
   const [isRuntimeActionRunning, setIsRuntimeActionRunning] = useState(false)
   const [runtimeActionMessage, setRuntimeActionMessage] = useState<string | null>(null)
   const [runtimeSleeping, setRuntimeSleeping] = useState(false)
+  const [idleUnloadMinutes, setIdleUnloadMinutes] = useState(() => {
+    const stored = Number(localStorage.getItem(IDLE_UNLOAD_MINUTES_KEY) ?? '15')
+    return [0, 5, 15, 30, 60].includes(stored) ? stored : 15
+  })
   const [modelCandidates, setModelCandidates] = useState<RuntimeModelCandidate[]>([])
   const [analystModelId, setAnalystModelId] = useState('')
   const [copiedCodeKey, setCopiedCodeKey] = useState<string | null>(null)
@@ -351,6 +355,7 @@ export default function App() {
     if (!providerAvailability.available) return 'Local provider unavailable'
     return isGenerating ? 'Anne is thinking locally…' : 'Inside the Keep'
   }, [
+    idleUnloadMinutes,
     isGenerating,
     isRuntimeActionRunning,
     providerAvailability,
@@ -595,6 +600,7 @@ export default function App() {
       autoRestoreAttemptedRef.current ||
       isRuntimeActionRunning ||
       isGenerating ||
+      runtimeSleeping ||
       providerAvailability?.available !== false ||
       !setupRecord?.healthy
     ) {
@@ -607,6 +613,7 @@ export default function App() {
     isGenerating,
     isRuntimeActionRunning,
     providerAvailability,
+    runtimeSleeping,
     selectedProviderId,
     setupRecord,
   ])
@@ -618,6 +625,7 @@ export default function App() {
       runtimeSleeping ||
       isGenerating ||
       isRuntimeActionRunning ||
+      idleUnloadMinutes <= 0 ||
       providerAvailability?.available !== true ||
       !selectedModelId
     ) {
@@ -626,7 +634,7 @@ export default function App() {
 
     const timer = window.setTimeout(() => {
       void releaseNativeLocalAi('idle')
-    }, WINDOWS_IDLE_UNLOAD_MS)
+    }, idleUnloadMinutes * 60 * 1000)
 
     return () => window.clearTimeout(timer)
   }, [
@@ -727,7 +735,7 @@ export default function App() {
       setRuntimeSleeping(true)
       setRuntimeActionMessage(
         reason === 'idle'
-          ? 'Local AI went to sleep after 15 minutes of inactivity. Click the status above to wake it.'
+          ? `Local AI went to sleep after ${idleUnloadMinutes} minutes of inactivity. Click the status above to wake it.`
           : stopResult.detail,
       )
       setProviderRefreshNonce((current) => current + 1)
@@ -1753,6 +1761,27 @@ export default function App() {
                           )}
                         </div>
                       )}
+
+                    {localRuntimeManager.mode === 'embedded' && (
+                      <label className="idle-unload-control">
+                        <span>Idle unload</span>
+                        <select
+                          value={idleUnloadMinutes}
+                          onChange={(event) => {
+                            const next = Number(event.target.value)
+                            setIdleUnloadMinutes(next)
+                            localStorage.setItem(IDLE_UNLOAD_MINUTES_KEY, String(next))
+                          }}
+                          disabled={isRuntimeActionRunning || isGenerating}
+                        >
+                          <option value={0}>Never</option>
+                          <option value={5}>5 minutes</option>
+                          <option value={15}>15 minutes</option>
+                          <option value={30}>30 minutes</option>
+                          <option value={60}>60 minutes</option>
+                        </select>
+                      </label>
+                    )}
 
                     {localRuntimeManager.mode === 'embedded' && (
                       <details className="model-analyst">
