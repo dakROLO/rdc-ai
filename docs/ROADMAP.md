@@ -179,7 +179,7 @@ Deliverables:
 - Apple availability-state mapping for device eligibility, Apple Intelligence state, and model readiness;
 - first Swift `CrownKeepFoundationModelsService` scaffold using `SystemLanguageModel` and `LanguageModelSession`.
 
-#### Sprint 3.1B — Minimal native iPhone host — **IMPLEMENTED · DEVICE VALIDATION PENDING**
+#### Sprint 3.1B — Minimal native iPhone host — **COMPLETE**
 
 Deliverables:
 
@@ -198,7 +198,7 @@ Exit criteria:
 - a supported native iPhone can report Apple model availability through CrownKeep;
 - the Windows provider path remains unaffected.
 
-### Sprint 3.2 — Mobile local conversation
+### Sprint 3.2 — Mobile local conversation — **ACTIVE · IMPLEMENTED CHANGES PENDING DEVICE VALIDATION**
 
 **Outcome:** A supported iPhone can produce local responses in the shared conversation system.
 
