@@ -29,6 +29,21 @@ export interface RuntimeActionResult {
   detail: string
 }
 
+export interface RuntimeExecutionProvider {
+  name: string
+  registered: boolean
+  registrationAttempted: boolean
+  registrationSucceeded: boolean
+}
+
+export interface RuntimeDeviceAnalysis {
+  devices: string[]
+  executionProviders: RuntimeExecutionProvider[]
+  acceleratedVariantCount: number
+  cpuVariantCount: number
+  detail: string
+}
+
 export interface RuntimeModelCandidate {
   id: string
   alias: string
@@ -59,4 +74,5 @@ export interface LocalRuntimeManager {
   loadModel(modelId: string): Promise<RuntimeActionResult>
   unloadModel(modelId: string): Promise<RuntimeActionResult>
   listModelCandidates(): Promise<RuntimeModelCandidate[]>
+  analyzeDevice(): Promise<RuntimeDeviceAnalysis>
 }
