@@ -4,11 +4,11 @@
 
 ## Active phase
 
-Phase 3 complete — Windows + iPhone local baseline validated
+Phase 4A — Windows Product Host
 
 ## Active sprint
 
-Next-phase planning — product continuity, cloud identity/sync, and Windows productization.
+Sprint 4A.1 — Native shell proof.
 
 ## Completed
 
@@ -561,3 +561,36 @@ Validated baseline:
 - conversations remain provider-neutral and local-first.
 
 This establishes the first shared **Windows + iPhone local baseline** suitable for merging into `main`. Cloud identity, sync, explicit cloud escalation, RAG, agents, and live RDC data remain later phases.
+
+
+## Phase 4A Windows host kickoff — 2026-09-26
+
+Branch: `phase-4a-windows-product-host`
+
+Goal: turn the validated Windows browser/Foundry development path into the beginning of a normal desktop product without disturbing the working Windows + iPhone local baseline on `main`.
+
+Delivered in the kickoff slice:
+
+- added Tauri 2 development dependencies and desktop scripts;
+- added a minimal `src-tauri` Windows host around the existing Vite/React application;
+- added `crownkeep_host_info` as the first native Rust command;
+- added `TauriLocalRuntimeManager` and runtime-manager host selection;
+- browser mode continues to use `BrowserLocalRuntimeManager`;
+- the native host currently reports lifecycle controls as unavailable rather than pretending Foundry ownership is complete;
+- Vite ignores Rust/Tauri source changes for frontend file watching;
+- Tauri bundle generation remains disabled during the shell proof.
+
+Research basis:
+
+- current Tauri 2 documentation explicitly supports adding Tauri to an existing Vite frontend;
+- current Microsoft Foundry Local documentation publishes an official Rust SDK and a Windows `winml` feature for hardware-accelerated Windows integration.
+
+Next validation target:
+
+1. install/verify Windows Tauri prerequisites on the primary development PC;
+2. run `npm install`;
+3. run `npm run desktop:dev`;
+4. confirm the real CrownKeep UI opens in a native Windows window;
+5. open Local AI and confirm the runtime text says the native Windows host is connected;
+6. confirm ordinary `npm run dev` still uses browser-development runtime behavior;
+7. only after that validation, begin Sprint 4A.2 Foundry Local Rust SDK lifecycle integration.
