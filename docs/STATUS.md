@@ -594,3 +594,31 @@ Next validation target:
 5. open Local AI and confirm the runtime text says the native Windows host is connected;
 6. confirm ordinary `npm run dev` still uses browser-development runtime behavior;
 7. only after that validation, begin Sprint 4A.2 Foundry Local Rust SDK lifecycle integration.
+
+
+## Phase 4A.1 physical Windows validation — 2026-09-26
+
+The CrownKeep Tauri desktop host successfully launched on the primary Windows development machine.
+
+Validated:
+
+- Rust toolchain and MSVC build prerequisites are installed;
+- Smart App Control initially blocked Cargo-generated unsigned build helpers and was identified as the local policy blocker;
+- after the local development policy issue was addressed, `npm run desktop:dev` compiled and launched `target\debug\crownkeep.exe`;
+- CrownKeep rendered inside a real native Windows application window.
+
+Current expected limitation:
+
+- selecting **Anne · Foundry Local** while the external development daemon is stopped produces `ECONNREFUSED 127.0.0.1:39839`;
+- Sprint 4A.1 still intentionally uses the existing external Foundry Local development endpoint;
+- the native Windows host does not yet start, stop, acquire, load, or unload Foundry Local models.
+
+Immediate validation continuation:
+
+1. keep the Tauri development host running;
+2. start Foundry Local on fixed port 39839;
+3. load the previously validated local model;
+4. use CrownKeep **Recheck**;
+5. confirm a real Foundry Local response works inside the native Windows window.
+
+Successful inference through the Tauri-hosted UI will close the core Sprint 4A.1 shell proof and allow work to move into Sprint 4A.2 native Foundry lifecycle ownership.
