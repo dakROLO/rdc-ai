@@ -223,16 +223,37 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
                         : instructions
                 )
 
-                let response = try await session.respond(
+                let stream = session.streamResponse(
                     to: transcript.isEmpty ? "Hello." : transcript
                 )
 
-                guard !Task.isCancelled else { return }
+                var previousSnapshot = ""
 
-                self.streamChunk(
-                    streamId: streamId,
-                    chunk: ["text": response.content]
-                )
+                for try await partialResponse in stream {
+                    guard !Task.isCancelled else { return }
+
+                    let snapshot = partialResponse.content
+                    let delta: String
+
+                    if snapshot.hasPrefix(previousSnapshot) {
+                        delta = String(snapshot.dropFirst(previousSnapshot.count))
+                    } else {
+                        // Foundation Models normally emits cumulative snapshots.
+                        // If that contract ever changes, do not drop content.
+                        delta = snapshot
+                    }
+
+                    previousSnapshot = snapshot
+
+                    if !delta.isEmpty {
+                        self.streamChunk(
+                            streamId: streamId,
+                            chunk: ["text": delta]
+                        )
+                    }
+                }
+
+                guard !Task.isCancelled else { return }
                 self.streamComplete(streamId: streamId)
             } catch is CancellationError {
                 // CrownKeep already treats the aborted request as stopped.
