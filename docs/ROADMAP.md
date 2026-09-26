@@ -571,3 +571,7 @@ Projects should be implemented as an organizational layer above conversations, n
 - Preserve explicit timestamps and conversation identity in retrieved context.
 - Keep this local-first and permission-aware before any future cloud synchronization/context integration.
 - Do not conflate this with the current active-conversation history, which remains isolated by default.
+
+### Sprint 4A.3 implementation checkpoint
+
+Family-based adaptive selection, fingerprinted observations, provider-neutral local dictation, lifecycle safeguards, and native compile gates are implemented on the convergence branch. Sprint status remains **VALIDATION PENDING** until `docs/SPRINT-4A3-VALIDATION.md` is completed. Cloud, sync, RDC context, RAG, tools/MCP, and duplex voice remain deferred.

@@ -12,7 +12,8 @@
     "desktop:dev": "npm run desktop:prepare && tauri dev",
     "desktop:build": "npm run desktop:prepare && tauri build",
     "tauri": "tauri",
-    "desktop:prepare": "tauri icon public/crownkeep-mark.svg"
+    "desktop:prepare": "tauri icon public/crownkeep-mark.svg",
+    "test": "node --experimental-strip-types --test tests/*.test.ts"
   },
   "dependencies": {
     "react": "^19.3.0",

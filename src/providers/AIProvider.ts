@@ -23,6 +23,7 @@ export interface ChatMessageInput {
 export interface ChatRequest {
   modelId: string
   messages: ChatMessageInput[]
+  maxTokens?: number
   context?: unknown
 }
 

@@ -1,5 +1,8 @@
 use foundry_local_sdk::{FoundryLocalConfig, FoundryLocalManager};
 use serde::Serialize;
+use tauri::Emitter;
+mod speech;
+mod device;
 
 const FOUNDRY_WEB_URL: &str = "http://127.0.0.1:39839";
 
@@ -42,6 +45,9 @@ struct FoundryModelCandidate {
     execution_provider: Option<String>,
     file_size_mb: Option<u64>,
     context_length: Option<u64>,
+    model_type: String,
+    task: Option<String>,
+    supports_tool_calling: Option<bool>,
 }
 
 #[derive(Serialize)]
@@ -230,6 +236,9 @@ async fn crownkeep_foundry_models() -> Result<Vec<FoundryModelCandidate>, String
                 execution_provider: runtime.map(|value| value.execution_provider.clone()),
                 file_size_mb: info.file_size_mb,
                 context_length: info.context_length,
+                model_type: info.model_type.clone(),
+                task: info.task.clone(),
+                supports_tool_calling: info.supports_tool_calling,
             });
         }
     }
@@ -247,13 +256,14 @@ async fn crownkeep_foundry_models() -> Result<Vec<FoundryModelCandidate>, String
 
 
 #[tauri::command]
-async fn crownkeep_foundry_analyze_device() -> Result<FoundryDeviceAnalysis, String> {
+async fn crownkeep_foundry_analyze_device(app: tauri::AppHandle) -> Result<FoundryDeviceAnalysis, String> {
     use std::collections::BTreeSet;
 
     eprintln!("[CrownKeep/Foundry] stage=device-analysis discover-eps");
     let manager = foundry_manager()?;
     let catalog = manager.catalog();
 
+    let _ = app.emit("crownkeep-analysis-progress", "Discovering execution providers…");
     let discovered = manager
         .discover_eps()
         .map_err(|error| format!("Foundry Local execution-provider discovery failed: {error}"))?;
@@ -272,6 +282,7 @@ async fn crownkeep_foundry_analyze_device() -> Result<FoundryDeviceAnalysis, Str
         }
 
         let ep_name = ep.name.clone();
+        let _ = app.emit("crownkeep-analysis-progress", format!("Registering {}…", ep_name));
         eprintln!(
             "[CrownKeep/Foundry] stage=device-analysis register-ep name={}",
             ep_name
@@ -325,6 +336,7 @@ async fn crownkeep_foundry_analyze_device() -> Result<FoundryDeviceAnalysis, Str
         }
     }
 
+    let _ = app.emit("crownkeep-analysis-progress", "Refreshing compatible model catalog…");
     catalog
         .update_models()
         .await
@@ -554,6 +566,8 @@ pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             crownkeep_host_info,
+            device::crownkeep_device_profile,
+            speech::crownkeep_transcribe,
             crownkeep_foundry_status,
             crownkeep_foundry_models,
             crownkeep_foundry_analyze_device,

@@ -2668,3 +2668,13 @@ body {
     flex: 1 1 0;
   }
 }
+
+/* Local model families and dictation share the compact host layout. */
+.model-role { border-top: 1px solid var(--border, #31524b); padding-top: .5rem; }
+.model-family { display: grid; gap: .45rem; padding: .8rem 0; overflow-wrap: anywhere; }
+.model-family > span { font-size: .8rem; opacity: .85; }
+.model-family details { font-size: .75rem; }
+.dictation-control { display: flex; align-items: center; flex-wrap: wrap; gap: .35rem; max-width: 24rem; }
+.dictation-control > span { font-size: .72rem; flex-basis: 100%; }
+.composer-actions { flex-wrap: wrap; }
+@media (max-width: 700px) { .dictation-control { max-width: 14rem; } }

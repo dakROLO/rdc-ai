@@ -1,12 +1,17 @@
 import Foundation
 import FoundationModels
 import WebKit
+import Speech
+import AVFoundation
+import UIKit
 
+@MainActor
 final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
     static let messageHandlerName = "crownKeepAI"
 
     weak var webView: WKWebView?
 
+    private let speech = CrownKeepSpeechInput()
     private let model = SystemLanguageModel.default
     private var generationTasks: [String: Task<Void, Never>] = [:]
 
@@ -68,6 +73,13 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
       window.crownKeepNativeAI = {
         platform: "ios",
         provider: "apple-foundation-models",
+        speech: {
+          capability: () => call("speechCapability"),
+          startCapture: () => call("speechStart"),
+          stopCapture: () => call("speechStop"),
+          transcribe: () => call("speechTranscribe"),
+          cancel: () => call("speechCancel")
+        },
 
         getAvailability() {
           return call("getAvailability");
@@ -109,6 +121,20 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
         let args = body["args"] as? [String: Any] ?? [:]
 
         switch method {
+        case "speechCapability", "speechStart", "speechStop", "speechTranscribe", "speechCancel":
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                do {
+                    switch method {
+                    case "speechCapability": self.resolve(id: id, value: await self.speech.capability())
+                    case "speechStart": try await self.speech.startCapture(); self.resolve(id: id, value: true)
+                    case "speechStop": try self.speech.stopCapture(); self.resolve(id: id, value: true)
+                    case "speechTranscribe": self.resolve(id: id, value: try await self.speech.transcribe())
+                    default: await self.speech.cancel(); self.resolve(id: id, value: true)
+                    }
+                } catch { self.reject(id: id, message: error.localizedDescription) }
+            }
+
         case "getAvailability":
             resolve(id: id, value: availabilityPayload())
 
@@ -433,5 +459,118 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
         }
 
         return string
+    }
+}
+
+
+/// Record-then-transcribe keeps microphone access and Apple speech entirely native.
+/// No SFSpeechRecognizer network fallback is used.
+@MainActor
+private final class CrownKeepSpeechInput: NSObject {
+    private var recorder: AVAudioRecorder?
+    private var recordingURL: URL?
+    private var analyzer: SpeechAnalyzer?
+    private var epoch = 0
+    private var capturing = false
+
+    override init() {
+        super.init()
+        NotificationCenter.default.addObserver(self, selector: #selector(interrupted), name: UIApplication.willResignActiveNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(interrupted), name: AVAudioSession.interruptionNotification, object: nil)
+    }
+    deinit { NotificationCenter.default.removeObserver(self) }
+    @objc private func interrupted() {
+        // Permission sheets also resign active; only cancel an actual recording.
+        if capturing || analyzer != nil { Task { await self.cancel() } }
+    }
+    private func failure(_ message: String) -> NSError {
+        NSError(domain: "CrownKeepSpeech", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
+    }
+    private func installedLocale() async -> Locale? {
+        guard SpeechTranscriber.isAvailable,
+              let locale = await SpeechTranscriber.supportedLocale(equivalentTo: Locale.current)
+        else { return nil }
+        let installed = await SpeechTranscriber.installedLocales
+        return installed.contains(where: { $0.identifier == locale.identifier }) ? locale : nil
+    }
+    func capability() async -> [String: Any] {
+        let available = await installedLocale() != nil
+        return ["available": available, "detail": available
+            ? "Apple on-device dictation. Review text before sending. Record up to 60 seconds."
+            : "Apple on-device speech or installed language assets are unavailable. Text chat remains available."]
+    }
+    func startCapture() async throws {
+        guard !capturing, analyzer == nil else { throw failure("Dictation is already active.") }
+        epoch += 1
+        let requestEpoch = epoch
+        let microphoneAllowed = await AVAudioApplication.requestRecordPermission()
+        guard requestEpoch == epoch else { throw CancellationError() }
+        guard microphoneAllowed else { throw failure("Microphone permission denied. Enable CrownKeep microphone access in Settings.") }
+        let speechPermission = await withCheckedContinuation { continuation in
+            SFSpeechRecognizer.requestAuthorization { continuation.resume(returning: $0) }
+        }
+        guard requestEpoch == epoch else { throw CancellationError() }
+        guard speechPermission == .authorized else { throw failure("Speech permission denied. Enable CrownKeep speech access in Settings.") }
+        guard await installedLocale() != nil else { throw failure("On-device speech assets are unavailable for this language.") }
+        guard requestEpoch == epoch else { throw CancellationError() }
+        let session = AVAudioSession.sharedInstance()
+        do {
+            try session.setCategory(.record, mode: .measurement)
+            try session.setActive(true)
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent("crownkeep-dictation-\(UUID().uuidString).wav")
+            recordingURL = url
+            recorder = try AVAudioRecorder(url: url, settings: [
+                AVFormatIDKey: kAudioFormatLinearPCM,
+                AVSampleRateKey: 16000,
+                AVNumberOfChannelsKey: 1,
+                AVLinearPCMBitDepthKey: 16,
+                AVLinearPCMIsFloatKey: false,
+                AVLinearPCMIsBigEndianKey: false
+            ])
+            guard recorder?.record(forDuration: 60) == true else { throw failure("Could not start microphone capture.") }
+            try FileManager.default.setAttributes([.protectionKey: FileProtectionType.complete], ofItemAtPath: url.path)
+            capturing = true
+        } catch { await cancel(); throw error }
+    }
+    func stopCapture() throws {
+        guard recordingURL != nil else { throw failure("No recording is available.") }
+        recorder?.stop(); recorder = nil; capturing = false
+        try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+    func transcribe() async throws -> String {
+        guard analyzer == nil, let url = recordingURL, let locale = await installedLocale() else {
+            throw failure("No recording or local speech assets are ready.")
+        }
+        let requestEpoch = epoch
+        let transcriber = SpeechTranscriber(locale: locale, preset: .transcription)
+        let engine = SpeechAnalyzer(modules: [transcriber])
+        analyzer = engine
+        let timeout = Task { @MainActor in
+            do { try await Task.sleep(for: .seconds(90)) } catch { return }
+            await engine.cancelAndFinishNow()
+        }
+        defer { timeout.cancel(); analyzer = nil; removeRecording() }
+        do {
+            let file = try AVAudioFile(forReading: url)
+            try await engine.start(inputAudioFile: file, finishAfterFile: true)
+            var transcript = ""
+            for try await result in transcriber.results {
+                guard requestEpoch == epoch else { throw CancellationError() }
+                transcript += String(result.text.characters)
+            }
+            guard requestEpoch == epoch else { throw CancellationError() }
+            return transcript
+        } catch { await engine.cancelAndFinishNow(); throw error }
+    }
+    func cancel() async {
+        epoch += 1
+        recorder?.stop(); recorder = nil; capturing = false
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        if let engine = analyzer { await engine.cancelAndFinishNow() }
+        removeRecording()
+    }
+    private func removeRecording() {
+        if let url = recordingURL { try? FileManager.default.removeItem(at: url) }
+        recordingURL = nil
     }
 }

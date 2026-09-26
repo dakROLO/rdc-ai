@@ -53,6 +53,9 @@ export interface RuntimeModelCandidate {
   device?: string
   executionProvider?: string
   fileSizeMb?: number
+  modelType?: string
+  task?: string
+  supportsToolCalling?: boolean
   contextLength?: number
 }
 

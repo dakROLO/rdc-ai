@@ -1,3 +1,8 @@
+import { invoke } from '@tauri-apps/api/core'
+import { ModelAnalyst } from './runtime/ModelAnalyst.tsx'
+import { readPreferred, taskOf } from './runtime/modelPolicy.ts'
+import type { DeviceProfile } from './runtime/modelPolicy.ts'
+import { DictationControl } from './speech/DictationControl.tsx'
 import {
   type DragEvent as ReactDragEvent,
   type FormEvent,
@@ -26,7 +31,6 @@ import { ProviderRegistry } from './providers/ProviderRegistry.ts'
 import { getMobileCapabilitySnapshot } from './mobile/MobileCapability.ts'
 import { localRuntimeManager } from './runtime/runtimeManager.ts'
 import type {
-  RuntimeDeviceAnalysis,
   RuntimeModelCandidate,
   RuntimeSnapshot,
 } from './runtime/LocalRuntimeManager.ts'
@@ -272,7 +276,7 @@ function titleFromMessage(value: string): string {
 
 export default function App() {
   const providers = useMemo(() => providerRegistry.list(), [])
-  const defaultProviderId = providers[0]?.id ?? primaryProvider.id
+  const defaultProviderId = appleFoundationModelsProvider?.id ?? providers[0]?.id ?? primaryProvider.id
 
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [projects, setProjects] = useState<Project[]>([])
@@ -282,11 +286,13 @@ export default function App() {
   const [messages, setMessages] = useState<Message[]>([])
   const [prompt, setPrompt] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
+  const [speechBusy, setSpeechBusy] = useState(false)
+  const [fingerprint, setFingerprint] = useState<string>()
   const [isLoading, setIsLoading] = useState(true)
   const [storageError, setStorageError] = useState<string | null>(null)
   const [selectedProviderId, setSelectedProviderId] = useState(() => {
     const stored = localStorage.getItem(PROVIDER_STORAGE_KEY)
-    return stored && providerRegistry.get(stored) ? stored : defaultProviderId
+    return appleFoundationModelsProvider?.id ?? (stored && providerRegistry.get(stored) ? stored : defaultProviderId)
   })
   const [models, setModels] = useState<AIModel[]>([])
   const [selectedModelId, setSelectedModelId] = useState('')
@@ -316,8 +322,6 @@ export default function App() {
   })
   const [modelCandidates, setModelCandidates] = useState<RuntimeModelCandidate[]>([])
   const [analystModelId, setAnalystModelId] = useState('')
-  const [deviceAnalysis, setDeviceAnalysis] = useState<RuntimeDeviceAnalysis | null>(null)
-  const [isDeviceAnalysisRunning, setIsDeviceAnalysisRunning] = useState(false)
   const [copiedCodeKey, setCopiedCodeKey] = useState<string | null>(null)
   const autoRestoreAttemptedRef = useRef(false)
   const [setupRecord, setSetupRecord] = useState<LocalAiSetupRecord | null>(
@@ -353,12 +357,13 @@ export default function App() {
 
   const status = useMemo(() => {
     if (runtimeSleeping) return 'Local AI sleeping · click to wake'
-    if (isRuntimeActionRunning) return 'Starting local AI…'
+    if (speechBusy) return 'Local dictation active'
+    if (isRuntimeActionRunning) return 'Working with local AI…'
     if (!providerAvailability) return 'Checking local AI…'
     if (!providerAvailability.available) return 'Local provider unavailable'
     return isGenerating ? 'Anne is thinking locally…' : 'Inside the Keep'
   }, [
-    idleUnloadMinutes,
+    speechBusy,
     isGenerating,
     isRuntimeActionRunning,
     providerAvailability,
@@ -448,6 +453,7 @@ export default function App() {
   }
 
   async function createConversation(): Promise<void> {
+    if (speechBusy || isGenerating) return
     const conversation = await repository.create({
       title: DEFAULT_TITLE,
       projectId:
@@ -465,7 +471,7 @@ export default function App() {
   }
 
   async function openConversation(conversation: Conversation): Promise<void> {
-    if (isGenerating) return
+    if (isGenerating || speechBusy || isRuntimeActionRunning) return
     const nextMessages = await repository.listMessages(conversation.id)
     setActiveConversation(conversation)
     setMessages(nextMessages)
@@ -602,42 +608,47 @@ export default function App() {
       selectedProviderId !== 'foundry-local' ||
       autoRestoreAttemptedRef.current ||
       isRuntimeActionRunning ||
-      isGenerating ||
+      isGenerating || speechBusy ||
       runtimeSleeping ||
       providerAvailability?.available !== false ||
+      fingerprint === undefined ||
       modelCandidates.length === 0
     ) {
       return
     }
 
+    const chatCandidates = modelCandidates.filter((item) => taskOf(item) === 'chat')
     const preferred = preferredNativeModelId()
     const normalizedPreferred = normalizeRuntimeModelKey(preferred)
 
     const candidate =
-      modelCandidates.find(
+      chatCandidates.find(
         (item) =>
           item.cached &&
           (normalizeRuntimeModelKey(item.id) === normalizedPreferred ||
             item.alias.toLocaleLowerCase() === preferred.toLocaleLowerCase()),
       ) ??
-      modelCandidates.find(
+      chatCandidates.find(
         (item) =>
           item.cached &&
           item.alias.toLocaleLowerCase() ===
             DEFAULT_WINDOWS_MODEL_ALIAS.toLocaleLowerCase(),
       ) ??
-      modelCandidates.find((item) => item.cached)
+      chatCandidates.find((item) => item.cached)
 
     if (!candidate) return
 
     autoRestoreAttemptedRef.current = true
-    localStorage.setItem(PREFERRED_WINDOWS_MODEL_KEY, candidate.id)
     setRuntimeActionMessage(`Restoring ${candidate.alias} from the local cache…`)
     void prepareNativeLocalAi(candidate.id, { quiet: true })
   }, [
+    speechBusy,
+    isRuntimeCheckRunning,
+    idleUnloadMinutes,
     isGenerating,
     isRuntimeActionRunning,
     modelCandidates,
+    fingerprint,
     providerAvailability,
     runtimeSleeping,
     selectedProviderId,
@@ -648,7 +659,7 @@ export default function App() {
       localRuntimeManager.mode !== 'embedded' ||
       selectedProviderId !== 'foundry-local' ||
       runtimeSleeping ||
-      isGenerating ||
+      isGenerating || speechBusy || isRuntimeCheckRunning ||
       isRuntimeActionRunning ||
       idleUnloadMinutes <= 0 ||
       providerAvailability?.available !== true ||
@@ -663,6 +674,9 @@ export default function App() {
 
     return () => window.clearTimeout(timer)
   }, [
+    speechBusy,
+    isRuntimeCheckRunning,
+    idleUnloadMinutes,
     isGenerating,
     isRuntimeActionRunning,
     providerAvailability,
@@ -680,11 +694,21 @@ export default function App() {
     }
   }, [selectedProviderId, providerRefreshNonce])
 
+  async function refreshFingerprint() {
+    try { const value = await invoke<DeviceProfile>('crownkeep_device_profile'); setFingerprint(value.fingerprint) }
+    catch { setFingerprint('inspection-unavailable') }
+  }
+  useEffect(() => {
+    if (localRuntimeManager.mode === 'embedded') void refreshFingerprint()
+  }, [])
+
   function normalizeRuntimeModelKey(value: string): string {
     return value.split(':')[0].trim().toLocaleLowerCase()
   }
 
   function preferredNativeModelId(): string {
+    const observed = readPreferred(localStorage)
+    if (observed) return observed.fingerprint === fingerprint ? observed.variantId : observed.alias
     return (
       localStorage.getItem(PREFERRED_WINDOWS_MODEL_KEY) ||
       setupRecord?.modelId ||
@@ -699,7 +723,7 @@ export default function App() {
     if (
       localRuntimeManager.mode !== 'embedded' ||
       isRuntimeActionRunning ||
-      isGenerating
+      isGenerating || speechBusy || isRuntimeCheckRunning
     ) {
       return
     }
@@ -723,7 +747,6 @@ export default function App() {
       const startResult = await localRuntimeManager.start()
       if (!options.quiet) setRuntimeActionMessage(startResult.detail)
 
-      localStorage.setItem(PREFERRED_WINDOWS_MODEL_KEY, modelId)
       setProviderRefreshNonce((current) => current + 1)
     } catch (error) {
       setRuntimeCheckError(
@@ -740,7 +763,7 @@ export default function App() {
     if (
       localRuntimeManager.mode !== 'embedded' ||
       isRuntimeActionRunning ||
-      isGenerating
+      isGenerating || speechBusy || isRuntimeCheckRunning
     ) {
       return
     }
@@ -751,14 +774,9 @@ export default function App() {
       setRuntimeActionMessage('Stopping CrownKeep local AI…')
     }
 
-    const modelId = selectedModelId || preferredNativeModelId()
-
     try {
-      try {
-        await localRuntimeManager.unloadModel(modelId)
-      } catch {
-        // The model may already be unloaded. Continue to stop the service.
-      }
+      const loaded = (await localRuntimeManager.listModelCandidates()).filter((item) => item.loaded)
+      for (const model of loaded) await localRuntimeManager.unloadModel(model.id)
 
       const stopResult = await localRuntimeManager.stop()
       setRuntimeSleeping(true)
@@ -780,30 +798,35 @@ export default function App() {
   }
 
   async function useAnalystModel(modelId: string) {
-    if (!modelId || isRuntimeActionRunning || isGenerating) return
-
+    if (!modelId || isRuntimeActionRunning || isGenerating || speechBusy || isRuntimeCheckRunning) return
+    setIsRuntimeActionRunning(true)
+    setRuntimeCheckError(null)
     setRuntimeActionMessage(`Switching local AI to ${modelId}…`)
-    setSetupRecord(null)
-    localStorage.removeItem(LOCAL_AI_SETUP_STORAGE_KEY)
-    localStorage.setItem(PREFERRED_WINDOWS_MODEL_KEY, modelId)
-
-    if (providerAvailability?.available) {
-      try {
-        const currentModelId = selectedModelId || preferredNativeModelId()
-        if (currentModelId !== modelId) {
-          try {
-            await localRuntimeManager.unloadModel(currentModelId)
-          } catch {
-            // Model may already be unloaded.
-          }
-          await localRuntimeManager.stop()
-        }
-      } catch {
-        // Continue into prepare; it will surface the actionable error if needed.
+    const released: string[] = []
+    let loading = false
+    try {
+      await localRuntimeManager.installModel(modelId)
+      const loaded = (await localRuntimeManager.listModelCandidates()).filter((item) => item.loaded)
+      for (const item of loaded) {
+        if (item.id !== modelId) { await localRuntimeManager.unloadModel(item.id); released.push(item.id) }
       }
+      loading = true
+      await localRuntimeManager.loadModel(modelId)
+      await localRuntimeManager.start()
+      setSetupRecord(null)
+      localStorage.removeItem(LOCAL_AI_SETUP_STORAGE_KEY)
+      setRuntimeSleeping(false)
+      setRuntimeActionMessage('Diagnostic variant loaded. Benchmark a family to save a measured preference.')
+    } catch (error) {
+      setRuntimeCheckError(String(error))
+      try {
+        if (loading) await localRuntimeManager.unloadModel(modelId)
+        for (const id of released) await localRuntimeManager.loadModel(id)
+      } catch (recoveryError) { setRuntimeCheckError(`Model recovery needs attention: ${String(recoveryError)}`) }
+    } finally {
+      setIsRuntimeActionRunning(false)
+      setProviderRefreshNonce((value) => value + 1)
     }
-
-    await prepareNativeLocalAi(modelId)
   }
 
   async function refreshModelAnalyst() {
@@ -829,39 +852,6 @@ export default function App() {
     }
   }
 
-  async function analyzeNativeDevice() {
-    if (
-      localRuntimeManager.mode !== 'embedded' ||
-      isDeviceAnalysisRunning ||
-      isRuntimeActionRunning ||
-      isGenerating
-    ) {
-      return
-    }
-
-    setIsDeviceAnalysisRunning(true)
-    setRuntimeCheckError(null)
-    setRuntimeActionMessage(
-      'Analyzing this Windows device. CrownKeep may download/register compatible local execution providers.',
-    )
-
-    try {
-      const analysis = await localRuntimeManager.analyzeDevice()
-      setDeviceAnalysis(analysis)
-      setRuntimeActionMessage(analysis.detail)
-      await refreshModelAnalyst()
-    } catch (error) {
-      setRuntimeCheckError(
-        error instanceof Error
-          ? error.message
-          : 'CrownKeep could not analyze this device.',
-      )
-    } finally {
-      setIsDeviceAnalysisRunning(false)
-    }
-  }
-
-
   async function copyCode(content: string, key: string) {
     try {
       await navigator.clipboard.writeText(content)
@@ -884,7 +874,7 @@ export default function App() {
       !text ||
       !conversation ||
       !selectedModelId ||
-      isGenerating ||
+      isGenerating || speechBusy || isRuntimeActionRunning || isRuntimeCheckRunning ||
       providerAvailability?.available === false
     ) {
       return
@@ -1057,18 +1047,18 @@ export default function App() {
   }
 
   function handleProviderChange(providerId: string) {
-    if (isGenerating || providerId === selectedProviderId) return
+    if (isGenerating || speechBusy || providerId === selectedProviderId) return
     setSelectedProviderId(providerId)
   }
 
   function handleModelChange(modelId: string) {
-    if (isGenerating) return
+    if (isGenerating || speechBusy || isRuntimeActionRunning) return
     setSelectedModelId(modelId)
     localStorage.setItem(modelStorageKey(selectedProviderId), modelId)
   }
 
   async function createProject() {
-    if (isGenerating) return
+    if (isGenerating || speechBusy || isRuntimeActionRunning) return
     const title = window.prompt('Project name')?.trim()
     if (!title) return
 
@@ -1078,7 +1068,7 @@ export default function App() {
   }
 
   async function renameProject(project: Project) {
-    if (isGenerating) return
+    if (isGenerating || speechBusy || isRuntimeActionRunning) return
     const title = window.prompt('Rename project', project.title)?.trim()
     if (!title) return
 
@@ -1088,7 +1078,7 @@ export default function App() {
 
   async function deleteProject(project: Project) {
     if (
-      isGenerating ||
+      isGenerating || speechBusy ||
       !window.confirm(
         `Delete project "${project.title}"? Its conversations will be kept and moved to Unassigned.`,
       )
@@ -1105,7 +1095,7 @@ export default function App() {
     conversation: Conversation,
     projectId?: string,
   ) {
-    if (isGenerating) return
+    if (isGenerating || speechBusy || isRuntimeActionRunning) return
 
     await repository.assignConversationToProject(conversation.id, projectId)
     const next = await refreshConversations()
@@ -1141,7 +1131,7 @@ export default function App() {
   }
 
   async function moveConversationToProject(conversation: Conversation) {
-    if (isGenerating) return
+    if (isGenerating || speechBusy || isRuntimeActionRunning) return
 
     const choices = projects.map((project) => project.title).join('\n')
     const currentProject = conversation.projectId
@@ -1173,7 +1163,7 @@ export default function App() {
   }
 
   async function renameConversation(conversation: Conversation) {
-    if (isGenerating) return
+    if (isGenerating || speechBusy || isRuntimeActionRunning) return
     const value = window.prompt('Rename conversation', conversation.title)?.trim()
     if (!value) return
 
@@ -1186,7 +1176,7 @@ export default function App() {
   }
 
   async function deleteConversation(conversation: Conversation) {
-    if (isGenerating || !window.confirm(`Delete "${conversation.title}" from this device?`)) {
+    if (isGenerating || speechBusy || !window.confirm(`Delete "${conversation.title}" from this device?`)) {
       return
     }
 
@@ -1205,7 +1195,7 @@ export default function App() {
 
   async function runRuntimeQuickCheck() {
     if (
-      isGenerating ||
+      isGenerating || speechBusy || isRuntimeActionRunning ||
       isRuntimeCheckRunning ||
       !selectedModelId ||
       providerAvailability?.available === false
@@ -1225,6 +1215,7 @@ export default function App() {
     try {
       for await (const chunk of provider.streamChat({
         modelId: selectedModelId,
+        maxTokens: 48,
         messages: [
           {
             role: 'system',
@@ -1236,7 +1227,7 @@ export default function App() {
             content: 'Reply with one short greeting.',
           },
         ],
-      })) {
+      }, AbortSignal.timeout(45000))) {
         if (chunk.text && firstTokenAt === undefined) firstTokenAt = performance.now()
         if (chunk.usage) latestUsage = chunk.usage
         output += chunk.text
@@ -1246,10 +1237,8 @@ export default function App() {
       const firstTokenMs =
         firstTokenAt === undefined ? undefined : firstTokenAt - startedAt
       const runtimeDevice = selectedModel?.runtimeDevice
-      const healthy =
-        totalMs <= 15_000 &&
-        (firstTokenMs === undefined || firstTokenMs <= 8_000) &&
-        !(runtimeDevice === 'GPU' && totalMs > 10_000)
+      const healthy = output.trim().length > 0 &&
+        totalMs <= 15_000 && firstTokenMs !== undefined && firstTokenMs <= 8_000
 
       const record: LocalAiSetupRecord = {
         providerId: selectedProviderId,
@@ -1288,7 +1277,7 @@ export default function App() {
   }
 
   async function toggleMessageContext(message: Message) {
-    if (isGenerating || !message.content.trim()) return
+    if (isGenerating || speechBusy || !message.content.trim()) return
 
     const excluded = !message.excludedFromContext
     await repository.setMessageContextExcluded(message.id, excluded)
@@ -1349,7 +1338,7 @@ export default function App() {
           className="new-chat-button"
           type="button"
           onClick={() => void createConversation()}
-          disabled={isLoading || isGenerating}
+          disabled={isLoading || isGenerating || speechBusy}
           title="New chat"
         >
           <span className="nav-icon">+</span>
@@ -1381,7 +1370,7 @@ export default function App() {
                     type="button"
                     className="nav-mini-button project-manage-button"
                     onClick={() => void renameProject(selectedFilterProject)}
-                    disabled={isGenerating}
+                    disabled={isGenerating || speechBusy || isRuntimeActionRunning}
                     title="Rename selected project"
                     aria-label="Rename selected project"
                   >
@@ -1391,7 +1380,7 @@ export default function App() {
                     type="button"
                     className="nav-mini-button project-manage-button"
                     onClick={() => void deleteProject(selectedFilterProject)}
-                    disabled={isGenerating}
+                    disabled={isGenerating || speechBusy || isRuntimeActionRunning}
                     title="Delete selected project"
                     aria-label="Delete selected project"
                   >
@@ -1403,7 +1392,7 @@ export default function App() {
                 type="button"
                 className="nav-mini-button"
                 onClick={() => void createProject()}
-                disabled={isGenerating}
+                disabled={isGenerating || speechBusy || isRuntimeActionRunning}
                 title="New project"
                 aria-label="New project"
               >
@@ -1476,7 +1465,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => void renameProject(project)}
-                  disabled={isGenerating}
+                  disabled={isGenerating || speechBusy || isRuntimeActionRunning}
                   title="Rename project"
                   aria-label={`Rename ${project.title}`}
                 >
@@ -1485,7 +1474,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => void deleteProject(project)}
-                  disabled={isGenerating}
+                  disabled={isGenerating || speechBusy || isRuntimeActionRunning}
                   title="Delete project"
                   aria-label={`Delete ${project.title}`}
                 >
@@ -1508,7 +1497,7 @@ export default function App() {
             <div
               className={`conversation-row ${activeConversation?.id === conversation.id ? 'active' : ''}`}
               key={conversation.id}
-              draggable={!isGenerating}
+              draggable={!isGenerating && !speechBusy && !isRuntimeActionRunning}
               onDragStart={(event) => {
                 event.dataTransfer.effectAllowed = 'move'
                 event.dataTransfer.setData(
@@ -1522,7 +1511,7 @@ export default function App() {
                 className="conversation-open"
                 type="button"
                 onClick={() => void openConversation(conversation)}
-                disabled={isGenerating}
+                disabled={isGenerating || speechBusy || isRuntimeActionRunning}
                 title={conversation.title}
               >
                 <span>{conversation.title}</span>
@@ -1536,7 +1525,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => void moveConversationToProject(conversation)}
-                  disabled={isGenerating}
+                  disabled={isGenerating || speechBusy || isRuntimeActionRunning}
                   title="Move to project"
                   aria-label={`Move ${conversation.title} to project`}
                 >
@@ -1545,7 +1534,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => void renameConversation(conversation)}
-                  disabled={isGenerating}
+                  disabled={isGenerating || speechBusy || isRuntimeActionRunning}
                   title="Rename"
                   aria-label={`Rename ${conversation.title}`}
                 >
@@ -1554,7 +1543,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => void deleteConversation(conversation)}
-                  disabled={isGenerating}
+                  disabled={isGenerating || speechBusy || isRuntimeActionRunning}
                   title="Delete"
                   aria-label={`Delete ${conversation.title}`}
                 >
@@ -1594,7 +1583,7 @@ export default function App() {
                   onChange={(event) =>
                     void changeActiveConversationProject(event.target.value)
                   }
-                  disabled={isGenerating}
+                  disabled={isGenerating || speechBusy || isRuntimeActionRunning}
                   title="Move this conversation to a project"
                 >
                   <option value="unassigned">Unassigned</option>
@@ -1630,7 +1619,7 @@ export default function App() {
                       ? 'sleeping'
                       : providerAvailability?.available === false
                         ? 'unavailable'
-                        : isGenerating || isRuntimeActionRunning
+                        : isGenerating || speechBusy || isRuntimeActionRunning
                           ? 'working'
                           : ''
                   }`}
@@ -1667,7 +1656,7 @@ export default function App() {
                     <select
                       value={selectedProviderId}
                       onChange={(event) => handleProviderChange(event.target.value)}
-                      disabled={isGenerating}
+                      disabled={isGenerating || speechBusy || isRuntimeActionRunning}
                     >
                       {providers.map((provider) => (
                         <option value={provider.id} key={provider.id}>
@@ -1682,7 +1671,7 @@ export default function App() {
                     <select
                       value={selectedModelId}
                       onChange={(event) => handleModelChange(event.target.value)}
-                      disabled={isGenerating || models.length === 0}
+                      disabled={isGenerating || speechBusy || isRuntimeActionRunning || models.length === 0}
                     >
                       {models.map((model) => (
                         <option value={model.id} key={model.id}>
@@ -1744,7 +1733,7 @@ export default function App() {
                         type="button"
                         className="runtime-refresh-button"
                         onClick={() => setProviderRefreshNonce((current) => current + 1)}
-                        disabled={isGenerating || isRuntimeCheckRunning}
+                        disabled={isGenerating || speechBusy || isRuntimeActionRunning || isRuntimeCheckRunning}
                       >
                         Recheck
                       </button>
@@ -1770,7 +1759,7 @@ export default function App() {
                         type="button"
                         className="runtime-verify-button"
                         onClick={() => void runRuntimeQuickCheck()}
-                        disabled={isGenerating || isRuntimeCheckRunning}
+                        disabled={isGenerating || speechBusy || isRuntimeActionRunning || isRuntimeCheckRunning}
                       >
                         {isRuntimeCheckRunning ? 'Testing local AI…' : 'Verify local AI'}
                       </button>
@@ -1788,7 +1777,7 @@ export default function App() {
                                   quiet: true,
                                 })
                               }
-                              disabled={isGenerating || isRuntimeActionRunning}
+                              disabled={isGenerating || speechBusy || isRuntimeActionRunning}
                             >
                               {isRuntimeActionRunning ? 'Waking local AI…' : 'Wake local AI'}
                             </button>
@@ -1798,7 +1787,7 @@ export default function App() {
                               type="button"
                               className="runtime-native-button secondary"
                               onClick={() => void releaseNativeLocalAi('manual')}
-                              disabled={isGenerating || isRuntimeActionRunning}
+                              disabled={isGenerating || speechBusy || isRuntimeActionRunning}
                             >
                               {isRuntimeActionRunning ? 'Working…' : 'Sleep local AI'}
                             </button>
@@ -1807,7 +1796,7 @@ export default function App() {
                               type="button"
                               className="runtime-native-button"
                               onClick={() => void prepareNativeLocalAi()}
-                              disabled={isGenerating || isRuntimeActionRunning}
+                              disabled={isGenerating || speechBusy || isRuntimeActionRunning}
                             >
                               {isRuntimeActionRunning
                                 ? 'Preparing local AI…'
@@ -1827,7 +1816,7 @@ export default function App() {
                             setIdleUnloadMinutes(next)
                             localStorage.setItem(IDLE_UNLOAD_MINUTES_KEY, String(next))
                           }}
-                          disabled={isRuntimeActionRunning || isGenerating}
+                          disabled={isRuntimeActionRunning || isGenerating || speechBusy || isRuntimeCheckRunning}
                         >
                           <option value={0}>Never</option>
                           <option value={5}>5 minutes</option>
@@ -1841,87 +1830,11 @@ export default function App() {
                     {localRuntimeManager.mode === 'embedded' && (
                       <details className="model-analyst">
                         <summary>Local Model Analyst</summary>
-                        <div className="model-analyst-panel">
-                          <div className="model-analyst-heading">
-                            <div>
-                              <strong>Foundry models on this device</strong>
-                              <small>
-                                Analyze this PC first to discover compatible execution providers and accelerated CPU/GPU/NPU variants. CrownKeep still uses observed performance to decide what actually feels best.
-                              </small>
-                            </div>
-                            <div className="model-analyst-actions">
-                              <button
-                                type="button"
-                                className="runtime-refresh-button"
-                                onClick={() => void refreshModelAnalyst()}
-                                disabled={isRuntimeActionRunning || isDeviceAnalysisRunning}
-                              >
-                                Refresh
-                              </button>
-                              <button
-                                type="button"
-                                className="runtime-native-button analyst-button"
-                                onClick={() => void analyzeNativeDevice()}
-                                disabled={
-                                  isRuntimeActionRunning ||
-                                  isDeviceAnalysisRunning ||
-                                  isGenerating
-                                }
-                              >
-                                {isDeviceAnalysisRunning
-                                  ? 'Analyzing device…'
-                                  : 'Analyze this device'}
-                              </button>
-                            </div>
-                          </div>
-
-                          {deviceAnalysis && (
-                            <div className="device-analysis-card">
-                              <div className="device-analysis-summary">
-                                <span>
-                                  <strong>Devices</strong>
-                                  {deviceAnalysis.devices.join(' · ') || 'CPU / default'}
-                                </span>
-                                <span>
-                                  <strong>Accelerated variants</strong>
-                                  {deviceAnalysis.acceleratedVariantCount}
-                                </span>
-                                <span>
-                                  <strong>CPU variants</strong>
-                                  {deviceAnalysis.cpuVariantCount}
-                                </span>
-                              </div>
-
-                              {deviceAnalysis.executionProviders.length > 0 && (
-                                <div className="execution-provider-list">
-                                  {deviceAnalysis.executionProviders.map((provider) => (
-                                    <span
-                                      className={
-                                        provider.registered
-                                          ? 'execution-provider ready'
-                                          : 'execution-provider unavailable'
-                                      }
-                                      key={provider.name}
-                                      title={
-                                        provider.registrationAttempted
-                                          ? provider.registrationSucceeded
-                                            ? 'Registered by CrownKeep'
-                                            : 'Registration attempt failed'
-                                          : provider.registered
-                                            ? 'Already registered'
-                                            : 'Not registered'
-                                      }
-                                    >
-                                      {provider.name}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-
-                              <p>{deviceAnalysis.detail}</p>
-                            </div>
-                          )}
-
+                        <ModelAnalyst manager={localRuntimeManager} provider={foundryLocalProvider}
+                          candidates={modelCandidates} busy={isRuntimeActionRunning || isGenerating || speechBusy || isRuntimeCheckRunning}
+                          setBusy={setIsRuntimeActionRunning} refresh={refreshModelAnalyst}
+                          onReady={() => { setRuntimeSleeping(false); setProviderRefreshNonce((n) => n + 1); void refreshFingerprint() }} />
+                        <details className="model-analyst-panel"><summary>Advanced · force a chat variant</summary>
                           <label className="model-analyst-select">
                             <span>Candidate</span>
                             <select
@@ -1929,7 +1842,7 @@ export default function App() {
                               onChange={(event) => setAnalystModelId(event.target.value)}
                               disabled={isRuntimeActionRunning || modelCandidates.length === 0}
                             >
-                              {modelCandidates.map((candidate) => (
+                              {modelCandidates.filter((item) => taskOf(item) === 'chat').map((candidate) => (
                                 <option value={candidate.id} key={candidate.id}>
                                   {candidate.alias} · {candidate.device ?? 'Auto'}
                                   {candidate.cached ? ' · Cached' : ''}
@@ -1955,11 +1868,11 @@ export default function App() {
                             type="button"
                             className="runtime-native-button"
                             onClick={() => void useAnalystModel(analystModelId)}
-                            disabled={!analystModelId || isRuntimeActionRunning || isGenerating}
+                            disabled={!analystModelId || isRuntimeActionRunning || isGenerating || speechBusy || isRuntimeCheckRunning}
                           >
                             {isRuntimeActionRunning ? 'Switching model…' : 'Use this model'}
                           </button>
-                        </div>
+                        </details>
                       </details>
                     )}
 
@@ -2074,7 +1987,7 @@ export default function App() {
                       className="message-context-button"
                       type="button"
                       onClick={() => void toggleMessageContext(message)}
-                      disabled={isGenerating || !message.content.trim()}
+                      disabled={isGenerating || speechBusy || !message.content.trim()}
                       title={
                         message.excludedFromContext
                           ? 'Include this message in future Anne context'
@@ -2157,6 +2070,9 @@ export default function App() {
             <div className="composer-footer">
               <span>Enter to send · Shift+Enter for a new line</span>
               <div className="composer-actions">
+                <DictationControl disabled={isGenerating || isRuntimeActionRunning || isRuntimeCheckRunning || !activeConversation}
+                  conversationId={activeConversation?.id} refreshKey={providerRefreshNonce}
+                  onBusy={setSpeechBusy} onText={(text) => setPrompt((value) => value ? `${value} ${text}` : text)} />
                 {isGenerating ? (
                   <button className="secondary-button" type="button" onClick={stopGeneration}>
                     Stop
@@ -2167,7 +2083,7 @@ export default function App() {
                   type="submit"
                   disabled={
                     !prompt.trim() ||
-                    isGenerating ||
+                    isGenerating || speechBusy || isRuntimeActionRunning || isRuntimeCheckRunning ||
                     !activeConversation ||
                     !selectedModelId ||
                     providerAvailability?.available === false ||

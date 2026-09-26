@@ -354,3 +354,9 @@ The TypeScript runtime selector chooses `TauriLocalRuntimeManager` only when the
 4. Native runtime actions are surfaced through `LocalRuntimeManager`, not direct UI shell commands.
 5. Foundry Local SDK integration must not require Azure or cloud credentials.
 6. The installed product must eventually use a stable local storage location/origin and explicitly handle migration/export from browser-development storage.
+
+## Sprint 4A.3 shared model and speech boundaries
+
+`modelPolicy.ts` contains the host-label-neutral family/task/memory/benchmark policy. `ModelAnalyst` coordinates native lifecycle operations without touching conversation storage. Device fingerprints are local hashes of hardware/driver/OS/provider/catalog characteristics; no machine serial or user identity is gathered. Preferred families retain observed variants only for matching fingerprints.
+
+`SpeechInputProvider` separates capture, stopping, transcription, cancellation, and capability reporting. `DictationControl` only appends reviewed text to the composer. Windows uses a bounded WebView microphone capture and native Foundry `AudioClient`; iOS exposes Apple Speech through the native bridge. No browser cloud speech API or cloud fallback is used. Speech and chat/benchmark/lifecycle actions are mutually excluded in the shared UI. Speech releases immediately after each recording, including restoration of prior Windows chat models, rather than retaining both models in GPU memory.

@@ -1,3 +1,4 @@
+import type { NativeSpeechBridge } from '../speech/SpeechInputProvider.ts'
 import type {
   ChatMessageInput,
   TokenUsage,
@@ -34,6 +35,7 @@ export interface NativeChatChunk {
 }
 
 export interface NativeAIHost {
+  readonly speech?: NativeSpeechBridge
   readonly platform: 'ios'
   readonly provider: 'apple-foundation-models'
 

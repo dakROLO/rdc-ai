@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, phase-3-iphone-local-ai, phase-4a-windows-product-host]
+    branches: [main, phase-3-iphone-local-ai, phase-4a-windows-product-host, sprint-4a3-local-platform-convergence]
   pull_request:
     branches: [main]
 
@@ -19,13 +19,16 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Lint
         run: npm run lint
+
+      - name: Policy tests
+        run: npm test
 
       - name: Build
         run: npm run build
@@ -39,13 +42,29 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
 
       - name: Install frontend / Tauri CLI dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Generate CrownKeep desktop icons
         run: npm run desktop:prepare
 
       - name: Check CrownKeep Tauri host
         run: cargo check --manifest-path src-tauri/Cargo.toml
+
+  ios-host-check:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build
+      - name: Compile native iPhone host without signing
+        run: >-
+          xcodebuild -project native/ios/CrownKeepNative/CrownKeepNative.xcodeproj
+          -scheme CrownKeepNative -sdk iphonesimulator -configuration Debug
+          -destination 'generic/platform=iOS Simulator'
+          CODE_SIGNING_ALLOWED=NO build

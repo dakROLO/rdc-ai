@@ -847,3 +847,20 @@ Planned outcome:
 - finish with all validated local-first work merged to `main`, stale contained phase branches cleaned up, and a documented local-baseline pause point before cloud work.
 
 Branch: `sprint-4a3-local-platform-convergence`.
+
+## Sprint 4A.3 implementation — 2026-09-26
+
+**Implementation delivered on `sprint-4a3-local-platform-convergence`; device validation remains open. Do not merge/tag the baseline yet.**
+
+- Model Analyst groups catalog variants into Quick, Balanced, Deep / Experimental, and Voice families. Raw variants remain in Advanced.
+- A single Windows policy filters task/tool metadata and estimated RAM headroom, benchmarks one representative per device/execution-provider path using a fixed 48-token prompt, and persists accepted observed results. GPU labels confer no performance preference.
+- Preferred family plus resolved variant, provider, device, cache/tool metadata, timestamps, first-token/total timing, outcome and throughput (when usage is reported) are stored against a local hardware/runtime fingerprint. CPU, GPU names/drivers, OS version, total RAM, registered execution providers, SDK policy version, and catalog IDs contribute to invalidation. Changed fingerprints prompt re-analysis.
+- Progress comes from native discovery/registration/catalog events and actual benchmark preparation/measurement stages. Benchmark cancellation releases resources and restores the previous model; native downloads finish before cancellation cleanup.
+- Dictation uses `SpeechInputProvider`. Windows captures a bounded mono WAV, invokes the pinned Foundry SDK transcription API, releases Whisper and restores prior chat models. iOS records natively and uses `SpeechAnalyzer` / `SpeechTranscriber` only with installed on-device language assets. Missing capabilities disable dictation without disabling chat.
+- Transcript is appended to the current draft for review, never automatically sent. Microphone permission errors and cancellation are visible. Recordings are temporary and removed after use; browser speech services are not used. Windows cancellation discards output but waits for native transcription/resource cleanup before releasing the UI lock.
+- Fixed idle-timeout dependencies, resource switching rollback, cached endpoint health rechecks, and Apple-provider preference in native iPhone development builds.
+- Added policy tests, dependency lockfile, convergence-branch CI, and unsigned iOS compile gate.
+
+Validation at implementation time: local lint, TypeScript, production build, policy tests. Native CI and device tests must be recorded separately; a Linux web build is not evidence of a working Windows microphone or iPhone installation.
+
+Remaining gates: current Windows/laptop and AVD inference/benchmarks/dictation, `Rolo15` install/chat/dictation/persistence, native compilation, and the matrix in `docs/SPRINT-4A3-VALIDATION.md`. Merge, stale contained-branch deletion, and `v0.4-local-baseline` are intentionally pending those gates.

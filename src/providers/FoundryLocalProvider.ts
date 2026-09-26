@@ -104,13 +104,13 @@ export class FoundryLocalProvider implements AIProvider {
   }
 
   private async probeEndpoint(endpoint: string): Promise<ApiMode> {
-    const currentResponse = await fetch(`${endpoint}/v1/models`)
+    const currentResponse = await fetch(`${endpoint}/v1/models`, { signal: AbortSignal.timeout(5000) })
 
     if (currentResponse.ok) {
       return 'v1'
     }
 
-    const legacyResponse = await fetch(`${endpoint}/openai/status`)
+    const legacyResponse = await fetch(`${endpoint}/openai/status`, { signal: AbortSignal.timeout(5000) })
 
     if (legacyResponse.ok) {
       return 'legacy'
@@ -148,6 +148,8 @@ export class FoundryLocalProvider implements AIProvider {
 
   async getAvailability(): Promise<ProviderAvailability> {
     try {
+      this.activeEndpoint = undefined
+      this.apiMode = undefined
       const { endpoint, mode } = await this.resolveEndpoint()
 
       return {
@@ -208,6 +210,7 @@ export class FoundryLocalProvider implements AIProvider {
         model: request.modelId,
         messages: request.messages,
         stream: true,
+        ...(request.maxTokens ? { max_tokens: request.maxTokens } : {}),
       }),
       signal,
     })

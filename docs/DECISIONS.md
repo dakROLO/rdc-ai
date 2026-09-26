@@ -471,3 +471,14 @@ Observed performance and real runtime capability are the durable decision inputs
 - Manual variant forcing remains an advanced diagnostic override, not the normal user path.
 - Re-analysis should occur when meaningful hardware, driver, execution-provider, or runtime characteristics change.
 - This decision applies to Windows model/runtime selection; iPhone continues to use its native Apple capability path behind the same shared product experience.
+
+## ADR-0024 — Measured family preferences and local dictation
+
+**Status:** Implemented; native validation pending
+**Date:** 2026-09-26
+
+Normal Windows choices are model families. Compare compatible execution paths using the same short prompt and persist only accepted observations, including the resolved variant and hardware/runtime fingerprint. A stale fingerprint cannot reuse a measured variant as an authoritative preference. Tool capability remains catalog metadata, not actual tool execution. Experimental families require an explicit user action.
+
+Dictation is review-before-send and behind a separate speech provider boundary. Windows uses the existing pinned Foundry SDK; iPhone uses Apple SpeechAnalyzer with installed on-device language assets. Unsupported speech is explicitly unavailable. Speech resources release after each recording. Cancellation never appends a late transcript; Windows native work finishes cleanup before another runtime operation is enabled.
+
+The local-baseline merge/tag remains gated on actual laptop, second Windows host, and iPhone validation. CI compilation is necessary but does not replace those tests.
