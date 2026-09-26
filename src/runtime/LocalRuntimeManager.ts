@@ -29,6 +29,18 @@ export interface RuntimeActionResult {
   detail: string
 }
 
+export interface RuntimeModelCandidate {
+  id: string
+  alias: string
+  displayName: string
+  cached: boolean
+  loaded: boolean
+  device?: string
+  executionProvider?: string
+  fileSizeMb?: number
+  contextLength?: number
+}
+
 export interface LocalRuntimeManager {
   readonly id: string
   readonly displayName: string
@@ -46,4 +58,5 @@ export interface LocalRuntimeManager {
   installModel(modelId: string): Promise<RuntimeActionResult>
   loadModel(modelId: string): Promise<RuntimeActionResult>
   unloadModel(modelId: string): Promise<RuntimeActionResult>
+  listModelCandidates(): Promise<RuntimeModelCandidate[]>
 }
