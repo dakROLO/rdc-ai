@@ -503,3 +503,15 @@ Hardening delivered for the next build:
 - device deployment supports optional `CROWNKEEP_SLEEP_AFTER=1` to return the Mac to sleep only after a successful install/launch.
 
 Exact prompt/response transcript is still useful if the Apple model continues to truncate or repeat after this build.
+
+
+## iOS 27 token-usage availability fix — 2026-09-25
+
+The first build with Apple token diagnostics failed because `LanguageModelSession.usage` and `totalTokenCount` are only available on iOS 27+, while CrownKeep intentionally retains an iOS 26 deployment target.
+
+Fix:
+
+- preserve the iOS 26 deployment target;
+- wrap Apple token-usage collection in `if #available(iOS 27.0, *)`;
+- iOS 27 devices report prompt/completion/total tokens into CrownKeep Diagnostics;
+- iOS 26 devices continue local generation without token-usage diagnostics.
