@@ -126,3 +126,18 @@ chmod +x scripts/ios-device-build.sh
 ```
 
 Do not immediately pop the stash. The Apple account, certificate, provisioning profile, and device registration live outside the repository. The deployment script also passes `DEVELOPMENT_TEAM` explicitly. Reapply the stash only if the refreshed project unexpectedly loses required signing behavior.
+
+
+## Signing identity used by this project
+
+Xcode saved the current CrownKeep development team as `QJ9HLPX482`.
+
+This is the value used by the native project and by `scripts/ios-device-build.sh` when no override is supplied. The parenthetical identifier shown by `security find-identity -v -p codesigning` is a certificate/account identifier and should not be assumed to be the Apple Development Team ID.
+
+Normal device deployment therefore does not need `CROWNKEEP_TEAM_ID`:
+
+```bash
+CROWNKEEP_DEVICE_ID=<device-id> bash scripts/ios-device-build.sh
+```
+
+Set `CROWNKEEP_TEAM_ID` only when intentionally overriding the saved team.
