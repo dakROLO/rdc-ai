@@ -239,9 +239,31 @@ Exit criteria:
 - existing Foundry Local browser-development path still works outside Tauri;
 - normal web build/lint/typecheck remain green.
 
-### Sprint 4A.2 — Embedded Foundry Local lifecycle
+### Sprint 4A.2 — Embedded Foundry Local lifecycle — **ACTIVE**
 
 **Outcome:** The Windows host owns the local runtime/model lifecycle so a normal user does not need to operate the Foundry CLI.
+
+#### Sprint 4A.2A — CrownKeep-owned lifecycle proof — **COMPLETE**
+
+Validated on the primary Windows development machine:
+
+- native Foundry Local SDK initialization;
+- application-owned model acquisition/cache;
+- model load;
+- embedded OpenAI-compatible service start;
+- verified Anne response without manual Foundry CLI lifecycle commands;
+- application close releases the embedded runtime while preserving the downloaded model cache.
+
+#### Sprint 4A.2B — Automatic restore + normal-user startup — **NEXT**
+
+Focus:
+
+- when a known-good model is cached, automatically restore/load/start local AI on CrownKeep startup;
+- keep **Prepare local AI** as first-run/recovery behavior rather than a normal repeated step;
+- preserve a visible Stop local AI resource-release action;
+- recover cleanly if the prior model/runtime cannot start;
+- persist the working model/variant after observed verification;
+- keep startup non-blocking so conversation history opens even if local AI preparation is still running.
 
 Deliverables:
 
