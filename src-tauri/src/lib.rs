@@ -61,6 +61,15 @@ fn foundry_manager() -> Result<&'static FoundryLocalManager, String> {
     })
 }
 
+fn normalized_model_key(value: &str) -> String {
+    value
+        .split(':')
+        .next()
+        .unwrap_or(value)
+        .trim()
+        .to_ascii_lowercase()
+}
+
 async fn resolve_model(alias_or_id: &str) -> Result<std::sync::Arc<foundry_local_sdk::Model>, String> {
     let manager = foundry_manager()?;
     let catalog = manager.catalog();
@@ -69,10 +78,40 @@ async fn resolve_model(alias_or_id: &str) -> Result<std::sync::Arc<foundry_local
         return Ok(model);
     }
 
-    catalog
-        .get_model(alias_or_id)
+    if let Ok(model) = catalog.get_model(alias_or_id).await {
+        return Ok(model);
+    }
+
+    // The OpenAI-compatible service can expose an unversioned variant ID
+    // (for example "Phi-4-mini-instruct-generic-cpu") while the catalog keeps
+    // the native variant as "Phi-4-mini-instruct-generic-cpu:5". Match those
+    // forms so a previously verified provider model can be restored natively.
+    let requested = normalized_model_key(alias_or_id);
+    let models = catalog
+        .get_models()
         .await
-        .map_err(|error| format!("Foundry Local could not resolve model '{alias_or_id}': {error}"))
+        .map_err(|error| format!("Foundry Local catalog lookup failed: {error}"))?;
+
+    for model in models {
+        for variant in model.variants() {
+            let info = variant.info();
+            if normalized_model_key(&info.id) == requested
+                || info.alias.to_ascii_lowercase() == requested
+            {
+                eprintln!(
+                    "[CrownKeep/Foundry] resolved provider model '{}' to native variant '{}'",
+                    alias_or_id,
+                    info.id
+                );
+                return Ok(variant);
+            }
+        }
+    }
+
+    Err(format!(
+        "Foundry Local could not resolve model '{}'. Try the model alias shown in Local Model Analyst.",
+        alias_or_id
+    ))
 }
 
 #[tauri::command]
