@@ -22,7 +22,11 @@ class WindowsSpeechInput implements SpeechInputProvider {
       .sort((a, b) => (a.fileSizeMb ?? Infinity) - (b.fileSizeMb ?? Infinity))
     // Alias allows the native SDK to resolve the hardware variant normally.
     const preference = localStorage.getItem('crownkeep.speechAlias')
-    this.model = models.find((m) => m.alias === preference)?.alias ?? models[0]?.alias ?? ''
+    this.model =
+      models.find((m) => m.alias === preference)?.alias ??
+      models.find((m) => m.alias.toLowerCase() === 'whisper-base')?.alias ??
+      models[0]?.alias ??
+      ''
     return { available: !!this.model, detail: this.model ? `Local ${this.model}. First use may download the model; review text before sending. Record up to 60 seconds.` : 'No compatible Whisper speech model found. Run device analysis; text chat remains available.' }
   }
   async startCapture() {
@@ -65,7 +69,18 @@ class WindowsSpeechInput implements SpeechInputProvider {
     if (!this.wav || !this.model) throw new Error('No local recording or speech model is ready.')
     const epoch = this.epoch
     try {
-      const result = await invoke<{ text: string; elapsedMs: number; modelId: string }>('crownkeep_transcribe', { audio: this.wav, modelId: this.model })
+      const result = await Promise.race([
+        invoke<{ text: string; elapsedMs: number; modelId: string }>(
+          'crownkeep_transcribe',
+          { audio: this.wav, modelId: this.model },
+        ),
+        new Promise<never>((_, reject) =>
+          window.setTimeout(
+            () => reject(new Error('Local dictation exceeded the 10-minute safety limit. Restart CrownKeep if native cleanup does not finish.')),
+            10 * 60 * 1000,
+          ),
+        ),
+      ])
       if (epoch !== this.epoch) throw new Error('Dictation cancelled.')
       // Store only performance metadata; never audio or transcript text.
       localStorage.setItem('crownkeep.speechObservation', JSON.stringify({ alias: this.model, variantId: result.modelId,
