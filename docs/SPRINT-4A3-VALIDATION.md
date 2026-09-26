@@ -164,6 +164,19 @@ Behavior:
 
 The existing Quick and Balanced measurements remain stored in CrownKeep local app storage and are independent of Git pulls.
 
+### Startup regression after model-storage work
+
+The first restart after adding Model Storage exposed a startup regression: CrownKeep launched, but the embedded Foundry web service remained down and Vite repeatedly reported `ECONNREFUSED 127.0.0.1:39839`.
+
+Root cause was cache-state refresh in `crownkeep_foundry_models`: the first implementation called `variant.is_cached().await` serially for every catalog variant. On the primary laptop (~166 compatible variants), this delayed population of `modelCandidates`, and the existing auto-restore effect could not select and activate the cached preferred model.
+
+Fix:
+
+- cache state is now read once with `catalog.get_cached_models()`;
+- cached and loaded IDs are normalized into sets and matched in-memory while building candidate rows;
+- Model Storage still gets live post-cleanup cache state without O(n) native cache calls;
+- benchmark/profile data remains untouched in local app storage.
+
 ## Known implementation limits
 
 - RAM filtering uses disk-size × 1.5 + 2 GB as a conservative estimate, not a guarantee of peak memory or VRAM fit. Native load failures remain benchmark failures.
