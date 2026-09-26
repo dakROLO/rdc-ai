@@ -25,7 +25,10 @@ import { MockProvider } from './providers/MockProvider.ts'
 import { ProviderRegistry } from './providers/ProviderRegistry.ts'
 import { getMobileCapabilitySnapshot } from './mobile/MobileCapability.ts'
 import { localRuntimeManager } from './runtime/runtimeManager.ts'
-import type { RuntimeSnapshot } from './runtime/LocalRuntimeManager.ts'
+import type {
+  RuntimeModelCandidate,
+  RuntimeSnapshot,
+} from './runtime/LocalRuntimeManager.ts'
 import { IndexedDbConversationRepository } from './storage/IndexedDbConversationRepository.ts'
 import { createId } from './utils/id.ts'
 
@@ -72,6 +75,8 @@ const PROVIDER_STORAGE_KEY = 'crownkeep.providerId'
 const SIDEBAR_STORAGE_KEY = 'crownkeep.sidebarCollapsed'
 const LOCAL_AI_SETUP_STORAGE_KEY = 'crownkeep.localAiSetup'
 const DEFAULT_WINDOWS_MODEL_ALIAS = 'phi-4-mini'
+const PREFERRED_WINDOWS_MODEL_KEY = 'crownkeep.preferredWindowsModel'
+const WINDOWS_IDLE_UNLOAD_MS = 15 * 60 * 1000
 
 interface LocalAiSetupRecord {
   providerId: string
@@ -198,6 +203,45 @@ function saveLocalAiSetupRecord(record: LocalAiSetupRecord): void {
   localStorage.setItem(LOCAL_AI_SETUP_STORAGE_KEY, JSON.stringify(record))
 }
 
+interface MessageContentSegment {
+  type: 'text' | 'code'
+  content: string
+  language?: string
+}
+
+function parseMessageContent(value: string): MessageContentSegment[] {
+  const normalized = cleanTemporalArtifact(value)
+  const segments: MessageContentSegment[] = []
+  const fence = /```([^\n`]*)\n([\s\S]*?)```/g
+  let cursor = 0
+  let match: RegExpExecArray | null
+
+  while ((match = fence.exec(normalized)) !== null) {
+    if (match.index > cursor) {
+      segments.push({
+        type: 'text',
+        content: normalized.slice(cursor, match.index),
+      })
+    }
+
+    segments.push({
+      type: 'code',
+      language: match[1].trim() || undefined,
+      content: match[2].replace(/\n$/, ''),
+    })
+    cursor = fence.lastIndex
+  }
+
+  if (cursor < normalized.length) {
+    segments.push({
+      type: 'text',
+      content: normalized.slice(cursor),
+    })
+  }
+
+  return segments.length > 0 ? segments : [{ type: 'text', content: normalized }]
+}
+
 function makeMessage(
   conversationId: string,
   role: Message['role'],
@@ -264,6 +308,11 @@ export default function App() {
   const [runtimeCheckError, setRuntimeCheckError] = useState<string | null>(null)
   const [isRuntimeActionRunning, setIsRuntimeActionRunning] = useState(false)
   const [runtimeActionMessage, setRuntimeActionMessage] = useState<string | null>(null)
+  const [runtimeSleeping, setRuntimeSleeping] = useState(false)
+  const [modelCandidates, setModelCandidates] = useState<RuntimeModelCandidate[]>([])
+  const [analystModelId, setAnalystModelId] = useState('')
+  const [copiedCodeKey, setCopiedCodeKey] = useState<string | null>(null)
+  const autoRestoreAttemptedRef = useRef(false)
   const [setupRecord, setSetupRecord] = useState<LocalAiSetupRecord | null>(
     () => readLocalAiSetupRecord(),
   )
@@ -296,10 +345,17 @@ export default function App() {
   }, [conversations, projectFilter])
 
   const status = useMemo(() => {
+    if (runtimeSleeping) return 'Local AI sleeping · click to wake'
+    if (isRuntimeActionRunning) return 'Starting local AI…'
     if (!providerAvailability) return 'Checking local AI…'
     if (!providerAvailability.available) return 'Local provider unavailable'
     return isGenerating ? 'Anne is thinking locally…' : 'Inside the Keep'
-  }, [isGenerating, providerAvailability])
+  }, [
+    isGenerating,
+    isRuntimeActionRunning,
+    providerAvailability,
+    runtimeSleeping,
+  ])
 
   const performanceGuidance = useMemo(() => {
     if (!lastRun || lastRun.outcome === 'running') return null
@@ -532,7 +588,77 @@ export default function App() {
     return () => window.removeEventListener('focus', handleFocus)
   }, [selectedProviderId])
 
-  async function prepareNativeLocalAi() {
+  useEffect(() => {
+    if (
+      localRuntimeManager.mode !== 'embedded' ||
+      selectedProviderId !== 'foundry-local' ||
+      autoRestoreAttemptedRef.current ||
+      isRuntimeActionRunning ||
+      isGenerating ||
+      providerAvailability?.available !== false ||
+      !setupRecord?.healthy
+    ) {
+      return
+    }
+
+    autoRestoreAttemptedRef.current = true
+    void prepareNativeLocalAi(setupRecord.modelId, { quiet: true })
+  }, [
+    isGenerating,
+    isRuntimeActionRunning,
+    providerAvailability,
+    selectedProviderId,
+    setupRecord,
+  ])
+
+  useEffect(() => {
+    if (
+      localRuntimeManager.mode !== 'embedded' ||
+      selectedProviderId !== 'foundry-local' ||
+      runtimeSleeping ||
+      isGenerating ||
+      isRuntimeActionRunning ||
+      providerAvailability?.available !== true ||
+      !selectedModelId
+    ) {
+      return
+    }
+
+    const timer = window.setTimeout(() => {
+      void releaseNativeLocalAi('idle')
+    }, WINDOWS_IDLE_UNLOAD_MS)
+
+    return () => window.clearTimeout(timer)
+  }, [
+    isGenerating,
+    isRuntimeActionRunning,
+    providerAvailability,
+    runtimeSleeping,
+    selectedModelId,
+    selectedProviderId,
+  ])
+
+  useEffect(() => {
+    if (
+      localRuntimeManager.mode === 'embedded' &&
+      selectedProviderId === 'foundry-local'
+    ) {
+      void refreshModelAnalyst()
+    }
+  }, [selectedProviderId, providerRefreshNonce])
+
+  function preferredNativeModelId(): string {
+    return (
+      setupRecord?.modelId ||
+      localStorage.getItem(PREFERRED_WINDOWS_MODEL_KEY) ||
+      DEFAULT_WINDOWS_MODEL_ALIAS
+    )
+  }
+
+  async function prepareNativeLocalAi(
+    modelId = preferredNativeModelId(),
+    options: { quiet?: boolean } = {},
+  ) {
     if (
       localRuntimeManager.mode !== 'embedded' ||
       isRuntimeActionRunning ||
@@ -543,23 +669,24 @@ export default function App() {
 
     setIsRuntimeActionRunning(true)
     setRuntimeCheckError(null)
-    setRuntimeActionMessage(
-      `Preparing ${DEFAULT_WINDOWS_MODEL_ALIAS}. First setup may download local runtime components and the model.`,
-    )
+    setRuntimeSleeping(false)
+    if (!options.quiet) {
+      setRuntimeActionMessage(
+        `Preparing ${modelId}. First setup may download local runtime components and the model.`,
+      )
+    }
 
     try {
-      const installResult = await localRuntimeManager.installModel(
-        DEFAULT_WINDOWS_MODEL_ALIAS,
-      )
-      setRuntimeActionMessage(installResult.detail)
+      const installResult = await localRuntimeManager.installModel(modelId)
+      if (!options.quiet) setRuntimeActionMessage(installResult.detail)
 
-      const loadResult = await localRuntimeManager.loadModel(
-        DEFAULT_WINDOWS_MODEL_ALIAS,
-      )
-      setRuntimeActionMessage(loadResult.detail)
+      const loadResult = await localRuntimeManager.loadModel(modelId)
+      if (!options.quiet) setRuntimeActionMessage(loadResult.detail)
 
       const startResult = await localRuntimeManager.start()
-      setRuntimeActionMessage(startResult.detail)
+      if (!options.quiet) setRuntimeActionMessage(startResult.detail)
+
+      localStorage.setItem(PREFERRED_WINDOWS_MODEL_KEY, modelId)
       setProviderRefreshNonce((current) => current + 1)
     } catch (error) {
       setRuntimeCheckError(
@@ -572,7 +699,7 @@ export default function App() {
     }
   }
 
-  async function stopNativeLocalAi() {
+  async function releaseNativeLocalAi(reason: 'manual' | 'idle' = 'manual') {
     if (
       localRuntimeManager.mode !== 'embedded' ||
       isRuntimeActionRunning ||
@@ -583,24 +710,26 @@ export default function App() {
 
     setIsRuntimeActionRunning(true)
     setRuntimeCheckError(null)
-    setRuntimeActionMessage('Stopping CrownKeep local AI…')
+    if (reason === 'manual') {
+      setRuntimeActionMessage('Stopping CrownKeep local AI…')
+    }
+
+    const modelId = selectedModelId || preferredNativeModelId()
 
     try {
-      const stopResult = await localRuntimeManager.stop()
-      setRuntimeActionMessage(stopResult.detail)
-
       try {
-        const unloadResult = await localRuntimeManager.unloadModel(
-          DEFAULT_WINDOWS_MODEL_ALIAS,
-        )
-        setRuntimeActionMessage(
-          `${stopResult.detail} ${unloadResult.detail}`,
-        )
+        await localRuntimeManager.unloadModel(modelId)
       } catch {
-        // The service is already stopped; a model may not have been loaded by
-        // CrownKeep in this process. Do not turn a successful stop into an error.
+        // The model may already be unloaded. Continue to stop the service.
       }
 
+      const stopResult = await localRuntimeManager.stop()
+      setRuntimeSleeping(true)
+      setRuntimeActionMessage(
+        reason === 'idle'
+          ? 'Local AI went to sleep after 15 minutes of inactivity. Click the status above to wake it.'
+          : stopResult.detail,
+      )
       setProviderRefreshNonce((current) => current + 1)
     } catch (error) {
       setRuntimeCheckError(
@@ -610,6 +739,68 @@ export default function App() {
       )
     } finally {
       setIsRuntimeActionRunning(false)
+    }
+  }
+
+  async function useAnalystModel(modelId: string) {
+    if (!modelId || isRuntimeActionRunning || isGenerating) return
+
+    setRuntimeActionMessage(`Switching local AI to ${modelId}…`)
+    setSetupRecord(null)
+    localStorage.removeItem(LOCAL_AI_SETUP_STORAGE_KEY)
+    localStorage.setItem(PREFERRED_WINDOWS_MODEL_KEY, modelId)
+
+    if (providerAvailability?.available) {
+      try {
+        const currentModelId = selectedModelId || preferredNativeModelId()
+        if (currentModelId !== modelId) {
+          try {
+            await localRuntimeManager.unloadModel(currentModelId)
+          } catch {
+            // Model may already be unloaded.
+          }
+          await localRuntimeManager.stop()
+        }
+      } catch {
+        // Continue into prepare; it will surface the actionable error if needed.
+      }
+    }
+
+    await prepareNativeLocalAi(modelId)
+  }
+
+  async function refreshModelAnalyst() {
+    if (localRuntimeManager.mode !== 'embedded') return
+    try {
+      const candidates = await localRuntimeManager.listModelCandidates()
+      setModelCandidates(candidates)
+      const preferred =
+        localStorage.getItem(PREFERRED_WINDOWS_MODEL_KEY) ||
+        setupRecord?.modelId ||
+        candidates.find((candidate) => candidate.cached)?.id ||
+        candidates[0]?.id ||
+        ''
+      setAnalystModelId(
+        candidates.some((candidate) => candidate.id === preferred)
+          ? preferred
+          : candidates[0]?.id ?? '',
+      )
+    } catch (error) {
+      setRuntimeCheckError(
+        error instanceof Error ? error.message : 'Could not inspect local models.',
+      )
+    }
+  }
+
+  async function copyCode(content: string, key: string) {
+    try {
+      await navigator.clipboard.writeText(content)
+      setCopiedCodeKey(key)
+      window.setTimeout(() => {
+        setCopiedCodeKey((current) => (current === key ? null : current))
+      }, 1400)
+    } catch {
+      setRuntimeCheckError('CrownKeep could not copy that code block.')
     }
   }
 
@@ -769,6 +960,9 @@ export default function App() {
         }
         saveLocalAiSetupRecord(record)
         setSetupRecord(record)
+        if (provider.id === 'foundry-local') {
+          localStorage.setItem(PREFERRED_WINDOWS_MODEL_KEY, selectedModelId)
+        }
       }
 
       await repository.saveMessage({ ...assistantMessage, content: assistantContent })
@@ -804,6 +998,9 @@ export default function App() {
     if (isGenerating) return
     setSelectedModelId(modelId)
     localStorage.setItem(modelStorageKey(selectedProviderId), modelId)
+    if (selectedProviderId === 'foundry-local') {
+      localStorage.setItem(PREFERRED_WINDOWS_MODEL_KEY, modelId)
+    }
   }
 
   async function createProject() {
@@ -1002,6 +1199,7 @@ export default function App() {
 
       saveLocalAiSetupRecord(record)
       setSetupRecord(record)
+      localStorage.setItem(PREFERRED_WINDOWS_MODEL_KEY, selectedModelId)
 
       setLastRun({
         providerId: selectedProviderId,
@@ -1354,14 +1552,24 @@ export default function App() {
 
           <div className="provider-area">
             <details className="local-ai-menu">
-              <summary>
+              <summary
+                onClick={(event) => {
+                  if (runtimeSleeping) {
+                    event.preventDefault()
+                    void prepareNativeLocalAi(preferredNativeModelId(), { quiet: true })
+                  }
+                }}
+                title={runtimeSleeping ? 'Wake local AI' : undefined}
+              >
                 <span
                   className={`status-dot ${
-                    providerAvailability?.available === false
-                      ? 'unavailable'
-                      : isGenerating
-                        ? 'working'
-                        : ''
+                    runtimeSleeping
+                      ? 'sleeping'
+                      : providerAvailability?.available === false
+                        ? 'unavailable'
+                        : isGenerating || isRuntimeActionRunning
+                          ? 'working'
+                          : ''
                   }`}
                 />
                 <span className="local-ai-summary-copy">
@@ -1426,11 +1634,13 @@ export default function App() {
                   <div>
                     <span>Health</span>
                     <strong>
-                      {providerAvailability?.available === false
-                        ? 'Unavailable'
-                        : providerAvailability
-                          ? 'Ready'
-                          : 'Checking'}
+                      {runtimeSleeping
+                        ? 'Sleeping'
+                        : providerAvailability?.available === false
+                          ? 'Unavailable'
+                          : providerAvailability
+                            ? 'Ready'
+                            : 'Checking'}
                     </strong>
                   </div>
                   <div>
@@ -1454,8 +1664,10 @@ export default function App() {
                       <div>
                         <span className="runtime-kicker">Local AI setup</span>
                         <strong>
-                          {runtimeSnapshot?.state === 'ready'
-                            ? setupVerified
+                          {runtimeSleeping
+                            ? 'Sleeping'
+                            : runtimeSnapshot?.state === 'ready'
+                              ? setupVerified
                               ? 'Verified'
                               : 'Ready to verify'
                             : runtimeSnapshot?.state === 'model-required'
@@ -1504,17 +1716,28 @@ export default function App() {
                     {localRuntimeManager.mode === 'embedded' &&
                       localRuntimeManager.capabilities.canStartRuntime && (
                         <div className="runtime-native-actions">
-                          {providerAvailability?.available &&
-                          runtimeSnapshot?.state === 'ready' ? (
+                          {runtimeSleeping ? (
+                            <button
+                              type="button"
+                              className="runtime-native-button"
+                              onClick={() =>
+                                void prepareNativeLocalAi(preferredNativeModelId(), {
+                                  quiet: true,
+                                })
+                              }
+                              disabled={isGenerating || isRuntimeActionRunning}
+                            >
+                              {isRuntimeActionRunning ? 'Waking local AI…' : 'Wake local AI'}
+                            </button>
+                          ) : providerAvailability?.available &&
+                            runtimeSnapshot?.state === 'ready' ? (
                             <button
                               type="button"
                               className="runtime-native-button secondary"
-                              onClick={() => void stopNativeLocalAi()}
+                              onClick={() => void releaseNativeLocalAi('manual')}
                               disabled={isGenerating || isRuntimeActionRunning}
                             >
-                              {isRuntimeActionRunning
-                                ? 'Working…'
-                                : 'Stop local AI'}
+                              {isRuntimeActionRunning ? 'Working…' : 'Sleep local AI'}
                             </button>
                           ) : (
                             <button
@@ -1525,11 +1748,73 @@ export default function App() {
                             >
                               {isRuntimeActionRunning
                                 ? 'Preparing local AI…'
-                                : `Prepare ${DEFAULT_WINDOWS_MODEL_ALIAS}`}
+                                : `Prepare ${preferredNativeModelId()}`}
                             </button>
                           )}
                         </div>
                       )}
+
+                    {localRuntimeManager.mode === 'embedded' && (
+                      <details className="model-analyst">
+                        <summary>Local Model Analyst</summary>
+                        <div className="model-analyst-panel">
+                          <div className="model-analyst-heading">
+                            <div>
+                              <strong>Foundry models on this device</strong>
+                              <small>
+                                Cached models are listed first. CrownKeep will benchmark the model after you switch.
+                              </small>
+                            </div>
+                            <button
+                              type="button"
+                              className="runtime-refresh-button"
+                              onClick={() => void refreshModelAnalyst()}
+                              disabled={isRuntimeActionRunning}
+                            >
+                              Refresh
+                            </button>
+                          </div>
+
+                          <label className="model-analyst-select">
+                            <span>Candidate</span>
+                            <select
+                              value={analystModelId}
+                              onChange={(event) => setAnalystModelId(event.target.value)}
+                              disabled={isRuntimeActionRunning || modelCandidates.length === 0}
+                            >
+                              {modelCandidates.map((candidate) => (
+                                <option value={candidate.id} key={candidate.id}>
+                                  {candidate.alias} · {candidate.device ?? 'Auto'}
+                                  {candidate.cached ? ' · Cached' : ''}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+
+                          {modelCandidates
+                            .filter((candidate) => candidate.id === analystModelId)
+                            .map((candidate) => (
+                              <div className="model-analyst-details" key={candidate.id}>
+                                <span><strong>Variant</strong>{candidate.id}</span>
+                                <span><strong>Device</strong>{candidate.device ?? 'Auto'}</span>
+                                <span><strong>Runtime</strong>{candidate.executionProvider ?? 'Default'}</span>
+                                <span><strong>Cache</strong>{candidate.cached ? 'Downloaded' : 'Not downloaded'}</span>
+                                <span><strong>Size</strong>{candidate.fileSizeMb ? `${candidate.fileSizeMb} MB` : '—'}</span>
+                                <span><strong>Context</strong>{candidate.contextLength ? candidate.contextLength.toLocaleString() : '—'}</span>
+                              </div>
+                            ))}
+
+                          <button
+                            type="button"
+                            className="runtime-native-button"
+                            onClick={() => void useAnalystModel(analystModelId)}
+                            disabled={!analystModelId || isRuntimeActionRunning || isGenerating}
+                          >
+                            {isRuntimeActionRunning ? 'Switching model…' : 'Use this model'}
+                          </button>
+                        </div>
+                      </details>
+                    )}
 
                     {runtimeActionMessage && (
                       <p className="runtime-setup-note healthy">
@@ -1653,7 +1938,35 @@ export default function App() {
                     </button>
                   </div>
                 </div>
-                <p>{message.content ? cleanTemporalArtifact(message.content) : '…'}</p>
+                <div className="message-content">
+                  {message.content ? (
+                    parseMessageContent(message.content).map((segment, index) => {
+                      if (segment.type === 'code') {
+                        const codeKey = `${message.id}:${index}`
+                        return (
+                          <section className="code-block" key={codeKey}>
+                            <div className="code-block-header">
+                              <span>{segment.language ?? 'code'}</span>
+                              <button
+                                type="button"
+                                onClick={() => void copyCode(segment.content, codeKey)}
+                              >
+                                {copiedCodeKey === codeKey ? 'Copied' : 'Copy'}
+                              </button>
+                            </div>
+                            <pre><code>{segment.content}</code></pre>
+                          </section>
+                        )
+                      }
+
+                      return segment.content ? (
+                        <p key={`${message.id}:text:${index}`}>{segment.content}</p>
+                      ) : null
+                    })
+                  ) : (
+                    <p>…</p>
+                  )}
+                </div>
                 {message.excludedFromContext && (
                   <small className="context-state">Excluded from future inference context</small>
                 )}
@@ -1710,7 +2023,8 @@ export default function App() {
                     isGenerating ||
                     !activeConversation ||
                     !selectedModelId ||
-                    providerAvailability?.available === false
+                    providerAvailability?.available === false ||
+                    runtimeSleeping
                   }
                 >
                   Send
