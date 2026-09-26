@@ -83,6 +83,10 @@ export class BrowserLocalRuntimeManager implements LocalRuntimeManager {
     return unsupported()
   }
 
+  activateModel(_modelId: string): Promise<RuntimeActionResult> {
+    return unsupported()
+  }
+
   loadModel(_modelId: string): Promise<RuntimeActionResult> {
     return unsupported()
   }
