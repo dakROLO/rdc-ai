@@ -385,3 +385,52 @@ The native framework exposes the device's Apple on-device language model, availa
 ### Constraint
 
 This decision does not permit silent cloud fallback. If the Apple on-device model is unavailable, CrownKeep must surface that state and preserve the user's explicit choice boundary.
+
+
+---
+
+## ADR-0021 — Projects are a local organizational layer
+
+**Status:** Accepted  
+**Date:** 2026-09-25
+
+### Decision
+
+A CrownKeep conversation may belong to zero or one local Project.
+
+Projects organize conversations but do not change inference context, conversation identity, provider selection, or message ownership.
+
+Deleting a Project does not delete its conversations; those conversations become Unassigned.
+
+### Reason
+
+Projects provide useful organization without coupling the core conversation model to future RDC context or synchronization decisions.
+
+---
+
+## ADR-0022 — Tauri 2 selected for the Windows product-host spike
+
+**Status:** Accepted for Phase 4A validation  
+**Date:** 2026-09-26
+
+### Decision
+
+Use Tauri 2 for the Phase 4A Windows native-host spike around the existing CrownKeep Vite/React application.
+
+The host must preserve the existing provider-neutral conversation UI and use the established `LocalRuntimeManager` boundary for native runtime/model lifecycle actions.
+
+If the shell proof validates, the intended Windows runtime integration is the official Foundry Local Rust SDK with the Windows `winml` feature. The framework choice remains reversible until the host/runtime/installer slices are validated.
+
+### Reason
+
+CrownKeep now has a concrete browser capability gap: normal Windows users should not have to operate Vite, PowerShell, or a separately managed Foundry CLI.
+
+Tauri supports an existing Vite frontend while providing a Rust native host. Microsoft currently publishes an official Foundry Local Rust SDK, including a Windows WinML integration path, which aligns with the existing runtime abstraction.
+
+### Constraints
+
+- Do not move conversation/provider logic into Rust merely because a native host exists.
+- Do not make Azure required for local Windows use.
+- Browser development must remain functional.
+- Do not add Foundry SDK lifecycle ownership until the Tauri shell/bridge proof is validated.
+- No real RDC customer data is introduced by this phase.
