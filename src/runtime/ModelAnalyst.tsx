@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import type { AIProvider } from '../providers/AIProvider.ts'
 import type { LocalRuntimeManager, RuntimeModelCandidate } from './LocalRuntimeManager.ts'
+import { ModelStorage } from './ModelStorage.tsx'
 import {
   bestObserved,
   groupFamilies,
@@ -520,6 +521,17 @@ export function ModelAnalyst({
           </section>
         ))}
       </div>
+
+      <ModelStorage
+        manager={manager}
+        candidates={candidates}
+        profile={profile}
+        results={results}
+        busy={busy}
+        setBusy={setBusy}
+        refresh={refresh}
+        onCatalogChanged={onCatalogChanged}
+      />
 
       {otherFamilies.length > 0 && (
         <details className="more-models">
