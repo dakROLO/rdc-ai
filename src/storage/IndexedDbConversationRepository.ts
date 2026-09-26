@@ -1,14 +1,20 @@
 import type { Conversation, Message, MessageRole } from '../domain/conversation.ts'
+import type { Project } from '../domain/project.ts'
 import { createId } from '../utils/id.ts'
 import type {
   ConversationRepository,
   CreateConversationInput,
 } from './ConversationRepository.ts'
+import type {
+  CreateProjectInput,
+  ProjectRepository,
+} from './ProjectRepository.ts'
 
 const DATABASE_NAME = 'crownkeep-local'
-const DATABASE_VERSION = 2
+const DATABASE_VERSION = 3
 const CONVERSATIONS_STORE = 'conversations'
 const MESSAGES_STORE = 'messages'
+const PROJECTS_STORE = 'projects'
 const CONVERSATION_MESSAGE_INDEX = 'conversationId'
 
 const ROLE_TIE_BREAK: Record<MessageRole, number> = {
@@ -57,6 +63,13 @@ function openDatabase(): Promise<IDBDatabase> {
           keyPath: 'id',
         })
         conversations.createIndex('updatedAt', 'updatedAt', { unique: false })
+      }
+
+      if (!database.objectStoreNames.contains(PROJECTS_STORE)) {
+        const projects = database.createObjectStore(PROJECTS_STORE, {
+          keyPath: 'id',
+        })
+        projects.createIndex('updatedAt', 'updatedAt', { unique: false })
       }
 
       let messages: IDBObjectStore
@@ -124,7 +137,9 @@ function transactionComplete(transaction: IDBTransaction): Promise<void> {
   })
 }
 
-export class IndexedDbConversationRepository implements ConversationRepository {
+export class IndexedDbConversationRepository
+  implements ConversationRepository, ProjectRepository
+{
   private readonly databasePromise = openDatabase()
 
   async create(input: CreateConversationInput = {}): Promise<Conversation> {
@@ -137,6 +152,7 @@ export class IndexedDbConversationRepository implements ConversationRepository {
       updatedAt: now,
       syncState: 'local-only',
       syncVersion: 0,
+      projectId: input.projectId,
     }
 
     const transaction = database.transaction(CONVERSATIONS_STORE, 'readwrite')
@@ -144,6 +160,104 @@ export class IndexedDbConversationRepository implements ConversationRepository {
     await transactionComplete(transaction)
 
     return conversation
+  }
+
+  async createProject(input: CreateProjectInput): Promise<Project> {
+    const database = await this.databasePromise
+    const now = new Date().toISOString()
+    const project: Project = {
+      id: createId('project'),
+      title: input.title.trim() || 'Untitled project',
+      description: input.description?.trim() || undefined,
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    const transaction = database.transaction(PROJECTS_STORE, 'readwrite')
+    transaction.objectStore(PROJECTS_STORE).add(project)
+    await transactionComplete(transaction)
+
+    return project
+  }
+
+  async listProjects(): Promise<Project[]> {
+    const database = await this.databasePromise
+    const transaction = database.transaction(PROJECTS_STORE, 'readonly')
+    const request = transaction
+      .objectStore(PROJECTS_STORE)
+      .getAll() as IDBRequest<Project[]>
+
+    const projects = await requestResult(request)
+    return projects.sort((a, b) => a.title.localeCompare(b.title))
+  }
+
+  async renameProject(id: string, title: string): Promise<void> {
+    const database = await this.databasePromise
+    const transaction = database.transaction(PROJECTS_STORE, 'readwrite')
+    const store = transaction.objectStore(PROJECTS_STORE)
+    const request = store.get(id) as IDBRequest<Project | undefined>
+
+    request.onsuccess = () => {
+      const project = request.result
+      if (!project) return
+
+      store.put({
+        ...project,
+        title: title.trim() || project.title,
+        updatedAt: new Date().toISOString(),
+      })
+    }
+
+    await transactionComplete(transaction)
+  }
+
+  async deleteProject(id: string): Promise<void> {
+    const database = await this.databasePromise
+    const transaction = database.transaction(
+      [PROJECTS_STORE, CONVERSATIONS_STORE],
+      'readwrite',
+    )
+
+    transaction.objectStore(PROJECTS_STORE).delete(id)
+
+    const conversationStore = transaction.objectStore(CONVERSATIONS_STORE)
+    const request = conversationStore.getAll() as IDBRequest<Conversation[]>
+
+    request.onsuccess = () => {
+      for (const conversation of request.result) {
+        if (conversation.projectId !== id) continue
+
+        const { projectId: _projectId, ...withoutProject } = conversation
+        conversationStore.put(withoutProject)
+      }
+    }
+
+    await transactionComplete(transaction)
+  }
+
+  async assignConversationToProject(
+    conversationId: string,
+    projectId?: string,
+  ): Promise<void> {
+    const database = await this.databasePromise
+    const transaction = database.transaction(CONVERSATIONS_STORE, 'readwrite')
+    const store = transaction.objectStore(CONVERSATIONS_STORE)
+    const request = store.get(conversationId) as IDBRequest<Conversation | undefined>
+
+    request.onsuccess = () => {
+      const conversation = request.result
+      if (!conversation) return
+
+      if (projectId) {
+        store.put({ ...conversation, projectId })
+        return
+      }
+
+      const { projectId: _projectId, ...withoutProject } = conversation
+      store.put(withoutProject)
+    }
+
+    await transactionComplete(transaction)
   }
 
   async get(id: string): Promise<Conversation | undefined> {

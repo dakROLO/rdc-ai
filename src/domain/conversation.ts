@@ -9,6 +9,7 @@ export interface Conversation {
   updatedAt: string
   syncState: SyncState
   syncVersion: number
+  projectId?: string
 }
 
 export interface Message {

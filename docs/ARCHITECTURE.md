@@ -255,3 +255,57 @@ First-run state is derived from three stages:
 Successful verification is stored locally with the selected provider/model and basic observed timing. The stored record is advisory and can be invalidated by changing the model/runtime.
 
 Runtime performance guidance is based on observed first-token and total-response timing, not solely on a CPU/GPU/NPU label.
+
+
+## iPhone native local-AI direction
+
+The primary iPhone local-inference path is a native Apple host using the Foundation Models framework rather than treating browser WebGPU/WebLLM as the default.
+
+Architecture:
+
+```text
+CrownKeep React UI
+        |
+        v
+AppleFoundationModelsProvider
+        |
+        v
+NativeAIHost TypeScript bridge
+        |
+        v
+iPhone native host
+        |
+        v
+Foundation Models framework
+        |
+        v
+SystemLanguageModel.default
+```
+
+The React conversation system remains provider-neutral. The native host supplies local inference capability but does not own conversation identity.
+
+### Native/provider boundary
+
+- `src/native/NativeAIHost.ts` defines the JavaScript-side native bridge.
+- `src/providers/AppleFoundationModelsProvider.ts` adapts that bridge to `AIProvider`.
+- `native/ios/CrownKeepFoundationModelsService.swift` is the initial Swift service boundary.
+- The bridge must surface model availability explicitly and must not silently route unavailable local requests to cloud.
+- Safari/PWA mode remains useful for the CrownKeep UI and local conversation storage, but it cannot claim access to Apple's Foundation Models framework unless the native host is present.
+
+### Apple availability
+
+CrownKeep must distinguish at least:
+
+- model available;
+- device not eligible;
+- Apple Intelligence not enabled;
+- model not ready;
+- unknown/unhandled availability.
+
+### Model/session strategy
+
+For the first device vertical slice, the native host may return a complete non-streaming response as one `ChatChunk` to prove the bridge.
+
+After the bridge works, Sprint 3.2 will add native streaming, cancellation, token/context instrumentation, and mobile resource handling.
+
+WebLLM/WebGPU remains an optional fallback/experimental provider rather than the primary iPhone implementation.

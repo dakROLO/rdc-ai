@@ -1,4 +1,5 @@
 import {
+  type DragEvent as ReactDragEvent,
   type FormEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   useEffect,
@@ -8,6 +9,7 @@ import {
 } from 'react'
 import { ANNE_SYSTEM_PROMPT } from './assistant/anne.ts'
 import type { Conversation, Message } from './domain/conversation.ts'
+import type { Project } from './domain/project.ts'
 import type {
   AIModel,
   ProviderAvailability,
@@ -16,9 +18,12 @@ import type {
 import {
   createAppleFoundationModelsProviderIfAvailable,
 } from './providers/AppleFoundationModelsProvider.ts'
+import { installMockNativeAIHostFromQuery } from './native/MockNativeAIHost.ts'
 import { FoundryLocalProvider } from './providers/FoundryLocalProvider.ts'
+import { IOSBrowserLocalUnavailableProvider } from './providers/IOSBrowserLocalUnavailableProvider.ts'
 import { MockProvider } from './providers/MockProvider.ts'
 import { ProviderRegistry } from './providers/ProviderRegistry.ts'
+import { getMobileCapabilitySnapshot } from './mobile/MobileCapability.ts'
 import { browserLocalRuntimeManager } from './runtime/BrowserLocalRuntimeManager.ts'
 import type { RuntimeSnapshot } from './runtime/LocalRuntimeManager.ts'
 import { IndexedDbConversationRepository } from './storage/IndexedDbConversationRepository.ts'
@@ -33,19 +38,29 @@ const developmentAlternateProvider = new MockProvider({
   responseLabel: 'alternate local development provider',
 })
 const foundryLocalProvider = new FoundryLocalProvider()
+
+installMockNativeAIHostFromQuery()
+
 const appleFoundationModelsProvider =
   createAppleFoundationModelsProviderIfAvailable()
+const mobileCapability = getMobileCapabilitySnapshot()
+const iosBrowserUnavailableProvider = mobileCapability.isIOS
+  ? new IOSBrowserLocalUnavailableProvider()
+  : undefined
 
 const developmentProviders = [
   primaryProvider,
   developmentAlternateProvider,
   foundryLocalProvider,
   ...(appleFoundationModelsProvider ? [appleFoundationModelsProvider] : []),
+  ...(iosBrowserUnavailableProvider ? [iosBrowserUnavailableProvider] : []),
 ]
 
 const productionProviders = appleFoundationModelsProvider
   ? [appleFoundationModelsProvider]
-  : [foundryLocalProvider]
+  : iosBrowserUnavailableProvider
+    ? [iosBrowserUnavailableProvider]
+    : [foundryLocalProvider]
 
 const providerRegistry = new ProviderRegistry(
   import.meta.env.DEV ? developmentProviders : productionProviders,
@@ -214,6 +229,9 @@ export default function App() {
   const defaultProviderId = providers[0]?.id ?? primaryProvider.id
 
   const [conversations, setConversations] = useState<Conversation[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
+  const [projectFilter, setProjectFilter] = useState('all')
+  const [dragProjectTarget, setDragProjectTarget] = useState<string | null>(null)
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [prompt, setPrompt] = useState('')
@@ -237,6 +255,7 @@ export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     () => localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true',
   )
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [lastRun, setLastRun] = useState<InferenceRunStats | null>(null)
   const [runtimeSnapshot, setRuntimeSnapshot] = useState<RuntimeSnapshot | null>(null)
   const [providerRefreshNonce, setProviderRefreshNonce] = useState(0)
@@ -252,6 +271,26 @@ export default function App() {
   const setupVerified =
     setupRecord?.providerId === selectedProviderId &&
     setupRecord.modelId === selectedModelId
+  const projectById = useMemo(
+    () => new Map(projects.map((project) => [project.id, project])),
+    [projects],
+  )
+  const activeProject = activeConversation?.projectId
+    ? projectById.get(activeConversation.projectId)
+    : undefined
+  const selectedFilterProject =
+    projectFilter !== 'all' && projectFilter !== 'unassigned'
+      ? projectById.get(projectFilter)
+      : undefined
+  const visibleConversations = useMemo(() => {
+    if (projectFilter === 'all') return conversations
+    if (projectFilter === 'unassigned') {
+      return conversations.filter((conversation) => !conversation.projectId)
+    }
+    return conversations.filter(
+      (conversation) => conversation.projectId === projectFilter,
+    )
+  }, [conversations, projectFilter])
 
   const status = useMemo(() => {
     if (!providerAvailability) return 'Checking local AI…'
@@ -335,14 +374,27 @@ export default function App() {
     return next
   }
 
+  async function refreshProjects(): Promise<Project[]> {
+    const next = await repository.listProjects()
+    setProjects(next)
+    return next
+  }
+
   async function createConversation(): Promise<void> {
-    const conversation = await repository.create({ title: DEFAULT_TITLE })
+    const conversation = await repository.create({
+      title: DEFAULT_TITLE,
+      projectId:
+        projectFilter !== 'all' && projectFilter !== 'unassigned'
+          ? projectFilter
+          : undefined,
+    })
     const welcome = welcomeMessage(conversation.id)
     await repository.saveMessage(welcome)
     await refreshConversations()
     setActiveConversation(conversation)
     setMessages([welcome])
     setPrompt('')
+    setMobileNavOpen(false)
   }
 
   async function openConversation(conversation: Conversation): Promise<void> {
@@ -351,6 +403,7 @@ export default function App() {
     setActiveConversation(conversation)
     setMessages(nextMessages)
     setPrompt('')
+    setMobileNavOpen(false)
   }
 
   useEffect(() => {
@@ -358,8 +411,13 @@ export default function App() {
 
     async function initialize() {
       try {
-        const existing = await repository.list()
+        const [existing, existingProjects] = await Promise.all([
+          repository.list(),
+          repository.listProjects(),
+        ])
         if (cancelled) return
+
+        setProjects(existingProjects)
 
         if (existing.length === 0) {
           await createConversation()
@@ -664,6 +722,111 @@ export default function App() {
     localStorage.setItem(modelStorageKey(selectedProviderId), modelId)
   }
 
+  async function createProject() {
+    if (isGenerating) return
+    const title = window.prompt('Project name')?.trim()
+    if (!title) return
+
+    const project = await repository.createProject({ title })
+    await refreshProjects()
+    setProjectFilter(project.id)
+  }
+
+  async function renameProject(project: Project) {
+    if (isGenerating) return
+    const title = window.prompt('Rename project', project.title)?.trim()
+    if (!title) return
+
+    await repository.renameProject(project.id, title)
+    await refreshProjects()
+  }
+
+  async function deleteProject(project: Project) {
+    if (
+      isGenerating ||
+      !window.confirm(
+        `Delete project "${project.title}"? Its conversations will be kept and moved to Unassigned.`,
+      )
+    ) {
+      return
+    }
+
+    await repository.deleteProject(project.id)
+    await Promise.all([refreshProjects(), refreshConversations()])
+    if (projectFilter === project.id) setProjectFilter('unassigned')
+  }
+
+  async function assignConversationProject(
+    conversation: Conversation,
+    projectId?: string,
+  ) {
+    if (isGenerating) return
+
+    await repository.assignConversationToProject(conversation.id, projectId)
+    const next = await refreshConversations()
+    const updated = next.find((item) => item.id === conversation.id)
+
+    if (updated && activeConversation?.id === conversation.id) {
+      setActiveConversation(updated)
+    }
+  }
+
+  async function handleProjectDrop(
+    event: ReactDragEvent<HTMLElement>,
+    projectId?: string,
+  ) {
+    event.preventDefault()
+    const conversationId = event.dataTransfer.getData('text/crownkeep-conversation')
+    setDragProjectTarget(null)
+    if (!conversationId) return
+
+    const conversation = conversations.find((item) => item.id === conversationId)
+    if (!conversation) return
+
+    await assignConversationProject(conversation, projectId)
+  }
+
+  async function changeActiveConversationProject(projectId: string) {
+    const conversation = activeConversation
+    if (!conversation) return
+    await assignConversationProject(
+      conversation,
+      projectId === 'unassigned' ? undefined : projectId,
+    )
+  }
+
+  async function moveConversationToProject(conversation: Conversation) {
+    if (isGenerating) return
+
+    const choices = projects.map((project) => project.title).join('\n')
+    const currentProject = conversation.projectId
+      ? projectById.get(conversation.projectId)?.title ?? ''
+      : ''
+
+    const value = window.prompt(
+      `Move conversation to project. Enter an exact project name, or leave blank for Unassigned.\n\nProjects:\n${choices || '(No projects yet)'}`,
+      currentProject,
+    )
+
+    if (value === null) return
+    const title = value.trim()
+
+    if (!title) {
+      await assignConversationProject(conversation)
+      return
+    }
+
+    const project = projects.find(
+      (item) => item.title.toLocaleLowerCase() === title.toLocaleLowerCase(),
+    )
+    if (!project) {
+      window.alert('Project not found. Use one of the listed project names.')
+      return
+    }
+
+    await assignConversationProject(conversation, project.id)
+  }
+
   async function renameConversation(conversation: Conversation) {
     if (isGenerating) return
     const value = window.prompt('Rename conversation', conversation.title)?.trim()
@@ -816,7 +979,7 @@ export default function App() {
   }
 
   return (
-    <div className={`app-shell ${sidebarCollapsed ? 'nav-collapsed' : ''}`}>
+    <div className={`app-shell ${sidebarCollapsed ? 'nav-collapsed' : ''} ${mobileNavOpen ? 'mobile-nav-open' : ''}`}>
       <aside className="sidebar">
         <div className="brand-row">
           <div className="brand-lockup">
@@ -848,12 +1011,167 @@ export default function App() {
           <span className="nav-label">New Chat</span>
         </button>
 
-        <section className="conversation-nav" aria-label="Conversations">
+        <button
+          className="mobile-nav-toggle"
+          type="button"
+          onClick={() => setMobileNavOpen((current) => !current)}
+          aria-expanded={mobileNavOpen}
+          aria-controls="mobile-navigation"
+        >
+          <span>{mobileNavOpen ? 'Hide' : 'Chats & Projects'}</span>
+          <span aria-hidden="true">{mobileNavOpen ? '⌃' : '⌄'}</span>
+        </button>
+
+        <section
+          id="mobile-navigation"
+          className={`project-nav ${mobileNavOpen ? 'mobile-open' : ''}`}
+          aria-label="Projects"
+        >
+          <div className="nav-heading-row">
+            <p className="nav-heading">Projects</p>
+            <div className="project-heading-actions">
+              {selectedFilterProject && (
+                <>
+                  <button
+                    type="button"
+                    className="nav-mini-button project-manage-button"
+                    onClick={() => void renameProject(selectedFilterProject)}
+                    disabled={isGenerating}
+                    title="Rename selected project"
+                    aria-label="Rename selected project"
+                  >
+                    ✎
+                  </button>
+                  <button
+                    type="button"
+                    className="nav-mini-button project-manage-button"
+                    onClick={() => void deleteProject(selectedFilterProject)}
+                    disabled={isGenerating}
+                    title="Delete selected project"
+                    aria-label="Delete selected project"
+                  >
+                    ×
+                  </button>
+                </>
+              )}
+              <button
+                type="button"
+                className="nav-mini-button"
+                onClick={() => void createProject()}
+                disabled={isGenerating}
+                title="New project"
+                aria-label="New project"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          <select
+            className="project-filter-select"
+            value={projectFilter}
+            onChange={(event) => setProjectFilter(event.target.value)}
+            aria-label="Project filter"
+          >
+            <option value="all">All chats ({conversations.length})</option>
+            <option value="unassigned">
+              Unassigned ({conversations.filter((conversation) => !conversation.projectId).length})
+            </option>
+            {projects.map((project) => (
+              <option value={project.id} key={project.id}>
+                {project.title} ({conversations.filter((conversation) => conversation.projectId === project.id).length})
+              </option>
+            ))}
+          </select>
+
+          <button
+            className={`project-filter ${projectFilter === 'all' ? 'active' : ''}`}
+            type="button"
+            onClick={() => setProjectFilter('all')}
+          >
+            <span>All chats</span>
+            <small>{conversations.length}</small>
+          </button>
+
+          <button
+            className={`project-filter ${projectFilter === 'unassigned' ? 'active' : ''} ${dragProjectTarget === 'unassigned' ? 'drop-target' : ''}`}
+            type="button"
+            onClick={() => setProjectFilter('unassigned')}
+            onDragOver={(event) => {
+              event.preventDefault()
+              setDragProjectTarget('unassigned')
+            }}
+            onDragLeave={() => setDragProjectTarget(null)}
+            onDrop={(event) => void handleProjectDrop(event)}
+          >
+            <span>Unassigned</span>
+            <small>{conversations.filter((conversation) => !conversation.projectId).length}</small>
+          </button>
+
+          {projects.map((project) => (
+            <div className="project-row" key={project.id}>
+              <button
+                className={`project-filter ${projectFilter === project.id ? 'active' : ''} ${dragProjectTarget === project.id ? 'drop-target' : ''}`}
+                type="button"
+                onClick={() => setProjectFilter(project.id)}
+                onDragOver={(event) => {
+                  event.preventDefault()
+                  setDragProjectTarget(project.id)
+                }}
+                onDragLeave={() => setDragProjectTarget(null)}
+                onDrop={(event) => void handleProjectDrop(event, project.id)}
+                title={`${project.title} — drop a conversation here to move it`}
+              >
+                <span>{project.title}</span>
+                <small>
+                  {conversations.filter((conversation) => conversation.projectId === project.id).length}
+                </small>
+              </button>
+              <div className="project-actions">
+                <button
+                  type="button"
+                  onClick={() => void renameProject(project)}
+                  disabled={isGenerating}
+                  title="Rename project"
+                  aria-label={`Rename ${project.title}`}
+                >
+                  ✎
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void deleteProject(project)}
+                  disabled={isGenerating}
+                  title="Delete project"
+                  aria-label={`Delete ${project.title}`}
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          ))}
+        </section>
+
+        <section
+          className={`conversation-nav ${mobileNavOpen ? 'mobile-open' : ''}`}
+          aria-label="Conversations"
+        >
           <p className="nav-heading">Conversations</p>
-          {conversations.map((conversation) => (
+          {visibleConversations.length === 0 && (
+            <p className="nav-empty">No conversations here yet.</p>
+          )}
+          {visibleConversations.map((conversation) => (
             <div
               className={`conversation-row ${activeConversation?.id === conversation.id ? 'active' : ''}`}
               key={conversation.id}
+              draggable={!isGenerating}
+              onDragStart={(event) => {
+                event.dataTransfer.effectAllowed = 'move'
+                event.dataTransfer.setData(
+                  'text/crownkeep-conversation',
+                  conversation.id,
+                )
+              }}
+              onDragEnd={() => setDragProjectTarget(null)}
             >
               <button
                 className="conversation-open"
@@ -863,9 +1181,22 @@ export default function App() {
                 title={conversation.title}
               >
                 <span>{conversation.title}</span>
-                <small>Stored locally</small>
+                <small>
+                  {conversation.projectId
+                    ? projectById.get(conversation.projectId)?.title ?? 'Project'
+                    : 'Unassigned'}
+                </small>
               </button>
               <div className="conversation-actions">
+                <button
+                  type="button"
+                  onClick={() => void moveConversationToProject(conversation)}
+                  disabled={isGenerating}
+                  title="Move to project"
+                  aria-label={`Move ${conversation.title} to project`}
+                >
+                  ▣
+                </button>
                 <button
                   type="button"
                   onClick={() => void renameConversation(conversation)}
@@ -910,6 +1241,31 @@ export default function App() {
           <div className="conversation-title">
             <p className="eyebrow">Anne · Local assistant</p>
             <h2>{activeConversation?.title ?? 'Opening CrownKeep…'}</h2>
+            {activeConversation && (
+              <label className="active-project-control">
+                <span>Project</span>
+                <select
+                  value={activeConversation.projectId ?? 'unassigned'}
+                  onChange={(event) =>
+                    void changeActiveConversationProject(event.target.value)
+                  }
+                  disabled={isGenerating}
+                  title="Move this conversation to a project"
+                >
+                  <option value="unassigned">Unassigned</option>
+                  {projects.map((project) => (
+                    <option value={project.id} key={project.id}>
+                      {project.title}
+                    </option>
+                  ))}
+                </select>
+                <small>
+                  {activeProject
+                    ? `Stored in ${activeProject.title}`
+                    : 'Not assigned to a project'}
+                </small>
+              </label>
+            )}
           </div>
 
           <div className="provider-area">
@@ -935,6 +1291,21 @@ export default function App() {
               </summary>
 
               <div className="local-ai-panel">
+                <div className="local-ai-panel-heading">
+                  <strong>Inside the Keep</strong>
+                  <button
+                    type="button"
+                    className="local-ai-close-button"
+                    onClick={(event) =>
+                      event.currentTarget
+                        .closest('details.local-ai-menu')
+                        ?.removeAttribute('open')
+                    }
+                  >
+                    Close
+                  </button>
+                </div>
+
                 <div className="provider-selectors">
                   <label>
                     <span>Provider</span>
@@ -1076,6 +1447,18 @@ export default function App() {
                 <details className="diagnostics-disclosure">
                   <summary>Diagnostics</summary>
                   <div className="diagnostics-panel">
+                    <div className="diagnostics-heading-row">
+                      <strong>Local AI diagnostics</strong>
+                      <button
+                        type="button"
+                        className="diagnostics-close-button"
+                        onClick={(event) =>
+                          event.currentTarget.closest('details')?.removeAttribute('open')
+                        }
+                      >
+                        Close
+                      </button>
+                    </div>
                     <div className="diagnostics-grid">
                       <div><span>Last result</span><strong>{lastRun?.outcome ?? 'No run yet'}</strong></div>
                       <div><span>First token</span><strong>{formatDuration(lastRun?.firstTokenMs)}</strong></div>

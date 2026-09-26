@@ -301,3 +301,265 @@ Fixes delivered:
 - This preserves temporal reasoning while reducing normal prompt-token overhead.
 
 Validation pending: compare prompt-token count and first-token latency on the same AVD conversation after pulling current main.
+
+
+## Phase 3 branch kickoff — 2026-09-25
+
+Branch: `phase-3-iphone-local-ai`
+
+Windows/Foundry browser hardening was accepted by user validation and Phase 2 is treated as complete for the current browser-development scope.
+
+Phase 3.1A foundation delivered on the branch:
+
+- Added `NativeAIHost` TypeScript bridge contract.
+- Added `AppleFoundationModelsProvider` implementing the existing provider-neutral `AIProvider` interface.
+- Added iPhone/iPad capability detection that distinguishes native-host and browser-only use.
+- Added explicit iPhone Safari/PWA local-AI unavailable provider so iPhone browser mode does not attempt the Windows Foundry path.
+- Added production provider selection that prefers Apple on-device AI when the native host is present.
+- Added `native/ios/CrownKeepFoundationModelsService.swift` as the first Swift Foundation Models service scaffold.
+- Added native-host implementation notes under `native/ios/README.md`.
+- Phase 3 work is isolated from stable `main` on the phase branch.
+
+Next: Sprint 3.1B — create the minimal native iPhone host and wire availability plus the first real on-device response through `window.crownKeepNativeAI`.
+
+
+## Phase 3 Windows-side native-host simulation — 2026-09-25
+
+To keep Phase 3 moving without immediate Mac access:
+
+- Added `MockNativeAIHost` for development-only simulation of the native iPhone bridge.
+- The mock host can expose Apple-provider states from Windows without changing production behavior.
+- Development URL `?nativeAI=mock` installs a fake native Apple host before provider registration.
+- `nativeAIState` can simulate:
+  - `available`
+  - `device-not-eligible`
+  - `apple-intelligence-not-enabled`
+  - `model-not-ready`
+- The available mock returns a short iPhone-local response through `AppleFoundationModelsProvider`, exercising the same provider-neutral chat path the real Swift bridge will use.
+- This lets provider registration, availability mapping, conversation continuity, cancellation plumbing, and mobile-local metadata be validated before Xcode/device work begins.
+
+
+## Phase 3 mock native-host validation — 2026-09-25
+
+User validation on Windows confirmed the mock native iPhone bridge works end-to-end.
+
+Observed:
+
+- CrownKeep exposed **Anne · Apple On-Device** as a selectable provider.
+- CrownKeep exposed **Apple On-Device Model** as the model.
+- Local AI diagnostics showed the simulated Apple provider as Ready / NPU / Inside the Keep.
+- A test prompt returned through the provider-neutral CrownKeep conversation path with the expected development response: `Mock iPhone-local Anne received: ...`.
+- Existing conversation UI and local-message metadata remained intact.
+
+Conclusion:
+
+The TypeScript/provider side of the iPhone native bridge is proven before the real Swift/Xcode host exists.
+
+UX note:
+
+Provider/model dropdowns are useful during development, but the native iPhone release should automatically prefer Apple On-Device when available and move manual provider/model selection into an advanced Local AI settings surface.
+
+Latest Phase 3 branch CI is green after fixing the Apple provider's TypeScript syntax compatibility and the iPhone-unavailable provider lint warning.
+
+
+## Physical iPhone proof — 2026-09-25
+
+User successfully built, signed, installed, and launched the first CrownKeep native app on physical iPhone `Rolo15` over the paired Mac/Xcode environment.
+
+Validated:
+
+- Xcode 27.0 / iPhoneOS SDK 27.0;
+- Personal Team development signing;
+- wireless device visibility from Xcode;
+- CrownKeep native app installation on the physical iPhone;
+- `SystemLanguageModel.default` reported available;
+- **Ask Anne on this iPhone** successfully returned a real Foundation Models response on-device.
+
+Known packaging polish:
+
+- the proof app currently uses the default blank app icon; CrownKeep branded iOS app icon assets are still required.
+
+Conclusion:
+
+The native Apple Foundation Models theory is proven on the user's actual iPhone. Phase 3 can move from native-model feasibility into integration of the shared CrownKeep UI.
+
+
+## Shared CrownKeep iPhone host integration — IMPLEMENTED · DEVICE VALIDATION PENDING
+
+The Phase 3 branch now contains the first complete integration slice:
+
+- the native iPhone app hosts the existing CrownKeep React UI in `WKWebView`;
+- the production React build is packaged inside the application bundle under `dist`;
+- a stable `crownkeep://app` scheme serves the bundled UI and assets;
+- the native host injects `window.crownKeepNativeAI` before the React application initializes;
+- `AppleFoundationModelsProvider` calls the injected native bridge;
+- Swift maps provider availability and model discovery to `SystemLanguageModel.default`;
+- Swift translates CrownKeep system/history messages into a `LanguageModelSession` request;
+- the first integration returns a complete native response as one provider chat chunk;
+- cancellation plumbing is represented and native generation tasks can be cancelled;
+- the native host skips browser service-worker registration;
+- `scripts/ios-device-build.sh` now builds the React UI before Xcode packages, signs, installs, and launches the app.
+
+Next device validation:
+
+1. pull current `phase-3-iphone-local-ai` on the Mac;
+2. rerun the SSH deployment script;
+3. confirm the installed app now renders the normal CrownKeep conversation UI;
+4. confirm provider is **Anne · Apple On-Device**;
+5. create/send a chat and confirm the answer comes from the phone's Foundation Model;
+6. confirm local conversations persist across app relaunch;
+7. capture any narrow-layout/safe-area/storage issues before native streaming work.
+
+
+## iOS signing and branded icon hardening — 2026-09-25
+
+Physical-device signing revealed that the identifier shown in the development certificate name (`QS3773YNR5`) was not the Apple Development Team ID. Xcode saved the actual CrownKeep development team as `QJ9HLPX482`.
+
+Changes delivered:
+
+- persisted the Xcode-selected development team in the native project;
+- updated the device-build script to default to `QJ9HLPX482` while still allowing an explicit override;
+- added a native `Assets.xcassets/AppIcon.appiconset`;
+- wired `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon` into Debug and Release;
+- device builds now generate a 1024×1024 iOS app icon from the canonical CrownKeep logo at `public/icons/crownkeep-512.png`;
+- the generated 1024 icon is ignored by Git because it is reproducible from the committed CrownKeep source icon.
+
+Device validation pending: pull the current Phase 3 branch, redeploy to Rolo15, confirm the full CrownKeep UI/native Anne bridge, and confirm the branded CrownKeep icon appears on the iPhone Home Screen.
+
+
+## Wireless SSH deployment validated — 2026-09-25
+
+The CrownKeep iPhone build now installs and launches successfully on physical device `Rolo15` from the Windows PC through SSH to the Mac.
+
+Important signing behavior discovered:
+
+- Xcode GUI signing works normally;
+- non-interactive SSH sessions do not automatically unlock the macOS login keychain;
+- when the keychain remains locked, `codesign` can fail with `errSecInternalComponent` even though the certificate and provisioning profile are valid;
+- running `security unlock-keychain ~/Library/Keychains/login.keychain-db` in the same SSH session before the device-build script resolves the signing failure without storing the password in Git or the command line.
+
+Validated deployment flow:
+
+```text
+Windows PC
+  → SSH to Mac
+  → unlock login keychain
+  → build CrownKeep React UI
+  → generate branded iOS app icon
+  → Xcode build/sign
+  → wireless install to Rolo15
+  → launch CrownKeep
+```
+
+Next validation target: confirm the installed build renders the full CrownKeep UI, shows the branded app icon, uses **Anne · Apple On-Device**, persists local conversations, and returns a real Apple Foundation Models response through the native bridge.
+
+
+## First full iPhone UI validation — 2026-09-25
+
+User validated the first shared-UI CrownKeep build on physical iPhone `Rolo15`.
+
+Passed:
+
+- native app launches the real CrownKeep React UI;
+- **Anne · Apple On-Device** is selected correctly;
+- Apple on-device model/provider availability is healthy;
+- Anne returns successful local responses through the Swift bridge.
+
+Issues found:
+
+- Home Screen icon rendered effectively black instead of showing the CrownKeep mark;
+- **New Project** did not open its naming dialog;
+- conversation rename did not open its editing dialog;
+- mobile project/navigation controls plus Local AI chrome consumed too much vertical space;
+- Apple responses arrived as one completed block instead of streaming.
+
+Root cause / fixes delivered:
+
+- project creation, rename, delete confirmation, and related browser dialogs use `window.prompt/confirm/alert`; the native `WKWebView` host now implements the required `WKUIDelegate` JavaScript dialog callbacks;
+- mobile Chats/Projects navigation is now collapsed behind a dedicated phone-only tray;
+- the active project selector and Local AI summary are compacted into a single short mobile header row, while detailed Local AI controls remain expandable;
+- the native Apple bridge now uses `LanguageModelSession.streamResponse(...)` and converts Foundation Models' cumulative partial snapshots into deltas for the existing CrownKeep provider stream;
+- the iOS icon build now rasterizes the canonical `public/crownkeep-mark.svg` instead of relying primarily on the older PNG asset.
+
+Device revalidation required for all five fixes.
+
+
+## iPhone device validation round 2 — 2026-09-25
+
+Additional physical-device findings:
+
+- deleting the development-signed CrownKeep app caused iOS to request developer/publisher approval again; routine test deployments should update the installed app in place rather than delete it unless icon-cache testing requires a clean install;
+- real CrownKeep UI and Apple on-device provider continue to work;
+- user observed some Apple responses that felt truncated or repetitive, including weak continuation after a short follow-up;
+- Diagnostics could expand but lacked an explicit Close action.
+
+Hardening delivered for the next build:
+
+- added an explicit Diagnostics Close control;
+- Anne instructions now explicitly permit fictional/creative work when requested and treat short follow-ups as continuation intent;
+- native Apple prompting now separates previous conversation context from the current user request instead of passing the entire labeled transcript as one undifferentiated prompt;
+- creative requests receive a higher-temperature randomized sampling configuration while ordinary requests retain Apple's default generation behavior;
+- Apple session input/output/total token usage is sent back through the native bridge so CrownKeep diagnostics can distinguish model behavior from UI/bridge truncation;
+- device deployment supports optional `CROWNKEEP_SLEEP_AFTER=1` to return the Mac to sleep only after a successful install/launch.
+
+Exact prompt/response transcript is still useful if the Apple model continues to truncate or repeat after this build.
+
+
+## iOS 27 token-usage availability fix — 2026-09-25
+
+The first build with Apple token diagnostics failed because `LanguageModelSession.usage` and `totalTokenCount` are only available on iOS 27+, while CrownKeep intentionally retains an iOS 26 deployment target.
+
+Fix:
+
+- preserve the iOS 26 deployment target;
+- wrap Apple token-usage collection in `if #available(iOS 27.0, *)`;
+- iOS 27 devices report prompt/completion/total tokens into CrownKeep Diagnostics;
+- iOS 26 devices continue local generation without token-usage diagnostics.
+
+
+## Transient wireless CoreDevice install failure hardening — 2026-09-25
+
+A physical iPhone deployment completed the full CrownKeep build successfully but failed during the wireless `devicectl device install app` step with a CoreDevice control-channel reset (`Connection reset by peer`).
+
+This is distinct from compilation, signing, or provisioning failure. The built app remained available in DerivedData.
+
+Hardening delivered:
+
+- device install now retries up to three times after transient wireless failures;
+- launch also retries up to three times;
+- retry guidance asks the user to keep the iPhone awake/unlocked and on the same network;
+- after repeated install failure, the script prints the current CoreDevice device list for diagnosis;
+- the Mac sleep-after-success step still runs only after both install and launch succeed.
+
+
+## Creative-loop root cause and Local AI close fix — 2026-09-25
+
+Physical iPhone testing captured a repeatable Apple on-device failure mode: when asked to invent a story about a fictional princess named Anne, the model repeatedly refused because it interpreted the fictional Anne as the assistant's own biography. Earlier refusals were then fed back as context and reinforced the loop. Short follow-ups such as "let's do it" also lost creative-mode detection because the current message alone did not contain a creative keyword.
+
+Fixes delivered:
+
+- Anne's shared instructions explicitly distinguish a fictional character named Anne from the assistant's identity and permit invented fictional details;
+- creative intent on iPhone now considers recent user requests, so short follow-ups preserve the prior creative task;
+- creative recovery excludes prior assistant responses from the compact context so repeated refusal text does not train the next turn into the same refusal;
+- the native prompt explicitly tells the Apple model to complete the fiction rather than discuss themes or explain that it lacks personal narratives;
+- recent native context is capped to a small window for the on-device model rather than replaying the full conversation;
+- the outer Local AI / Inside the Keep panel now has an explicit Close control in addition to the Diagnostics Close control.
+
+Device validation pending.
+
+
+## Windows + iPhone local baseline accepted — 2026-09-25
+
+User accepted the current basic local experience on both supported development paths.
+
+Validated baseline:
+
+- Windows CrownKeep local chat works through Microsoft Foundry Local;
+- iPhone CrownKeep runs the shared React UI in the native host;
+- **Anne · Apple On-Device** is healthy on physical iPhone;
+- Apple responses stream through the provider-neutral CrownKeep conversation path;
+- mobile project/conversation controls, JavaScript dialogs, Local AI panel closing, diagnostics, and creative follow-up behavior are functioning at the current basic-validation level;
+- wireless Mac → iPhone build/sign/install/launch workflow is operational, with retries for transient CoreDevice drops;
+- conversations remain provider-neutral and local-first.
+
+This establishes the first shared **Windows + iPhone local baseline** suitable for merging into `main`. Cloud identity, sync, explicit cloud escalation, RAG, agents, and live RDC data remain later phases.
