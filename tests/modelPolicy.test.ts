@@ -37,3 +37,8 @@ test('reasoning variants stay out of the default Quick role', () => {
   assert.equal(roleOf({ ...cpu, alias: 'phi-4-mini-reasoning' }), 'Deep / Experimental')
   assert.equal(roleOf({ ...cpu, alias: 'phi-4-mini' }), 'Quick')
 })
+
+
+test('Phi-4 Mini remains Quick even when a package is over the generic size threshold', () => {
+  assert.equal(roleOf({ ...cpu, alias: 'phi-4-mini', fileSizeMb: 4915 }), 'Quick')
+})
