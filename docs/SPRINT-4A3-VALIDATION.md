@@ -120,6 +120,19 @@ Required fix before Windows dictation can pass:
 4. make Cancel visibly mean either immediate cancellation when supported or **Cancel requested / finishing cleanup** when the native operation cannot be preempted;
 5. verify the prior chat model is restored after success, failure, timeout, and cancellation.
 
+### Physical laptop retest — Quick benchmark
+
+The repaired Quick benchmark completed successfully on the primary Windows laptop using the intended `phi-4-mini` family.
+
+Observed winner:
+
+- execution provider: `CPUExecutionProvider`
+- first token: **2380 ms**
+- observed generation rate: **13.8 tok/s**
+- result: accepted as the fastest measured Quick path for this device
+
+This is an expected outcome under the adaptive policy: CrownKeep should select the fastest measured path rather than prefer a GPU-labelled variant by assumption. The RTX 5070 remains a candidate signal, not a forced execution choice.
+
 ## Known implementation limits
 
 - RAM filtering uses disk-size × 1.5 + 2 GB as a conservative estimate, not a guarantee of peak memory or VRAM fit. Native load failures remain benchmark failures.
