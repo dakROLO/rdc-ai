@@ -6,6 +6,7 @@ import type {
 import type {
   LocalRuntimeManager,
   RuntimeActionResult,
+  RuntimeDeviceAnalysis,
   RuntimeModelCandidate,
   RuntimeSnapshot,
 } from './LocalRuntimeManager.ts'
@@ -92,6 +93,16 @@ export class BrowserLocalRuntimeManager implements LocalRuntimeManager {
 
   listModelCandidates(): Promise<RuntimeModelCandidate[]> {
     return Promise.resolve([])
+  }
+
+  analyzeDevice(): Promise<RuntimeDeviceAnalysis> {
+    return Promise.resolve({
+      devices: [],
+      executionProviders: [],
+      acceleratedVariantCount: 0,
+      cpuVariantCount: 0,
+      detail: unsupportedDetail,
+    })
   }
 }
 
