@@ -8,7 +8,7 @@ Phase 4A — Windows Product Host
 
 ## Active sprint
 
-Sprint 4A.2 — Embedded Foundry Local lifecycle.
+Sprint 4A.3 — Local Platform Convergence / Pause Point.
 
 ## Completed
 
@@ -827,3 +827,23 @@ This intentionally makes device analysis machine-specific. An AVD CPU result doe
 ### Windows UI refinement
 
 The Local AI panel is now a bounded fixed desktop overlay with internal scrolling and a sticky heading so long Model Analyst content does not run off-screen. The medium/desktop top bar now uses an explicit two-column title/status layout instead of allowing the Local AI status control to wrap underneath the conversation title.
+
+
+## Sprint 4A.3 planning reset — 2026-09-26
+
+The next sprint is intentionally a convergence sprint rather than the start of cloud identity/sync.
+
+A detailed contract now lives in `docs/SPRINT-4A3-LOCAL-PLATFORM-CONVERGENCE.md`.
+
+Planned outcome:
+
+- reduce the Windows Foundry catalog from raw variant volume to useful model-family/role choices;
+- benchmark the primary RTX 5070 Laptop GPU (8,151 MiB VRAM) for Quick, Balanced, and Experimental/Deep model roles;
+- keep `gpt-oss-20b` experimental on this hardware because its intended memory footprint exceeds the laptop's dedicated VRAM;
+- add provider-neutral local dictation, using Foundry Local Whisper on Windows and native Apple Speech on iPhone;
+- revalidate the current shared build on the physical iPhone and church AVD;
+- persist device-appropriate model/runtime profiles rather than forcing one model across all hosts;
+- preserve tool-call capability metadata for model choice without implementing CrownKeep tools/MCP in this sprint;
+- finish with all validated local-first work merged to `main`, stale contained phase branches cleaned up, and a documented local-baseline pause point before cloud work.
+
+Branch: `sprint-4a3-local-platform-convergence`.
