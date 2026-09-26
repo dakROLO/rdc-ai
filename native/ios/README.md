@@ -108,3 +108,21 @@ The device deployment script now:
 The native app serves bundled assets from `crownkeep://app` through a `WKURLSchemeHandler` and injects the `NativeAIHost` JavaScript contract at document start.
 
 The first real integration is intentionally non-streaming on the Swift side: one completed Apple Foundation Models response is emitted as one CrownKeep provider chunk. This proves the full UI/provider/native path before native response streaming is added.
+
+
+### If Xcode changed project files locally
+
+The first Xcode signing/provisioning run may modify the local `project.pbxproj`, and `chmod +x` may modify the executable bit of `scripts/ios-device-build.sh`.
+
+If a later `git pull` refuses to continue because those files would be overwritten, preserve the local state before updating:
+
+```bash
+git stash push -m "local Xcode signing setup" -- \
+  native/ios/CrownKeepNative/CrownKeepNative.xcodeproj/project.pbxproj \
+  scripts/ios-device-build.sh
+
+git pull
+chmod +x scripts/ios-device-build.sh
+```
+
+Do not immediately pop the stash. The Apple account, certificate, provisioning profile, and device registration live outside the repository. The deployment script also passes `DEVELOPMENT_TEAM` explicitly. Reapply the stash only if the refreshed project unexpectedly loses required signing behavior.
