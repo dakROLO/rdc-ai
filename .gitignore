@@ -19,3 +19,6 @@ native/ios/CrownKeepNative/CrownKeepNative/Assets.xcassets/AppIcon.appiconset/Ap
 
 # Tauri/Rust build output
 src-tauri/target/
+
+# Generated from the canonical CrownKeep mark by npm run desktop:prepare.
+src-tauri/icons/
