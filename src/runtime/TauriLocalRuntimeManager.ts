@@ -7,6 +7,7 @@ import type {
 import type {
   LocalRuntimeManager,
   RuntimeActionResult,
+  RuntimeModelCandidate,
   RuntimeSnapshot,
 } from './LocalRuntimeManager.ts'
 
@@ -29,6 +30,18 @@ interface NativeFoundryRuntimeStatus {
   catalogModelCount: number
   cachedModels: NativeFoundryModelSummary[]
   loadedModels: NativeFoundryModelSummary[]
+}
+
+interface NativeFoundryModelCandidate {
+  id: string
+  alias: string
+  displayName: string
+  cached: boolean
+  loaded: boolean
+  device?: string
+  executionProvider?: string
+  fileSizeMb?: number
+  contextLength?: number
 }
 
 async function invokeAction(
@@ -118,6 +131,10 @@ export class TauriLocalRuntimeManager implements LocalRuntimeManager {
 
   unloadModel(modelId: string): Promise<RuntimeActionResult> {
     return invokeAction('crownkeep_foundry_unload_model', { modelId })
+  }
+
+  listModelCandidates(): Promise<RuntimeModelCandidate[]> {
+    return invoke<NativeFoundryModelCandidate[]>('crownkeep_foundry_models')
   }
 }
 
