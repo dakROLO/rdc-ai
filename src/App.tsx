@@ -184,10 +184,40 @@ function formatMessageTime(value: string): string {
 }
 
 function cleanTemporalArtifact(value: string): string {
-  return value.replace(
+  let cleaned = value.replace(
     /^\s*\[Message timestamp:\s*[^\]]+\]\s*/i,
     '',
   )
+
+  const lines = cleaned.split(/\r?\n/)
+  let index = 0
+  let sawTemporalBlock = false
+  while (index < lines.length) {
+    const line = lines[index].trim()
+    const temporalLine =
+      /^CrownKeep time context\./i.test(line) ||
+      /^Current local date\/time:/i.test(line) ||
+      /^Time zone:/i.test(line) ||
+      /^Conversation started:/i.test(line) ||
+      /^Relevant conversation timeline:/i.test(line) ||
+      /^#\d+\s+(assistant|user)\s+—/i.test(line)
+
+    if (temporalLine) {
+      sawTemporalBlock = true
+      index += 1
+      continue
+    }
+
+    if (sawTemporalBlock && line === '') {
+      index += 1
+      continue
+    }
+
+    break
+  }
+
+  if (sawTemporalBlock) cleaned = lines.slice(index).join('\n').trimStart()
+  return cleaned
 }
 
 function modelStorageKey(providerId: string): string {
@@ -558,7 +588,22 @@ export default function App() {
       if (cancelled) return
       const storedModel = localStorage.getItem(modelStorageKey(provider.id))
       const nextModel =
-        availableModels.find((model) => nativeLoaded.some((item) => normalizeRuntimeModelKey(item.id) === normalizeRuntimeModelKey(model.id)))?.id ??
+        availableModels.find(
+          (model) =>
+            model.id === storedModel &&
+            nativeLoaded.some(
+              (item) =>
+                normalizeRuntimeModelKey(item.id) ===
+                normalizeRuntimeModelKey(model.id),
+            ),
+        )?.id ??
+        availableModels.find((model) =>
+          nativeLoaded.some(
+            (item) =>
+              normalizeRuntimeModelKey(item.id) ===
+              normalizeRuntimeModelKey(model.id),
+          ),
+        )?.id ??
         availableModels.find((model) => model.id === storedModel)?.id ??
         availableModels[0]?.id ??
         ''
@@ -711,6 +756,10 @@ export default function App() {
     return value.split(':')[0].trim().toLocaleLowerCase()
   }
 
+  function normalizedModelForStorage(value: string): string {
+    return value.split(':')[0].trim()
+  }
+
   function preferredNativeModelId(): string {
     const observed = readPreferred(localStorage)
     if (observed) return observed.fingerprint === fingerprint ? observed.variantId : observed.alias
@@ -743,14 +792,8 @@ export default function App() {
     }
 
     try {
-      const installResult = await localRuntimeManager.installModel(modelId)
-      if (!options.quiet) setRuntimeActionMessage(installResult.detail)
-
-      const loadResult = await localRuntimeManager.loadModel(modelId)
-      if (!options.quiet) setRuntimeActionMessage(loadResult.detail)
-
-      const startResult = await localRuntimeManager.start()
-      if (!options.quiet) setRuntimeActionMessage(startResult.detail)
+      const activateResult = await localRuntimeManager.activateModel(modelId)
+      if (!options.quiet) setRuntimeActionMessage(activateResult.detail)
 
       setProviderRefreshNonce((current) => current + 1)
     } catch (error) {
@@ -807,27 +850,15 @@ export default function App() {
     setIsRuntimeActionRunning(true)
     setRuntimeCheckError(null)
     setRuntimeActionMessage(`Switching local AI to ${modelId}…`)
-    const released: string[] = []
-    let loading = false
     try {
-      await localRuntimeManager.installModel(modelId)
-      const loaded = (await localRuntimeManager.listModelCandidates()).filter((item) => item.loaded)
-      for (const item of loaded) {
-        if (item.id !== modelId) { await localRuntimeManager.unloadModel(item.id); released.push(item.id) }
-      }
-      loading = true
-      await localRuntimeManager.loadModel(modelId)
-      await localRuntimeManager.start()
+      await localRuntimeManager.activateModel(modelId)
       setSetupRecord(null)
       localStorage.removeItem(LOCAL_AI_SETUP_STORAGE_KEY)
       setRuntimeSleeping(false)
-      setRuntimeActionMessage('Diagnostic variant loaded. Benchmark a family to save a measured preference.')
+      localStorage.setItem(modelStorageKey(selectedProviderId), normalizedModelForStorage(modelId))
+      setRuntimeActionMessage('Model switch complete. Benchmark the family to save it as the measured preference.')
     } catch (error) {
       setRuntimeCheckError(String(error))
-      try {
-        if (loading) await localRuntimeManager.unloadModel(modelId)
-        for (const id of released) await localRuntimeManager.loadModel(id)
-      } catch (recoveryError) { setRuntimeCheckError(`Model recovery needs attention: ${String(recoveryError)}`) }
     } finally {
       setIsRuntimeActionRunning(false)
       setProviderRefreshNonce((value) => value + 1)
@@ -991,6 +1022,14 @@ export default function App() {
         ),
       )
     } finally {
+      assistantContent = cleanTemporalArtifact(assistantContent)
+      setMessages((current) =>
+        current.map((message) =>
+          message.id === assistantMessage.id
+            ? { ...message, content: assistantContent }
+            : message,
+        ),
+      )
       const completedAt = performance.now()
       const totalMs = completedAt - startedAt
       const firstTokenMs =
@@ -1057,7 +1096,14 @@ export default function App() {
   }
 
   function handleModelChange(modelId: string) {
-    if (isGenerating || speechBusy || isRuntimeActionRunning) return
+    if (isGenerating || speechBusy || isRuntimeActionRunning || isRuntimeCheckRunning) return
+    if (
+      localRuntimeManager.mode === 'embedded' &&
+      selectedProviderId === 'foundry-local'
+    ) {
+      void useAnalystModel(modelId)
+      return
+    }
     setSelectedModelId(modelId)
     localStorage.setItem(modelStorageKey(selectedProviderId), modelId)
   }
