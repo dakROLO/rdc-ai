@@ -38,7 +38,7 @@ export function taskOf(model: RuntimeModelCandidate): 'chat' | 'speech' | 'other
 }
 export function roleOf(model: RuntimeModelCandidate): ModelRole {
   if (taskOf(model) === 'speech') return 'Voice'
-  if (/gpt-oss|20b|32b|70b|deepseek/i.test(model.alias)) return 'Deep / Experimental'
+  if (/gpt-oss|20b|32b|70b|deepseek|reasoning|reasoner/i.test(model.alias)) return 'Deep / Experimental'
   if (/12b|14b|nemo|8b|9b/i.test(model.alias) || (model.fileSizeMb ?? 0) > 4500) return 'Balanced'
   return 'Quick'
 }
