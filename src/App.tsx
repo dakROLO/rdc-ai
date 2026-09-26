@@ -852,10 +852,10 @@ export default function App() {
     }
 
     try {
+      const stopResult = await localRuntimeManager.stop()
       const loaded = (await localRuntimeManager.listModelCandidates()).filter((item) => item.loaded)
       for (const model of loaded) await localRuntimeManager.unloadModel(model.id)
 
-      const stopResult = await localRuntimeManager.stop()
       setRuntimeSleeping(true)
       setRuntimeActionMessage(
         reason === 'idle'
