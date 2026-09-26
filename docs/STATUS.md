@@ -646,3 +646,31 @@ Observed performance guidance correctly warned that the GPU-labeled variant took
 **Sprint 4A.1 is complete.**
 
 Next active slice: **Sprint 4A.2 — Embedded Foundry Local lifecycle**, beginning with native runtime/model discovery and lifecycle ownership through the existing `LocalRuntimeManager` seam.
+
+
+## Sprint 4A.2A native Foundry lifecycle implementation — 2026-09-26
+
+Implementation delivered; physical Windows validation pending.
+
+Native host changes:
+
+- added the official `foundry-local-sdk` Rust dependency with the Windows `winml` feature;
+- CrownKeep initializes its own Foundry Local manager with an embedded OpenAI-compatible service bound to `127.0.0.1:39839`;
+- native Tauri commands now expose Foundry SDK status, service start/stop, model download, model load, and model unload;
+- native status reports catalog size plus cached and loaded model state;
+- execution-provider download/registration is performed through the SDK before first model acquisition;
+- `TauriLocalRuntimeManager` now advertises real lifecycle capabilities rather than placeholder unsupported actions;
+- browser mode remains on `BrowserLocalRuntimeManager` and is unchanged.
+
+Product-facing first-run slice:
+
+- the native Local AI setup adds **Prepare phi-4-mini** when the embedded provider is not ready;
+- Prepare uses the native manager to register execution providers, download/cache `phi-4-mini` when needed, load it, start the embedded Foundry service, and recheck CrownKeep;
+- a **Stop local AI** action stops the embedded service and attempts to unload the bootstrap model;
+- the bootstrap alias is intentionally the already-validated `phi-4-mini` for this engineering slice; broader model recommendation/selection remains part of Sprint 4A.2.
+
+Important validation boundary:
+
+- stop the externally managed Foundry CLI server before testing this slice so port 39839 is free;
+- the SDK uses CrownKeep's application-owned cache by default, so the first native preparation may download model/runtime assets even if a CLI-managed copy already exists;
+- successful validation means CrownKeep reaches a ready Anne response without running `foundry server restart`, `foundry model download`, or `foundry model load` manually.
