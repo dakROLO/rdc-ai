@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, phase-3-iphone-local-ai]
+    branches: [main, phase-3-iphone-local-ai, phase-4a-windows-product-host]
   pull_request:
     branches: [main]
 
@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  verify:
+  web-verify:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -29,3 +29,12 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  windows-host-check:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check CrownKeep Tauri host
+        run: cargo check --manifest-path src-tauri/Cargo.toml
