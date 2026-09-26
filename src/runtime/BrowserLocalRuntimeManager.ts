@@ -95,6 +95,10 @@ export class BrowserLocalRuntimeManager implements LocalRuntimeManager {
     return unsupported()
   }
 
+  removeCachedModel(_modelId: string): Promise<RuntimeActionResult> {
+    return unsupported()
+  }
+
   listModelCandidates(): Promise<RuntimeModelCandidate[]> {
     return Promise.resolve([])
   }
