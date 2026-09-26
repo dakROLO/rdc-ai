@@ -13,6 +13,7 @@ export interface BenchmarkResult {
   executionProvider?: string
   device?: string
   cached: boolean
+  downloadedDuringBenchmark?: boolean
   supportsToolCalling?: boolean
   timestamp: string
   firstTokenMs?: number
