@@ -6,6 +6,7 @@ import type {
 import type {
   LocalRuntimeManager,
   RuntimeActionResult,
+  RuntimeModelCandidate,
   RuntimeSnapshot,
 } from './LocalRuntimeManager.ts'
 
@@ -87,6 +88,10 @@ export class BrowserLocalRuntimeManager implements LocalRuntimeManager {
 
   unloadModel(_modelId: string): Promise<RuntimeActionResult> {
     return unsupported()
+  }
+
+  listModelCandidates(): Promise<RuntimeModelCandidate[]> {
+    return Promise.resolve([])
   }
 }
 
