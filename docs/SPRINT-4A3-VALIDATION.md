@@ -146,6 +146,24 @@ Observed winner:
 
 This is strong evidence that the adaptive policy is working as intended: the same laptop selected CPU for Quick Phi-4 Mini and CUDA for the heavier Balanced model based on measured results rather than a host-level GPU preference.
 
+### Model storage / benchmark cleanup controls
+
+A model-storage management surface is now part of the Windows Model Analyst so benchmark testing does not leave opaque disk usage behind.
+
+Behavior:
+
+- lists cached Foundry variants with alias, variant ID, execution provider/device, approximate package size, loaded state, and current-fingerprint benchmark result when available;
+- shows approximate total cached model size;
+- allows a loaded model to be explicitly unloaded;
+- allows a non-loaded, non-protected cached variant to be deleted from the device;
+- protects the measured winner for every benchmarked family on the current device fingerprint;
+- protects the selected Voice family;
+- provides **Clean measured benchmark losers**, which removes cached measured losing variants only after explicit confirmation while keeping family winners and Voice protected;
+- newer benchmark records also mark whether a variant was first downloaded during the benchmark for future audit/cleanup behavior;
+- native cache removal refuses loaded models and uses Foundry Local's supported cache-removal CLI surface, with compatibility for both `cache remove` and `cache rm` preview command forms.
+
+The existing Quick and Balanced measurements remain stored in CrownKeep local app storage and are independent of Git pulls.
+
 ## Known implementation limits
 
 - RAM filtering uses disk-size × 1.5 + 2 GB as a conservative estimate, not a guarantee of peak memory or VRAM fit. Native load failures remain benchmark failures.
