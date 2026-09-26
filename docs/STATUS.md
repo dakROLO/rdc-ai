@@ -795,3 +795,35 @@ Correction:
 - prior verification/performance data remains advisory rather than controlling whether the runtime is allowed to start.
 
 This makes the native catalog the source of truth for Windows local-model restore.
+
+
+## Device-aware Local Model Analyst — 2026-09-26
+
+Physical laptop testing confirmed automatic restore works, but the initial Local Model Analyst exposed only CPU variants. This was expected from the implementation because CrownKeep was reading the current Foundry catalog without first running Foundry's execution-provider discovery/registration flow.
+
+Microsoft's Foundry Local WinML verification flow explicitly performs:
+
+1. discover compatible execution providers;
+2. register/download those execution providers;
+3. refresh the model catalog;
+4. inspect GPU/NPU accelerated variants;
+5. download/load a candidate and validate observed performance.
+
+CrownKeep now implements the same sequence through the native Rust SDK with one important resilience improvement: execution providers are registered individually so one failed provider does not abort the entire device analysis.
+
+New behavior:
+
+- **Local Model Analyst → Analyze this device** discovers Foundry execution providers for the current Windows machine;
+- previously registered providers are reused;
+- unregistered discovered providers are attempted individually;
+- partial provider-registration failures are surfaced but do not discard successful providers;
+- the Foundry model catalog is refreshed after provider analysis;
+- Model Analyst then refreshes model/variant choices and exposes CPU/GPU/NPU device labels and execution-provider metadata;
+- the analysis reports detected device classes, execution-provider status, CPU variant count, and accelerated GPU/NPU variant count;
+- acceleration is treated as a candidate, not an automatic winner: CrownKeep continues to use observed verification/benchmark timing before persisting a preferred model.
+
+This intentionally makes device analysis machine-specific. An AVD CPU result does not constrain a physical laptop with compatible GPU/NPU execution providers.
+
+### Windows UI refinement
+
+The Local AI panel is now a bounded fixed desktop overlay with internal scrolling and a sticky heading so long Model Analyst content does not run off-screen. The medium/desktop top bar now uses an explicit two-column title/status layout instead of allowing the Local AI status control to wrap underneath the conversation title.
