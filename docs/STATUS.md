@@ -530,3 +530,19 @@ Hardening delivered:
 - retry guidance asks the user to keep the iPhone awake/unlocked and on the same network;
 - after repeated install failure, the script prints the current CoreDevice device list for diagnosis;
 - the Mac sleep-after-success step still runs only after both install and launch succeed.
+
+
+## Creative-loop root cause and Local AI close fix — 2026-09-25
+
+Physical iPhone testing captured a repeatable Apple on-device failure mode: when asked to invent a story about a fictional princess named Anne, the model repeatedly refused because it interpreted the fictional Anne as the assistant's own biography. Earlier refusals were then fed back as context and reinforced the loop. Short follow-ups such as "let's do it" also lost creative-mode detection because the current message alone did not contain a creative keyword.
+
+Fixes delivered:
+
+- Anne's shared instructions explicitly distinguish a fictional character named Anne from the assistant's identity and permit invented fictional details;
+- creative intent on iPhone now considers recent user requests, so short follow-ups preserve the prior creative task;
+- creative recovery excludes prior assistant responses from the compact context so repeated refusal text does not train the next turn into the same refusal;
+- the native prompt explicitly tells the Apple model to complete the fiction rather than discuss themes or explain that it lacks personal narratives;
+- recent native context is capped to a small window for the on-device model rather than replaying the full conversation;
+- the outer Local AI / Inside the Keep panel now has an explicit Close control in addition to the Diagnostics Close control.
+
+Device validation pending.
