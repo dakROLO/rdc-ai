@@ -41,8 +41,10 @@ fn foundry_manager() -> Result<&'static FoundryLocalManager, String> {
     let config = FoundryLocalConfig::new("CrownKeep")
         .web_service_urls(FOUNDRY_WEB_URL);
 
-    FoundryLocalManager::create(config)
-        .map_err(|error| format!("Foundry Local SDK initialization failed: {error}"))
+    FoundryLocalManager::create(config).map_err(|error| {
+        eprintln!("[CrownKeep/Foundry] SDK initialization failed: {error}");
+        format!("Foundry Local SDK initialization failed: {error}")
+    })
 }
 
 async fn resolve_model(alias_or_id: &str) -> Result<std::sync::Arc<foundry_local_sdk::Model>, String> {
@@ -117,6 +119,7 @@ async fn crownkeep_foundry_status() -> Result<FoundryRuntimeStatus, String> {
 
 #[tauri::command]
 async fn crownkeep_foundry_start() -> Result<FoundryActionResult, String> {
+    eprintln!("[CrownKeep/Foundry] stage=start-service");
     let manager = foundry_manager()?;
 
     if !manager
@@ -133,18 +136,21 @@ async fn crownkeep_foundry_start() -> Result<FoundryActionResult, String> {
     manager
         .start_web_service()
         .await
-        .map_err(|error| format!("Could not start CrownKeep's embedded Foundry Local service: {error}"))?;
+        .map_err(|error| {
+            eprintln!("[CrownKeep/Foundry] stage=start-service failed: {error}");
+            format!("Could not start CrownKeep's embedded Foundry Local service: {error}")
+        })?;
 
     let urls = manager
         .urls()
         .map_err(|error| format!("Foundry Local started but its service URL could not be read: {error}"))?;
 
+    let url = urls.first().map(String::as_str).unwrap_or(FOUNDRY_WEB_URL);
+    eprintln!("[CrownKeep/Foundry] stage=start-service ready url={url}");
+
     Ok(FoundryActionResult {
         supported: true,
-        detail: format!(
-            "CrownKeep started Foundry Local at {}.",
-            urls.first().map(String::as_str).unwrap_or(FOUNDRY_WEB_URL)
-        ),
+        detail: format!("CrownKeep started Foundry Local at {url}."),
     })
 }
 
@@ -176,24 +182,42 @@ async fn crownkeep_foundry_stop() -> Result<FoundryActionResult, String> {
 
 #[tauri::command]
 async fn crownkeep_foundry_install_model(model_id: String) -> Result<FoundryActionResult, String> {
-    let manager = foundry_manager()?;
+    eprintln!("[CrownKeep/Foundry] stage=resolve-model requested={model_id}");
+    let model = resolve_model(&model_id).await.map_err(|error| {
+        eprintln!("[CrownKeep/Foundry] stage=resolve-model failed: {error}");
+        error
+    })?;
 
-    manager
-        .download_and_register_eps(None)
-        .await
-        .map_err(|error| format!("Foundry Local execution-provider setup failed: {error}"))?;
+    eprintln!(
+        "[CrownKeep/Foundry] stage=resolve-model selected alias={} id={}",
+        model.alias(),
+        model.id()
+    );
 
-    let model = resolve_model(&model_id).await?;
-
-    if !model
+    let cached = model
         .is_cached()
         .await
-        .map_err(|error| format!("Could not inspect Foundry Local model cache state: {error}"))?
-    {
+        .map_err(|error| {
+            eprintln!("[CrownKeep/Foundry] stage=inspect-cache failed: {error}");
+            format!("Could not inspect Foundry Local model cache state: {error}")
+        })?;
+
+    if !cached {
+        eprintln!(
+            "[CrownKeep/Foundry] stage=download-model begin alias={} id={}",
+            model.alias(),
+            model.id()
+        );
         model
             .download(None::<fn(f64)>)
             .await
-            .map_err(|error| format!("Could not download Foundry Local model '{model_id}': {error}"))?;
+            .map_err(|error| {
+                eprintln!("[CrownKeep/Foundry] stage=download-model failed: {error}");
+                format!("Could not download Foundry Local model '{model_id}': {error}")
+            })?;
+        eprintln!("[CrownKeep/Foundry] stage=download-model complete");
+    } else {
+        eprintln!("[CrownKeep/Foundry] stage=download-model skipped cached=true");
     }
 
     Ok(FoundryActionResult {
@@ -204,12 +228,25 @@ async fn crownkeep_foundry_install_model(model_id: String) -> Result<FoundryActi
 
 #[tauri::command]
 async fn crownkeep_foundry_load_model(model_id: String) -> Result<FoundryActionResult, String> {
-    let model = resolve_model(&model_id).await?;
+    eprintln!("[CrownKeep/Foundry] stage=load-model requested={model_id}");
+    let model = resolve_model(&model_id).await.map_err(|error| {
+        eprintln!("[CrownKeep/Foundry] stage=load-model resolve failed: {error}");
+        error
+    })?;
 
     model
         .load()
         .await
-        .map_err(|error| format!("Could not load Foundry Local model '{model_id}': {error}"))?;
+        .map_err(|error| {
+            eprintln!("[CrownKeep/Foundry] stage=load-model failed: {error}");
+            format!("Could not load Foundry Local model '{model_id}': {error}")
+        })?;
+
+    eprintln!(
+        "[CrownKeep/Foundry] stage=load-model complete alias={} id={}",
+        model.alias(),
+        model.id()
+    );
 
     Ok(FoundryActionResult {
         supported: true,
