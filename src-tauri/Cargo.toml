@@ -1,0 +1,17 @@
+[package]
+name = "crownkeep"
+version = "0.1.0"
+description = "CrownKeep Windows native host"
+authors = ["Royal Digital Clarity"]
+edition = "2021"
+
+[lib]
+name = "crownkeep_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+tauri = { version = "2", features = [] }
