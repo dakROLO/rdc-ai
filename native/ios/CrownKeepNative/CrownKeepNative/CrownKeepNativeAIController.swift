@@ -208,7 +208,33 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
             return
         }
 
-        let priorConversation = conversationMessages[..<currentUserIndex]
+        let recentPriorMessages = conversationMessages[..<currentUserIndex].suffix(8)
+
+        let recentUserRequests = recentPriorMessages.compactMap { item -> String? in
+            guard
+                let role = item["role"] as? String,
+                role == "user",
+                let content = item["content"] as? String
+            else {
+                return nil
+            }
+            return content
+        }
+
+        let creativeIntentText = (recentUserRequests + [currentPrompt])
+            .joined(separator: " ")
+            .lowercased()
+
+        let creativeRequestMarkers = [
+            "story", "fiction", "fictional", "imagine", "creative",
+            "brainstorm", "roleplay", "role-play", "hypothetical",
+            "make up", "make-up", "invent", "princess", "kingdom"
+        ]
+        let isCreativeRequest = creativeRequestMarkers.contains {
+            creativeIntentText.contains($0)
+        }
+
+        let priorConversation = recentPriorMessages
             .compactMap { item -> String? in
                 guard
                     let role = item["role"] as? String,
@@ -218,13 +244,32 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
                     return nil
                 }
 
+                // For creative recovery, do not reinforce earlier model refusals.
+                if isCreativeRequest && role == "assistant" {
+                    return nil
+                }
+
                 let label = role == "assistant" ? "Anne" : "User"
                 return "\(label): \(content)"
             }
             .joined(separator: "\n\n")
 
         let prompt: String
-        if priorConversation.isEmpty {
+        if isCreativeRequest {
+            prompt = """
+            This is a creative fiction request. Complete it as fiction.
+
+            A character named Anne is a fictional namesake character, not a claim about the assistant's biography or memories. You are expected to invent fictional characters, settings, secrets, dialogue, and events when needed.
+
+            Recent user context:
+            \(priorConversation.isEmpty ? "(none)" : priorConversation)
+
+            Current user request:
+            \(currentPrompt)
+
+            Write or continue the requested creative content now. Do not explain that you lack personal narratives. Do not repeat an earlier refusal or offer to discuss themes instead.
+            """
+        } else if priorConversation.isEmpty {
             prompt = currentPrompt
         } else {
             prompt = """
@@ -236,16 +281,6 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
 
             Respond directly to the current user request. Use the previous conversation only as context. Do not repeat an earlier Anne response unless the user explicitly asks you to repeat it.
             """
-        }
-
-        let normalizedPrompt = currentPrompt.lowercased()
-        let creativeRequestMarkers = [
-            "story", "fiction", "fictional", "imagine", "creative",
-            "brainstorm", "roleplay", "role-play", "hypothetical",
-            "make up", "invent"
-        ]
-        let isCreativeRequest = creativeRequestMarkers.contains {
-            normalizedPrompt.contains($0)
         }
 
         generationTasks[streamId]?.cancel()
