@@ -21,7 +21,7 @@ The project does not need another broad feature phase yet. The next sprint shoul
 
 A user can open CrownKeep on the primary Windows laptop, the physical iPhone, or the AVD and get a consistent local-first experience appropriate to that device.
 
-CrownKeep should understand that different devices need different local AI profiles rather than trying to force one model or one execution provider everywhere.
+CrownKeep should use one adaptive model-selection system across Windows hosts. It must inspect the hardware/runtime capabilities actually present, benchmark viable candidates, and choose the best observed path. A physical laptop and an AVD must not be assigned different rules simply because of where they run; different outcomes are acceptable only when the same analysis produces them.
 
 At sprint close, the repository should have one validated baseline on `main`, durable documentation of the supported local profiles, and a clear next-phase boundary.
 
@@ -49,6 +49,8 @@ The current loaded model was also a CPU-specific Phi-4 Mini variant even though 
 6. Display hardware fit, tool-call capability metadata, download/cache state, execution provider, and observed benchmark results.
 7. Show real progress stages while device analysis is running instead of only disabling the Analyze button.
 8. Do not treat a catalog `GPU` label as proof of useful acceleration. Observed performance wins.
+9. Do not branch selection logic on host labels such as `AVD`, `laptop`, or `desktop`. The same discovery → candidate filtering → benchmark → recommendation policy must run on every Windows host.
+10. Persist the observed result for the current machine/runtime fingerprint, but allow automatic re-analysis when meaningful hardware, driver, execution-provider, or Foundry runtime characteristics change.
 
 ### Primary Windows hardware profile
 
@@ -179,39 +181,40 @@ Target:
 - keep transcription local/on-device when the framework/device supports the required assets;
 - bridge the result into the same shared `SpeechInputProvider` contract.
 
-### AVD path
+### Windows capability behavior
 
-Voice is capability-aware on AVD.
+Voice uses the same capability-aware logic on every Windows host.
 
-Do not make remote-microphone redirection or a Whisper model an AVD sprint blocker.
+CrownKeep should inspect whether microphone capture, a compatible local speech model, and acceptable observed transcription performance are available. If they are, enable the same dictation UX. If they are not, show voice input as unavailable without affecting text chat.
 
-If the AVD exposes a usable microphone and speech model within the performance budget, enable the same dictation UX. Otherwise show voice input as unavailable on that host without affecting text chat.
+Do not special-case AVD by name. Remote microphone redirection, virtual hardware, or missing acceleration should simply appear as capabilities or performance results discovered by the same analyzer.
 
 ---
 
-## Work package C — AVD constrained-device profile
+## Work package C — Adaptive Windows runtime selection
 
-### Known baseline
+### Known validation case
 
-The church AVD has no physical GPU passthrough.
-
-Observed:
+The church AVD is a useful second Windows test host because it previously exposed a misleading acceleration path:
 
 - virtual WebGPU `qwen2.5-0.5b-instruct-generic-gpu:4`: about 49.9 seconds for a request and unsuitable for interactive use;
 - forced CPU `qwen2.5-0.5b-instruct-generic-cpu`: about 0.97 seconds on the direct short API test;
 - CrownKeep streamed response with the CPU path successfully.
 
+This is evidence for the selection algorithm, not a reason to create an AVD-specific policy.
+
 ### Sprint target
 
-1. Pull the current shared CrownKeep build to the AVD.
-2. Revalidate current UI, projects, diagnostics, temporal-context fixes, and conversation persistence.
-3. Run the new compact model-selection benchmark against CPU-suitable candidate families.
-4. Persist an AVD-specific preferred profile based on observed performance.
-5. Explicitly reject virtual WebGPU choices when the benchmark is materially worse than CPU.
-6. Ensure the app remains fully usable when no native Windows GPU acceleration is available.
-7. Do not require the AVD to match the primary laptop's heavy-model capability.
+1. Run the same Model Analyst flow on the primary Windows laptop and the AVD.
+2. Discover the execution providers, devices, model families, memory constraints, and speech capabilities that each host actually exposes.
+3. Generate viable candidates from those observed capabilities.
+4. Benchmark the candidates using the same metrics and thresholds.
+5. Choose and persist the best observed path for that machine/runtime fingerprint.
+6. Reject any nominally accelerated path when observed latency/throughput is materially worse than another viable path.
+7. Re-run analysis automatically or prompt for it when meaningful hardware/runtime characteristics change.
+8. Keep manual variant forcing only as an Advanced/diagnostic override.
 
-The result should be **same CrownKeep product, device-appropriate AI profile**.
+The result should be **one CrownKeep Windows intelligence policy that adapts itself to the machine it is running on**. The laptop may select CUDA/TensorRT and the AVD may select CPU, but neither outcome is hard-coded by host type.
 
 ---
 
@@ -282,7 +285,7 @@ Before closing the sprint:
 1. Run lint/build/type checks.
 2. Revalidate:
    - primary Windows native host;
-   - AVD constrained CPU path;
+   - second Windows host / AVD through the same adaptive selection path;
    - physical iPhone native path.
 3. Update:
    - `docs/STATUS.md`
@@ -317,11 +320,12 @@ Sprint 4A.3 is complete only when all required criteria pass.
 - local dictation works through a Foundry speech model;
 - text chat, projects, persistence, diagnostics, runtime sleep/wake, and model switching remain healthy.
 
-### AVD
+### Second Windows host / AVD
 
 - current shared build is validated;
-- a CPU-suitable model profile is selected from observed performance;
-- virtual WebGPU is not preferred merely because it says GPU;
+- the exact same device-analysis and recommendation policy used on the primary laptop runs here;
+- CrownKeep chooses the best observed execution path without an `AVD` special case;
+- virtual WebGPU is rejected when benchmarks show it is slower than CPU;
 - normal text chat remains interactive and persistent;
 - unsupported voice capability does not break the product.
 
@@ -367,7 +371,7 @@ When this sprint closes, CrownKeep should be a coherent local-first prototype on
 - device-aware local model selection;
 - a sensible Windows model portfolio;
 - native Apple local AI on iPhone;
-- a constrained but working AVD profile;
+- one adaptive Windows selection policy proven on both the physical laptop and the AVD;
 - local voice dictation where the device supports it;
 - clean resource handling;
 - a clean `main` branch and durable documentation.
