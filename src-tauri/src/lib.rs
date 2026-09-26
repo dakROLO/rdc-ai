@@ -279,9 +279,18 @@ async fn crownkeep_foundry_models() -> Result<Vec<FoundryModelCandidate>, String
         .await
         .map_err(|error| format!("Foundry Local loaded-model discovery failed: {error}"))?;
 
+    let cached = catalog
+        .get_cached_models()
+        .await
+        .map_err(|error| format!("Foundry Local cached-model discovery failed: {error}"))?;
+
     let loaded_ids: HashSet<String> = loaded
         .iter()
-        .map(|model| model.id().to_string())
+        .map(|model| normalized_model_key(model.id()))
+        .collect();
+    let cached_ids: HashSet<String> = cached
+        .iter()
+        .map(|model| normalized_model_key(model.id()))
         .collect();
 
     let mut candidates = Vec::new();
@@ -290,7 +299,7 @@ async fn crownkeep_foundry_models() -> Result<Vec<FoundryModelCandidate>, String
         for variant in model.variants() {
             let info = variant.info();
             let runtime = info.runtime.as_ref();
-            let cached = variant.is_cached().await.unwrap_or(info.cached);
+            let variant_key = normalized_model_key(&info.id);
             candidates.push(FoundryModelCandidate {
                 id: info.id.clone(),
                 alias: info.alias.clone(),
@@ -298,8 +307,8 @@ async fn crownkeep_foundry_models() -> Result<Vec<FoundryModelCandidate>, String
                     .display_name
                     .clone()
                     .unwrap_or_else(|| info.name.clone()),
-                cached,
-                loaded: loaded_ids.contains(&info.id),
+                cached: cached_ids.contains(&variant_key),
+                loaded: loaded_ids.contains(&variant_key),
                 device: runtime.map(|value| format!("{:?}", value.device_type)),
                 execution_provider: runtime.map(|value| value.execution_provider.clone()),
                 file_size_mb: info.file_size_mb,
