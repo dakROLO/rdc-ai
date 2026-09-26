@@ -22,3 +22,6 @@ src-tauri/target/
 
 # Generated from the canonical CrownKeep mark by npm run desktop:prepare.
 src-tauri/icons/
+
+# Tauri generated schemas / capability artifacts.
+src-tauri/gen/
