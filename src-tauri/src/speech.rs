@@ -225,9 +225,10 @@ pub async fn crownkeep_transcribe(
     );
 
     let start = std::time::Instant::now();
+    let audio_client = model.create_audio_client();
     let transcription = tokio::time::timeout(
         Duration::from_secs(90),
-        model.create_audio_client().transcribe(file.path()),
+        audio_client.transcribe(file.path()),
     )
     .await;
 
