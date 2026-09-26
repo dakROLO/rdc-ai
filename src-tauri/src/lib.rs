@@ -128,10 +128,10 @@ fn normalized_model_key(value: &str) -> String {
 
 
 fn run_foundry_cache_remove(model_id: &str) -> Result<(), String> {
-    #[cfg(target_os = "windows")]
-    use std::os::windows::process::CommandExt;
-
     fn run(args: &[&str]) -> Result<std::process::Output, String> {
+        #[cfg(target_os = "windows")]
+        use std::os::windows::process::CommandExt;
+
         let mut command = std::process::Command::new("foundry");
         #[cfg(target_os = "windows")]
         command.creation_flags(0x08000000);
