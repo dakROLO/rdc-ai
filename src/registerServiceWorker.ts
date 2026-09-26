@@ -1,5 +1,9 @@
 export function registerServiceWorker(): void {
-  if (!('serviceWorker' in navigator) || import.meta.env.DEV) {
+  if (
+    !('serviceWorker' in navigator) ||
+    import.meta.env.DEV ||
+    !['http:', 'https:'].includes(window.location.protocol)
+  ) {
     return
   }
 
