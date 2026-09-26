@@ -622,3 +622,27 @@ Immediate validation continuation:
 5. confirm a real Foundry Local response works inside the native Windows window.
 
 Successful inference through the Tauri-hosted UI will close the core Sprint 4A.1 shell proof and allow work to move into Sprint 4A.2 native Foundry lifecycle ownership.
+
+
+## Sprint 4A.1 complete — 2026-09-26
+
+Physical Windows validation completed successfully.
+
+Validated in the native CrownKeep desktop host:
+
+- `npm run desktop:dev` launches the real CrownKeep Tauri application window;
+- the existing React/CrownKeep UI renders correctly inside the native host;
+- the native host identity bridge is active;
+- CrownKeep reports **Native Windows host connected**;
+- Foundry Local on `127.0.0.1:39839` is reachable through the existing provider path;
+- `phi-4-mini-instruct-openvino-gpu` is discovered and selected;
+- Local AI setup reports Runtime connected, Model selected, and Verify passed;
+- a real Anne response is generated successfully inside the native Windows application;
+- existing projects/conversations remain usable;
+- browser-development and provider-neutral architecture remain intact.
+
+Observed performance guidance correctly warned that the GPU-labeled variant took roughly 11 seconds on this machine and suggested comparing a CPU variant. This confirms the existing observed-performance logic continues to work inside the native host.
+
+**Sprint 4A.1 is complete.**
+
+Next active slice: **Sprint 4A.2 — Embedded Foundry Local lifecycle**, beginning with native runtime/model discovery and lifecycle ownership through the existing `LocalRuntimeManager` seam.
