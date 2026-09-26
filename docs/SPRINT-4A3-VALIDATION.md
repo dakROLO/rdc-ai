@@ -86,6 +86,20 @@ The stale-profile warning exposes a fingerprint design issue. `crownkeep_device_
 4. Revisit role classification: reasoning-family models such as `phi-4-mini-reasoning` should not crowd the default Quick shortlist merely because their size is small.
 5. After the crash is fixed, repeat the laptop acceptance flow beginning with the intended `phi-4-mini` family before testing heavier models.
 
+### Model selection / normal chat observation
+
+Normal chat recovered on the restored cached CPU model, but this test exposed two additional acceptance failures:
+
+- the primary **Model** dropdown is not a native model switch. `handleModelChange` only updates the frontend `selectedModelId` and provider-specific localStorage value; it does not install/load/unload the selected Foundry variant;
+- provider refresh prefers the actually loaded native model before the stored frontend selection, so a dropdown choice can appear to do nothing or snap back to the loaded CPU model;
+- therefore the UI can imply that a CUDA/OpenVINO model was selected while the native runtime remains on `Phi-4-mini-instruct-generic-cpu:5`;
+- the normal model selector should either become a real lifecycle-aware switch or become read-only/current-model status, with model changes owned by the Model Analyst/native runtime workflow;
+- the existing Advanced **Use this model** action does perform native lifecycle operations, but intentionally does not persist a preferred measured profile. The distinction is currently too confusing for normal use.
+
+The first recovered normal-chat response also repeated the injected **CrownKeep time context** metadata verbatim even though the system metadata says not to repeat it. This is a separate prompt/output-sanitization regression. The current `cleanTemporalArtifact` only strips the older bracketed `[Message timestamp: ...]` artifact and does not remove a generated `CrownKeep time context...` block.
+
+Do not treat the laptop model-selection acceptance gate as passed until the UI-selected model and the actual native loaded model are guaranteed to agree.
+
 ## Known implementation limits
 
 - RAM filtering uses disk-size × 1.5 + 2 GB as a conservative estimate, not a guarantee of peak memory or VRAM fit. Native load failures remain benchmark failures.
