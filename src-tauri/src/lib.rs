@@ -46,6 +46,25 @@ struct FoundryModelCandidate {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
+struct FoundryExecutionProviderStatus {
+    name: String,
+    registered: bool,
+    registration_attempted: bool,
+    registration_succeeded: bool,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct FoundryDeviceAnalysis {
+    devices: Vec<String>,
+    execution_providers: Vec<FoundryExecutionProviderStatus>,
+    accelerated_variant_count: usize,
+    cpu_variant_count: usize,
+    detail: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct FoundryActionResult {
     supported: bool,
     detail: String,
@@ -226,6 +245,158 @@ async fn crownkeep_foundry_models() -> Result<Vec<FoundryModelCandidate>, String
     Ok(candidates)
 }
 
+
+#[tauri::command]
+async fn crownkeep_foundry_analyze_device() -> Result<FoundryDeviceAnalysis, String> {
+    use std::collections::BTreeSet;
+
+    eprintln!("[CrownKeep/Foundry] stage=device-analysis discover-eps");
+    let manager = foundry_manager()?;
+    let catalog = manager.catalog();
+
+    let discovered = manager
+        .discover_eps()
+        .map_err(|error| format!("Foundry Local execution-provider discovery failed: {error}"))?;
+
+    let mut ep_statuses = Vec::new();
+
+    for ep in discovered {
+        if ep.is_registered {
+            ep_statuses.push(FoundryExecutionProviderStatus {
+                name: ep.name,
+                registered: true,
+                registration_attempted: false,
+                registration_succeeded: true,
+            });
+            continue;
+        }
+
+        let ep_name = ep.name.clone();
+        eprintln!(
+            "[CrownKeep/Foundry] stage=device-analysis register-ep name={}",
+            ep_name
+        );
+
+        let result = manager
+            .download_and_register_eps(Some(&[ep_name.as_str()]))
+            .await;
+
+        match result {
+            Ok(result) => {
+                let succeeded = result.success
+                    || result
+                        .registered_eps
+                        .iter()
+                        .any(|registered| registered.eq_ignore_ascii_case(&ep_name));
+
+                if succeeded {
+                    eprintln!(
+                        "[CrownKeep/Foundry] stage=device-analysis register-ep complete name={}",
+                        ep_name
+                    );
+                } else {
+                    eprintln!(
+                        "[CrownKeep/Foundry] stage=device-analysis register-ep partial name={} status={}",
+                        ep_name,
+                        result.status
+                    );
+                }
+
+                ep_statuses.push(FoundryExecutionProviderStatus {
+                    name: ep_name,
+                    registered: succeeded,
+                    registration_attempted: true,
+                    registration_succeeded: succeeded,
+                });
+            }
+            Err(error) => {
+                eprintln!(
+                    "[CrownKeep/Foundry] stage=device-analysis register-ep failed name={} error={}",
+                    ep_name,
+                    error
+                );
+                ep_statuses.push(FoundryExecutionProviderStatus {
+                    name: ep_name,
+                    registered: false,
+                    registration_attempted: true,
+                    registration_succeeded: false,
+                });
+            }
+        }
+    }
+
+    catalog
+        .update_models()
+        .await
+        .map_err(|error| format!("Foundry Local catalog refresh failed after device analysis: {error}"))?;
+
+    let models = catalog
+        .get_models()
+        .await
+        .map_err(|error| format!("Foundry Local model discovery failed after device analysis: {error}"))?;
+
+    let mut devices = BTreeSet::new();
+    let mut accelerated_variant_count = 0usize;
+    let mut cpu_variant_count = 0usize;
+
+    for model in models {
+        for variant in model.variants() {
+            if let Some(runtime) = variant.info().runtime.as_ref() {
+                let device = format!("{:?}", runtime.device_type);
+                devices.insert(device.clone());
+
+                match device.as_str() {
+                    "GPU" | "NPU" => accelerated_variant_count += 1,
+                    "CPU" => cpu_variant_count += 1,
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    let registered_count = ep_statuses.iter().filter(|ep| ep.registered).count();
+    let failed_count = ep_statuses
+        .iter()
+        .filter(|ep| ep.registration_attempted && !ep.registration_succeeded)
+        .count();
+
+    let device_list: Vec<String> = devices.into_iter().collect();
+    let detail = if accelerated_variant_count > 0 {
+        format!(
+            "Found {} execution provider(s) ready. Found {} accelerated model variant(s) across {}. Benchmark candidates on this device before choosing a preferred model.",
+            registered_count,
+            accelerated_variant_count,
+            device_list.join(", ")
+        )
+    } else if failed_count > 0 {
+        format!(
+            "Found {} execution provider(s) ready, but {} provider registration attempt(s) failed. The refreshed catalog currently exposes CPU-only model variants.",
+            registered_count,
+            failed_count
+        )
+    } else {
+        format!(
+            "Found {} execution provider(s) ready. The refreshed catalog currently exposes CPU-only model variants on this device.",
+            registered_count
+        )
+    };
+
+    eprintln!(
+        "[CrownKeep/Foundry] stage=device-analysis complete devices={} accelerated_variants={} cpu_variants={}",
+        device_list.join(","),
+        accelerated_variant_count,
+        cpu_variant_count
+    );
+
+    Ok(FoundryDeviceAnalysis {
+        devices: device_list,
+        execution_providers: ep_statuses,
+        accelerated_variant_count,
+        cpu_variant_count,
+        detail,
+    })
+}
+
 #[tauri::command]
 async fn crownkeep_foundry_start() -> Result<FoundryActionResult, String> {
     eprintln!("[CrownKeep/Foundry] stage=start-service");
@@ -385,6 +556,7 @@ pub fn run() {
             crownkeep_host_info,
             crownkeep_foundry_status,
             crownkeep_foundry_models,
+            crownkeep_foundry_analyze_device,
             crownkeep_foundry_start,
             crownkeep_foundry_stop,
             crownkeep_foundry_install_model,
