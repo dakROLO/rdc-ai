@@ -42,8 +42,9 @@ On the paired Mac, update the same branch and use the existing `scripts/ios-devi
 | --- | --- |
 | Local lint / TypeScript / production web build | Passed during implementation |
 | Deterministic selection-policy tests | Passed during implementation |
-| Native Windows compilation | Awaiting CI evidence |
-| Native iOS compilation | Awaiting CI evidence |
+| Shared UI persistence, dictation review/cancel, mobile layout | Passed in CI run 36267159109 |
+| Native Windows compilation | Passed in CI run 36266994648; final follow-up recheck pending |
+| Native iOS compilation | Passed in CI run 36267159109 (iOS 26.5 simulator SDK) |
 | Laptop Quick + heavier path benchmark | Pending physical device |
 | AVD same-policy benchmark + text persistence | Pending physical device |
 | Windows local dictation / cleanup | Pending physical device |

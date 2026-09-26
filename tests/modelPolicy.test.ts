@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { bestObserved, groupFamilies, memoryFit, readResults, viableVariants } from '../src/runtime/modelPolicy.ts'
+import { bestObserved, taskOf, groupFamilies, memoryFit, readResults, viableVariants } from '../src/runtime/modelPolicy.ts'
 import type { BenchmarkResult } from '../src/runtime/modelPolicy.ts'
 const cpu = { id: 'phi-cpu:5', alias: 'phi-4-mini', modelType: 'chat', displayName: 'Phi', cached: true, loaded: false, device: 'CPU', fileSizeMb: 2000 }
 const gpu = { ...cpu, id: 'phi-gpu:5', device: 'GPU' }
@@ -24,4 +24,10 @@ test('observed CPU beats nominal GPU, excludes stale and failed results', () => 
 test('malformed local records are discarded', () => {
   assert.deepEqual(readResults({ getItem: () => '{' }), [])
   assert.deepEqual(readResults({ getItem: () => '[null,{}]' }), [])
+})
+
+test('native text catalogs are chat-capable but embedding and unknown tasks are excluded', () => {
+  assert.equal(taskOf({ ...cpu, modelType: 'text' }), 'chat')
+  assert.equal(taskOf({ ...cpu, modelType: 'text', task: 'embeddings' }), 'other')
+  assert.equal(taskOf({ ...cpu, modelType: 'unknown' }), 'other')
 })

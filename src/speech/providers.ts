@@ -21,7 +21,8 @@ class WindowsSpeechInput implements SpeechInputProvider {
       .filter((m) => taskOf(m) === 'speech' && /whisper-(tiny|base|small)/i.test(m.alias))
       .sort((a, b) => (a.fileSizeMb ?? Infinity) - (b.fileSizeMb ?? Infinity))
     // Alias allows the native SDK to resolve the hardware variant normally.
-    this.model = models[0]?.alias ?? ''
+    const preference = localStorage.getItem('crownkeep.speechAlias')
+    this.model = models.find((m) => m.alias === preference)?.alias ?? models[0]?.alias ?? ''
     return { available: !!this.model, detail: this.model ? `Local ${this.model}. First use may download the model; review text before sending. Record up to 60 seconds.` : 'No compatible Whisper speech model found. Run device analysis; text chat remains available.' }
   }
   async startCapture() {
@@ -64,8 +65,11 @@ class WindowsSpeechInput implements SpeechInputProvider {
     if (!this.wav || !this.model) throw new Error('No local recording or speech model is ready.')
     const epoch = this.epoch
     try {
-      const result = await invoke<{ text: string; elapsedMs: number }>('crownkeep_transcribe', { audio: this.wav, modelId: this.model })
+      const result = await invoke<{ text: string; elapsedMs: number; modelId: string }>('crownkeep_transcribe', { audio: this.wav, modelId: this.model })
       if (epoch !== this.epoch) throw new Error('Dictation cancelled.')
+      // Store only performance metadata; never audio or transcript text.
+      localStorage.setItem('crownkeep.speechObservation', JSON.stringify({ alias: this.model, variantId: result.modelId,
+        timestamp: new Date().toISOString(), audioSeconds: this.frames / this.rate, transcriptionMs: result.elapsedMs }))
       return result.text
     } finally { this.wav = undefined }
   }

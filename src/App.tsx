@@ -552,8 +552,13 @@ export default function App() {
       setProviderAvailability(availability)
       setModels(availableModels)
 
+      const nativeLoaded = localRuntimeManager.mode === 'embedded' && provider.id === 'foundry-local'
+        ? (await localRuntimeManager.listModelCandidates()).filter((item) => item.loaded && taskOf(item) === 'chat')
+        : []
+      if (cancelled) return
       const storedModel = localStorage.getItem(modelStorageKey(provider.id))
       const nextModel =
+        availableModels.find((model) => nativeLoaded.some((item) => normalizeRuntimeModelKey(item.id) === normalizeRuntimeModelKey(model.id)))?.id ??
         availableModels.find((model) => model.id === storedModel)?.id ??
         availableModels[0]?.id ??
         ''
@@ -1047,7 +1052,7 @@ export default function App() {
   }
 
   function handleProviderChange(providerId: string) {
-    if (isGenerating || speechBusy || providerId === selectedProviderId) return
+    if (isGenerating || speechBusy || isRuntimeActionRunning || isRuntimeCheckRunning || providerId === selectedProviderId) return
     setSelectedProviderId(providerId)
   }
 
@@ -1833,7 +1838,8 @@ export default function App() {
                         <ModelAnalyst manager={localRuntimeManager} provider={foundryLocalProvider}
                           candidates={modelCandidates} busy={isRuntimeActionRunning || isGenerating || speechBusy || isRuntimeCheckRunning}
                           setBusy={setIsRuntimeActionRunning} refresh={refreshModelAnalyst}
-                          onReady={() => { setRuntimeSleeping(false); setProviderRefreshNonce((n) => n + 1); void refreshFingerprint() }} />
+                          onReady={(ready) => { setRuntimeSleeping(!ready); setProviderRefreshNonce((n) => n + 1); void refreshFingerprint() }}
+                          onCatalogChanged={() => { setProviderRefreshNonce((n) => n + 1); void refreshFingerprint() }} />
                         <details className="model-analyst-panel"><summary>Advanced · force a chat variant</summary>
                           <label className="model-analyst-select">
                             <span>Candidate</span>

@@ -13,10 +13,11 @@ interface Props {
   busy: boolean
   setBusy(value: boolean): void
   refresh(): Promise<void>
-  onReady(): void
+  onReady(ready: boolean): void
+  onCatalogChanged(): void
 }
 const normalized = (id: string) => id.split(':')[0].toLowerCase()
-export function ModelAnalyst({ manager, provider, candidates, busy, setBusy, refresh, onReady }: Props) {
+export function ModelAnalyst({ manager, provider, candidates, busy, setBusy, refresh, onReady, onCatalogChanged }: Props) {
   const [profile, setProfile] = useState<DeviceProfile>()
   const [results, setResults] = useState(() => readResults(localStorage))
   const [progress, setProgress] = useState('')
@@ -39,7 +40,7 @@ export function ModelAnalyst({ manager, provider, candidates, busy, setBusy, ref
     try {
       await manager.analyzeDevice()
       setProfile(await invoke<DeviceProfile>('crownkeep_device_profile'))
-      onReady()
+      onCatalogChanged()
       await refresh()
       setProgress('Discovery complete. Benchmark a family to compare its viable execution paths.')
     } catch (e) { setError(String(e)) } finally { setBusy(false) }
@@ -132,7 +133,7 @@ export function ModelAnalyst({ manager, provider, candidates, busy, setBusy, ref
         if (!selected) for (const item of released) await manager.loadModel(item.id)
         await refresh()
       } catch (e) { setError(`Model recovery needs attention: ${String(e)}`) }
-      controller.current = null; setRunning(false); setBusy(false); onReady()
+      controller.current = null; setRunning(false); setBusy(false); onReady(selected || released.length > 0)
     }
   }
   const stale = results.length > 0 && profile && !results.some((r) => r.fingerprint === profile.fingerprint)
@@ -156,7 +157,8 @@ export function ModelAnalyst({ manager, provider, candidates, busy, setBusy, ref
           <span>Tools: {family.variants.some((v) => v.supportsToolCalling === true) ? 'Advertised on some variants' : family.variants.every((v) => v.supportsToolCalling === false) ? 'Not advertised' : 'Unknown'}</span>
           {observed && <span>Observed: {observed.executionProvider ?? observed.device} · {Math.round(observed.firstTokenMs!)} ms first token{observed.tokensPerSecond ? ` · ${observed.tokensPerSecond.toFixed(1)} tok/s` : ''}</span>}
           {role !== 'Voice' && <button type="button" disabled={busy || !viable.length} onClick={() => void benchmark(family.alias)}>Compare paths and use fastest</button>}
-          {role === 'Voice' && <span>Available to local dictation; released after each recording.</span>}
+          {role === 'Voice' && <><span>Available to local dictation; released after each recording.</span>
+            {/whisper-(tiny|base|small)/i.test(family.alias) && <button type="button" disabled={busy} onClick={() => { localStorage.setItem('crownkeep.speechAlias', family.alias); setProgress(`Voice selected: ${family.alias}. Dictate a short sample to measure this model.`); onCatalogChanged() }}>Use for dictation</button>}</>}
           <details><summary>Advanced · variants and measurements</summary>
             {family.variants.map((v) => {
               const r = profile && results.find((item) => item.fingerprint === profile.fingerprint && item.variantId === v.id)
