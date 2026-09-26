@@ -303,18 +303,21 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
 
                 guard !Task.isCancelled else { return }
 
-                let usage = session.usage
-                self.streamChunk(
-                    streamId: streamId,
-                    chunk: [
-                        "text": "",
-                        "usage": [
-                            "promptTokens": usage.input.totalTokenCount,
-                            "completionTokens": usage.output.totalTokenCount,
-                            "totalTokens": usage.totalTokenCount
+                if #available(iOS 27.0, *) {
+                    let usage = session.usage
+                    self.streamChunk(
+                        streamId: streamId,
+                        chunk: [
+                            "text": "",
+                            "usage": [
+                                "promptTokens": usage.input.totalTokenCount,
+                                "completionTokens": usage.output.totalTokenCount,
+                                "totalTokens": usage.totalTokenCount
+                            ]
                         ]
-                    ]
-                )
+                    )
+                }
+
                 self.streamComplete(streamId: streamId)
             } catch is CancellationError {
                 // CrownKeep already treats the aborted request as stopped.
