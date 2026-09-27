@@ -131,7 +131,7 @@ export function ModelStorage({
   const measuredLosers = useMemo(() => {
     if (!profile) return []
     return cached.filter((candidate) => {
-      if (candidate.loaded || winnerIds.has(candidate.id)) return false
+      if (candidate.loaded || winnerIds.has(candidate.id) || candidate.id === quickRecoveryId) return false
       if (
         selectedVoiceAlias &&
         candidate.alias.toLowerCase() === selectedVoiceAlias
@@ -144,7 +144,7 @@ export function ModelStorage({
           result.variantId === candidate.id,
       )
     })
-  }, [cached, profile, results, selectedVoiceAlias, winnerIds])
+  }, [cached, profile, quickRecoveryId, results, selectedVoiceAlias, winnerIds])
 
   async function refreshStorage() {
     onCatalogChanged()
@@ -290,6 +290,7 @@ export function ModelStorage({
           <div className="model-storage-list">
             {cached.map((candidate) => {
               const protectedWinner = winnerIds.has(candidate.id)
+              const protectedQuickRecovery = candidate.id === quickRecoveryId
               const protectedVoice =
                 Boolean(selectedVoiceAlias) &&
                 candidate.alias.toLowerCase() === selectedVoiceAlias
@@ -319,10 +320,12 @@ export function ModelStorage({
                           : ''}
                       </span>
                     )}
-                    {(protectedWinner || protectedVoice) && (
+                    {(protectedWinner || protectedQuickRecovery || protectedVoice) && (
                       <span className="model-storage-protected">
                         {protectedWinner ? 'Measured winner' : ''}
-                        {protectedWinner && protectedVoice ? ' · ' : ''}
+                        {protectedWinner && protectedQuickRecovery ? ' · ' : ''}
+                        {protectedQuickRecovery ? 'Quick recovery model' : ''}
+                        {(protectedWinner || protectedQuickRecovery) && protectedVoice ? ' · ' : ''}
                         {protectedVoice ? 'Selected Voice model' : ''}
                       </span>
                     )}
@@ -344,11 +347,14 @@ export function ModelStorage({
                         busy ||
                         candidate.loaded ||
                         protectedWinner ||
+                        protectedQuickRecovery ||
                         protectedVoice
                       }
                       title={
                         protectedWinner
                           ? 'Measured winners are protected. Benchmark or select a replacement before deleting this variant.'
+                          : protectedQuickRecovery
+                            ? 'CrownKeep keeps one cached Quick model protected for startup and recovery.'
                           : protectedVoice
                             ? 'The selected Voice model is protected. Choose another Voice model first.'
                             : candidate.loaded
@@ -361,6 +367,8 @@ export function ModelStorage({
                         ? 'Active · switch first'
                         : protectedWinner
                           ? 'Measured winner · protected'
+                          : protectedQuickRecovery
+                            ? 'Quick recovery · protected'
                           : protectedVoice
                             ? 'Voice model · protected'
                             : 'Delete from device'}
