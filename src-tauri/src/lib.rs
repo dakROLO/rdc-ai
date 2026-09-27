@@ -16,7 +16,7 @@ fn trace_timestamp_ms() -> u128 {
 }
 
 fn trace_clean(value: &str) -> String {
-    value.replace(['\r', '\n'], " ")
+    value.replace('\r', " ").replace('\n', " ")
 }
 
 #[tauri::command]
