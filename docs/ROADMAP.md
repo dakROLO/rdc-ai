@@ -575,3 +575,9 @@ Projects should be implemented as an organizational layer above conversations, n
 ### Sprint 4A.3 implementation checkpoint
 
 Family-based adaptive selection, fingerprinted observations, provider-neutral local dictation, lifecycle safeguards, and native compile gates are implemented on the convergence branch. Sprint status remains **VALIDATION PENDING** until `docs/SPRINT-4A3-VALIDATION.md` is completed. Cloud, sync, RDC context, RAG, tools/MCP, and duplex voice remain deferred.
+
+### Sprint 4A.4 — System Foundry convergence + local-agent foundation — **IN PROGRESS**
+
+**Outcome:** One local-first experience with System Foundry as the Windows authority and Apple-native runtime on iPhone.
+
+Current vertical slice: provider-neutral `LocalRuntime`, explicit Tool Registry boundaries, and a generic local KnowledgeSource proof. System-cache migration, image proofs, and physical acceptance remain gated in `SPRINT-4A4-VALIDATION.md`.

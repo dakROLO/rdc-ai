@@ -34,7 +34,7 @@ test('native text catalogs are chat-capable but embedding and unknown tasks are 
 
 
 test('reasoning variants stay out of the default Quick role', () => {
-  assert.equal(roleOf({ ...cpu, alias: 'phi-4-mini-reasoning' }), 'Deep / Experimental')
+  assert.equal(roleOf({ ...cpu, alias: 'phi-4-mini-reasoning' }), 'Deep')
   assert.equal(roleOf({ ...cpu, alias: 'phi-4-mini' }), 'Quick')
 })
 

@@ -482,3 +482,23 @@ Normal Windows choices are model families. Compare compatible execution paths us
 Dictation is review-before-send and behind a separate speech provider boundary. Windows uses the existing pinned Foundry SDK; iPhone uses Apple SpeechAnalyzer with installed on-device language assets. Unsupported speech is explicitly unavailable. Speech resources release after each recording. Cancellation never appends a late transcript; Windows native work finishes cleanup before another runtime operation is enabled.
 
 The local-baseline merge/tag remains gated on actual laptop, second Windows host, and iPhone validation. CI compilation is necessary but does not replace those tests.
+
+---
+
+## ADR-0025 — System Foundry is the Windows runtime authority
+
+**Status:** Accepted; migration validation pending
+**Date:** 2026-09-27
+
+Windows CrownKeep requests model aliases and records the actual variant/provider/device chosen by System Foundry. CrownKeep owns roles, policy, benchmarks, UX, diagnostics, and recovery; it does not own a second Foundry cache or duplicate Foundry hardware routing.
+
+The installed Foundry CLI's cache location and local service are discovered at physical acceptance. The existing SDK-backed host remains a compatibility path until that migration proves the system cache, lifecycle, and REST model state agree. No legacy cache is deleted by this decision.
+
+---
+
+## ADR-0026 — LocalRuntime, tools, and knowledge sources remain provider-neutral
+
+**Status:** Accepted
+**Date:** 2026-09-27
+
+Shared CrownKeep code depends on a minimal `LocalRuntime` contract, not Foundry-specific types. Tool and knowledge-source contracts declare network/access requirements explicitly. An RDC integration, when authorized later, will be a configured `KnowledgeSource`, not a CrownKeep product mode or direct data dependency.

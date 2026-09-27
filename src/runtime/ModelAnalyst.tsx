@@ -56,11 +56,11 @@ function traceBenchmark(event: string, detail: string, requestId?: string) {
   }
 }
 
-const ROLE_ORDER: ModelRole[] = ['Quick', 'Balanced', 'Deep / Experimental', 'Voice']
+const ROLE_ORDER: ModelRole[] = ['Quick', 'Balanced', 'Deep', 'Voice']
 const ROLE_PRIORITIES: Record<ModelRole, string[]> = {
   Quick: ['phi-4-mini'],
   Balanced: ['mistral-nemo-12b-instruct', 'olmo-3-7b-instruct'],
-  'Deep / Experimental': ['gpt-oss-20b'],
+  Deep: ['gpt-oss-20b'],
   Voice: ['whisper-base', 'whisper-tiny', 'whisper-small'],
 }
 

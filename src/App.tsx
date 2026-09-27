@@ -102,12 +102,12 @@ function traceTerminal(
   }
 }
 
-type ChatModelRole = Extract<ModelRole, 'Quick' | 'Balanced' | 'Deep / Experimental'>
+type ChatModelRole = Extract<ModelRole, 'Quick' | 'Balanced' | 'Deep'>
 
 const CHAT_ROLE_LABELS: Record<ChatModelRole, string> = {
   Quick: 'Quick',
   Balanced: 'Balanced',
-  'Deep / Experimental': 'Deep',
+  Deep: 'Deep',
 }
 
 interface FoundryOperationProgress {
@@ -424,7 +424,7 @@ export default function App() {
     return {
       Quick: winnerFor('Quick'),
       Balanced: winnerFor('Balanced'),
-      'Deep / Experimental': winnerFor('Deep / Experimental'),
+      Deep: winnerFor('Deep'),
     }
   }, [fingerprint, providerRefreshNonce, modelCandidates])
 
@@ -726,7 +726,7 @@ export default function App() {
     const roles: ChatModelRole[] = [
       'Quick',
       'Balanced',
-      'Deep / Experimental',
+      'Deep',
     ]
     let changed = false
     const next = [...results]
@@ -2378,7 +2378,7 @@ export default function App() {
                         <span>Quick starts by default. Balanced and Deep use their measured winners.</span>
                       </div>
                       <div className="model-mode-segments" role="group" aria-label="Model mode">
-                        {(['Quick', 'Balanced', 'Deep / Experimental'] as ChatModelRole[]).map((role) => {
+                        {(['Quick', 'Balanced', 'Deep'] as ChatModelRole[]).map((role) => {
                           const winner = measuredRoleWinners[role]
                           const active = activeChatRole === role
                           return (

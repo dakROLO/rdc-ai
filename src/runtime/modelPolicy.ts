@@ -1,6 +1,6 @@
 import type { RuntimeModelCandidate } from './LocalRuntimeManager.ts'
 
-export type ModelRole = 'Quick' | 'Balanced' | 'Deep / Experimental' | 'Voice'
+export type ModelRole = 'Quick' | 'Balanced' | 'Deep' | 'Voice'
 export interface DeviceProfile {
   fingerprint: string
   memoryMb?: number
@@ -45,7 +45,7 @@ export function roleOf(model: RuntimeModelCandidate): ModelRole {
 
   const alias = model.alias.toLowerCase()
   if (/gpt-oss|20b|32b|70b|deepseek|reasoning|reasoner/i.test(alias)) {
-    return 'Deep / Experimental'
+    return 'Deep'
   }
 
   // CrownKeep's intended everyday baseline stays Quick even when a specific

@@ -1,6 +1,15 @@
 # CrownKeep — Current Status
 
-**Updated:** 2026-09-26
+**Updated:** 2026-09-27
+
+## Sprint 4A.4 start — 2026-09-27
+
+- Added a lean provider-neutral `LocalRuntime` contract and an adapter over the established provider/lifecycle split. It supports a Windows implementation with lifecycle ownership and an honest iOS Quick/Voice-only implementation without pretending unsupported roles exist.
+- Added `ToolRegistry` and `KnowledgeSource`/`KnowledgeRegistry` contracts. The included local-search/knowledge implementation is synthetic and read-only; no RDC data or cloud-model routing was added.
+- Normal UI/model-policy roles are now **Quick**, **Balanced**, and **Deep**. Balanced and Deep remain disabled until validated observed results exist.
+- Added automated contract tests and the concise Sprint 4A.4 acceptance handoff.
+- Verified from current Foundry documentation that the Rust SDK defaults model storage to an app-specific `{app_data_dir}/cache/models`; this confirms why `FoundryLocalConfig::new("CrownKeep")` produced a separate cache. The exact installed CLI cache/service migration needs physical Windows discovery and remains open.
+- Do not merge, tag, delete branches, or delete legacy cache data. `docs/SPRINT-4A4-VALIDATION.md` is the handoff record.
 
 ## Active phase
 
@@ -8,7 +17,7 @@ Phase 4A — Windows Product Host
 
 ## Active sprint
 
-Sprint 4A.3 — Local Platform Convergence / Pause Point.
+Sprint 4A.4 — System Foundry Convergence + Local Agent Foundation.
 
 ## Completed
 
