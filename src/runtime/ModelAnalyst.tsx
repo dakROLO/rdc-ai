@@ -318,20 +318,35 @@ export function ModelAnalyst({
 
       const winner = bestObserved(measured, profile.fingerprint, alias)
       if (winner && !abort.signal.aborted) {
-        setProgress(
-          `Loading measured winner: ${alias} · ${winner.executionProvider ?? winner.device}…`,
-        )
-        await manager.activateModel(winner.variantId)
         if (family.role === 'Quick') {
+          setProgress(
+            `Loading measured winner: ${alias} · ${winner.executionProvider ?? winner.device}…`,
+          )
+          await manager.activateModel(winner.variantId)
           localStorage.setItem(PREFERRED_PROFILE_KEY, JSON.stringify(winner))
           localStorage.setItem('crownkeep.preferredWindowsModel', winner.alias)
+          selected = true
+          setProgress(
+            `Ready · ${alias} · measured ${Math.round(winner.firstTokenMs!)} ms to first token. Quick startup preference saved for this device.`,
+          )
+        } else if (previous) {
+          setProgress(
+            `${family.role} winner recorded: ${alias} · ${winner.executionProvider ?? winner.device} · ${Math.round(winner.firstTokenMs!)} ms. Restoring the everyday Quick model…`,
+          )
+          await manager.activateModel(previous.id)
+          selected = true
+          setProgress(
+            `Recorded ${family.role} winner: ${alias} · ${winner.executionProvider ?? winner.device} · ${Math.round(winner.firstTokenMs!)} ms. Quick model restored.`,
+          )
+        } else {
+          // With no prior chat model to restore, leave the measured winner active,
+          // but do not promote it to the Windows startup preference.
+          await manager.activateModel(winner.variantId)
+          selected = true
+          setProgress(
+            `Recorded ${family.role} winner: ${alias} · ${winner.executionProvider ?? winner.device} · ${Math.round(winner.firstTokenMs!)} ms. No prior Quick model was available to restore.`,
+          )
         }
-        selected = true
-        setProgress(
-          family.role === 'Quick'
-            ? `Ready · ${alias} · measured ${Math.round(winner.firstTokenMs!)} ms to first token. Quick startup preference saved for this device.`
-            : `Ready · ${alias} · measured ${Math.round(winner.firstTokenMs!)} ms to first token. ${family.role} winner recorded without changing the Quick startup model.`,
-        )
       } else if (previous) {
         setProgress(
           abort.signal.aborted
