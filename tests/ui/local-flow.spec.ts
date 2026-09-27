@@ -6,8 +6,13 @@ test('local conversation persists and unsupported dictation does not block chat'
   await page.getByRole('textbox', { name: 'Message Anne' }).fill('Keep this local test message')
   await page.getByRole('button', { name: 'Send', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Stop', exact: true })).toBeHidden({ timeout: 15000 })
+
+  await page.getByRole('button', { name: '↻ Rerun' }).first().click()
+  await expect(page.getByRole('button', { name: 'Stop', exact: true })).toBeHidden({ timeout: 15000 })
+  await expect(page.getByText('Keep this local test message', { exact: true })).toHaveCount(2)
+
   await page.reload()
-  await expect(page.getByText('Keep this local test message', { exact: true }).last()).toBeVisible()
+  await expect(page.getByText('Keep this local test message', { exact: true })).toHaveCount(2)
 })
 
 test('native dictation requires review, preserves drafts on cancellation, and fits mobile', async ({ page }) => {
