@@ -100,3 +100,23 @@ test('Quick can remain usable with legacy accepted measurements', () => {
     cpu.id,
   )
 })
+
+
+test('role winner remains available when API model id differs from catalog variant suffix', () => {
+  const balanced = { ...gpu, id: 'mistral-nemo-12b-instruct-cuda-gpu:1', alias: 'mistral-nemo-12b-instruct', fileSizeMb: 6600 }
+  const result: BenchmarkResult = {
+    fingerprint: 'machine-a',
+    alias: balanced.alias,
+    variantId: 'mistral-nemo-12b-instruct-cuda-gpu',
+    cached: true,
+    timestamp: '',
+    firstTokenMs: 800,
+    totalMs: 1200,
+    realWorldValidated: true,
+    outcome: 'accepted',
+  }
+  assert.equal(
+    bestObservedForRole([result], 'machine-a', 'Balanced', [balanced])?.alias,
+    balanced.alias,
+  )
+})
