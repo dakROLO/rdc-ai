@@ -1135,14 +1135,54 @@ export default function App() {
           localRuntimeManager.mode === 'embedded' &&
           selectedProviderId === 'foundry-local'
         ) {
-          try {
-            setRuntimeActionMessage('Recovering the local model after a timed-out response…')
-            await localRuntimeManager.activateModel(selectedModelId)
-            setRuntimeActionMessage('Local model recovered. You can retry the message.')
-            setProviderRefreshNonce((current) => current + 1)
-          } catch (recoveryError) {
+          const quickRecovery =
+            modelCandidates.find(
+              (candidate) =>
+                candidate.cached &&
+                taskOf(candidate) === 'chat' &&
+                roleOf(candidate) === 'Quick' &&
+                candidate.alias.toLocaleLowerCase() ===
+                  DEFAULT_WINDOWS_MODEL_ALIAS.toLocaleLowerCase() &&
+                candidate.executionProvider?.toLocaleLowerCase() ===
+                  'cpuexecutionprovider',
+            ) ??
+            modelCandidates.find(
+              (candidate) =>
+                candidate.cached &&
+                taskOf(candidate) === 'chat' &&
+                roleOf(candidate) === 'Quick',
+            )
+
+          if (quickRecovery) {
+            try {
+              setRuntimeActionMessage(
+                `Local response stalled. Recovering with Quick · ${quickRecovery.alias}…`,
+              )
+              await Promise.race([
+                localRuntimeManager.activateModel(quickRecovery.id),
+                new Promise<never>((_, reject) =>
+                  window.setTimeout(
+                    () => reject(new Error('Quick-model recovery exceeded 20 seconds.')),
+                    20_000,
+                  ),
+                ),
+              ])
+              localStorage.setItem(
+                modelStorageKey(selectedProviderId),
+                normalizedModelForStorage(quickRecovery.id),
+              )
+              setRuntimeActionMessage(
+                `Recovered with Quick · ${quickRecovery.alias}. You can retry the message.`,
+              )
+              setProviderRefreshNonce((current) => current + 1)
+            } catch (recoveryError) {
+              setRuntimeCheckError(
+                `The local response timed out. Automatic Quick recovery did not finish: ${String(recoveryError)} Restart CrownKeep to reset the local runtime.`,
+              )
+            }
+          } else {
             setRuntimeCheckError(
-              `The local response timed out and runtime recovery failed: ${String(recoveryError)}`,
+              'The local response timed out and no cached Quick recovery model is available. Restart CrownKeep to reset the local runtime.',
             )
           }
         }
