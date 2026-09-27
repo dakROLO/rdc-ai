@@ -549,6 +549,86 @@ async fn crownkeep_foundry_stop() -> Result<FoundryActionResult, String> {
     })
 }
 
+async fn ensure_execution_provider_ready(
+    app: &tauri::AppHandle,
+    manager: &foundry_local_sdk::FoundryLocalManager,
+    model: &std::sync::Arc<foundry_local_sdk::Model>,
+) -> Result<(), String> {
+    let required = model
+        .info()
+        .runtime
+        .as_ref()
+        .map(|runtime| runtime.execution_provider.trim().to_string())
+        .filter(|name| !name.is_empty());
+
+    let Some(required) = required else {
+        return Ok(());
+    };
+
+    if required.eq_ignore_ascii_case("CPUExecutionProvider") {
+        return Ok(());
+    }
+
+    let discovered = manager
+        .discover_eps()
+        .map_err(|error| format!("Could not inspect Foundry execution providers: {error}"))?;
+
+    if discovered
+        .iter()
+        .any(|ep| ep.name.eq_ignore_ascii_case(&required) && ep.is_registered)
+    {
+        return Ok(());
+    }
+
+    emit_operation_progress(
+        app,
+        "registering-provider",
+        format!("Preparing {} for {}…", required, model.alias()),
+        Some(model.id().to_string()),
+        Some(model.alias().to_string()),
+        None,
+    );
+
+    eprintln!(
+        "[CrownKeep/Foundry] stage=ensure-ep register name={} model={}",
+        required,
+        model.id()
+    );
+
+    let result = manager
+        .download_and_register_eps(Some(&[required.as_str()]))
+        .await
+        .map_err(|error| {
+            format!(
+                "Could not register execution provider '{}' for '{}': {error}",
+                required,
+                model.alias()
+            )
+        })?;
+
+    let succeeded = result.success
+        || result
+            .registered_eps
+            .iter()
+            .any(|registered| registered.eq_ignore_ascii_case(&required));
+
+    if !succeeded {
+        return Err(format!(
+            "Execution provider '{}' is required by '{}' but could not be registered. Foundry status: {}",
+            required,
+            model.alias(),
+            result.status
+        ));
+    }
+
+    eprintln!(
+        "[CrownKeep/Foundry] stage=ensure-ep ready name={} model={}",
+        required,
+        model.id()
+    );
+    Ok(())
+}
+
 async fn ensure_model_cached(
     app: &tauri::AppHandle,
     model: &std::sync::Arc<foundry_local_sdk::Model>,
@@ -671,6 +751,7 @@ async fn crownkeep_foundry_activate_model(
     }
 
     let result: Result<(), String> = async {
+        ensure_execution_provider_ready(&app, manager, &model).await?;
         ensure_model_cached(&app, &model, &model_id).await?;
 
         emit_operation_progress(
