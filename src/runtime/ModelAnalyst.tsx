@@ -51,15 +51,47 @@ const ROLE_PRIORITIES: Record<ModelRole, string[]> = {
   Voice: ['whisper-base', 'whisper-tiny', 'whisper-small'],
 }
 
-function preferredFamilyForRole(families: ModelFamily[], role: ModelRole): ModelFamily | undefined {
+function preferredFamilyForRole(
+  families: ModelFamily[],
+  role: ModelRole,
+  results: BenchmarkResult[],
+  fingerprint?: string,
+): ModelFamily | undefined {
   const inRole = families.filter((family) => family.role === role)
+  if (!inRole.length) return undefined
+
+  if (fingerprint && role !== 'Voice') {
+    const validated = inRole.find((family) =>
+      results.some(
+        (result) =>
+          result.fingerprint === fingerprint &&
+          result.alias.toLowerCase() === family.alias.toLowerCase() &&
+          result.outcome === 'accepted' &&
+          result.firstTokenMs !== undefined &&
+          (role === 'Quick' || result.realWorldValidated === true),
+      ),
+    )
+    if (validated) return validated
+  }
+
   for (const alias of ROLE_PRIORITIES[role]) {
     const match = inRole.find((family) => family.alias.toLowerCase() === alias)
-    if (match) return match
+    if (!match) continue
+
+    if (!fingerprint || role === 'Quick' || role === 'Voice') return match
+
+    const attempted = results.some(
+      (result) =>
+        result.fingerprint === fingerprint &&
+        result.alias.toLowerCase() === match.alias.toLowerCase(),
+    )
+    if (!attempted) return match
   }
+
   if (role === 'Quick') {
     return inRole.find((family) => !/reason|deepseek|gpt-oss/i.test(family.alias))
   }
+
   return inRole[0]
 }
 
@@ -85,9 +117,11 @@ export function ModelAnalyst({
   const families = useMemo(() => groupFamilies(candidates), [candidates])
   const recommendedFamilies = useMemo(
     () => ROLE_ORDER
-      .map((role) => preferredFamilyForRole(families, role))
+      .map((role) =>
+        preferredFamilyForRole(families, role, results, profile?.fingerprint),
+      )
       .filter((family): family is ModelFamily => Boolean(family)),
-    [families],
+    [families, profile?.fingerprint, results],
   )
   const recommendedAliases = useMemo(
     () => new Set(recommendedFamilies.map((family) => family.alias.toLowerCase())),
