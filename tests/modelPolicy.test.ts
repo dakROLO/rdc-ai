@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { bestObserved, taskOf, groupFamilies, memoryFit, readResults, roleOf, viableVariants } from '../src/runtime/modelPolicy.ts'
+import { bestObserved, bestObservedForRole, taskOf, groupFamilies, memoryFit, readResults, roleOf, viableVariants } from '../src/runtime/modelPolicy.ts'
 import type { BenchmarkResult } from '../src/runtime/modelPolicy.ts'
 const cpu = { id: 'phi-cpu:5', alias: 'phi-4-mini', modelType: 'chat', displayName: 'Phi', cached: true, loaded: false, device: 'CPU', fileSizeMb: 2000 }
 const gpu = { ...cpu, id: 'phi-gpu:5', device: 'GPU' }
@@ -41,4 +41,49 @@ test('reasoning variants stay out of the default Quick role', () => {
 
 test('Phi-4 Mini remains Quick even when a package is over the generic size threshold', () => {
   assert.equal(roleOf({ ...cpu, alias: 'phi-4-mini', fileSizeMb: 4915 }), 'Quick')
+})
+
+
+test('heavier role winners require representative context validation', () => {
+  const balanced = { ...gpu, id: 'nemo-cuda:1', alias: 'mistral-nemo-12b-instruct', fileSizeMb: 6600 }
+  const speedOnly: BenchmarkResult = {
+    fingerprint: 'machine-a',
+    alias: balanced.alias,
+    variantId: balanced.id,
+    cached: true,
+    timestamp: '',
+    firstTokenMs: 800,
+    totalMs: 1200,
+    outcome: 'accepted',
+  }
+  assert.equal(
+    bestObservedForRole([speedOnly], 'machine-a', 'Balanced', [balanced]),
+    undefined,
+  )
+  assert.equal(
+    bestObservedForRole(
+      [{ ...speedOnly, realWorldValidated: true }],
+      'machine-a',
+      'Balanced',
+      [balanced],
+    )?.variantId,
+    balanced.id,
+  )
+})
+
+test('Quick can remain usable with legacy accepted measurements', () => {
+  const quick: BenchmarkResult = {
+    fingerprint: 'machine-a',
+    alias: cpu.alias,
+    variantId: cpu.id,
+    cached: true,
+    timestamp: '',
+    firstTokenMs: 200,
+    totalMs: 970,
+    outcome: 'accepted',
+  }
+  assert.equal(
+    bestObservedForRole([quick], 'machine-a', 'Quick', [cpu])?.variantId,
+    cpu.id,
+  )
 })
