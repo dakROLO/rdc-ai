@@ -961,12 +961,60 @@ async fn crownkeep_foundry_remove_cached_model(
     );
 
     let requested_id = model.id().to_string();
+
+    // Fully release loaded models while mutating the shared Foundry cache.
+    // The embedded SDK and cache lifecycle share native state; keeping a model
+    // loaded while deleting a sibling variant has caused the next inference
+    // request to stall on physical Windows hardware.
+    for active in &loaded {
+        active
+            .unload()
+            .await
+            .map_err(|error| format!("Could not release active model '{}' before cache cleanup: {error}", active.id()))?;
+    }
+
     let removal = model
         .remove_from_cache()
         .await
         .map_err(|error| format!("Could not delete cached model '{}': {error}", requested_id));
 
-    let restart = if service_was_running && !loaded.is_empty() {
+    if let Err(error) = removal {
+        for active in &loaded {
+            let _ = ensure_execution_provider_ready(&app, manager, active).await;
+            let _ = active.load().await;
+        }
+        if service_was_running && !loaded.is_empty() {
+            let _ = manager.start_web_service().await;
+        }
+        return Err(error);
+    }
+
+    manager
+        .catalog()
+        .update_models()
+        .await
+        .map_err(|error| format!("Cache cleanup succeeded, but Foundry cache state could not refresh: {error}"))?;
+
+    if !loaded.is_empty() {
+        emit_operation_progress(
+            &app,
+            "restoring-model",
+            "Reloading the active local model after cache cleanup…",
+            Some(model.id().to_string()),
+            Some(model.alias().to_string()),
+            None,
+        );
+    }
+
+    for active in &loaded {
+        ensure_execution_provider_ready(&app, manager, active).await?;
+        active
+            .load()
+            .await
+            .map_err(|error| format!("Cache cleanup succeeded, but active model '{}' could not reload: {error}", active.id()))?;
+    }
+
+    if service_was_running && !loaded.is_empty() {
         emit_operation_progress(
             &app,
             "restoring-service",
@@ -978,23 +1026,8 @@ async fn crownkeep_foundry_remove_cached_model(
         manager
             .start_web_service()
             .await
-            .map_err(|error| format!("Cache cleanup finished, but local inference could not restart: {error}"))
-    } else {
-        Ok(())
-    };
-
-    if let Err(error) = restart {
-        return Err(error);
+            .map_err(|error| format!("Cache cleanup succeeded, but local inference could not restart: {error}"))?;
     }
-    if let Err(error) = removal {
-        return Err(error);
-    }
-
-    manager
-        .catalog()
-        .update_models()
-        .await
-        .map_err(|error| format!("Cache cleanup succeeded, but Foundry cache state could not refresh: {error}"))?;
 
     let still_cached = manager
         .catalog()
