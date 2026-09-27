@@ -729,7 +729,8 @@ export default function App() {
         )
         .sort(
           (a, b) =>
-            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+            (a.firstTokenMs! * 2 + a.totalMs) -
+            (b.firstTokenMs! * 2 + b.totalMs),
         )[0]
 
       if (!legacy) continue
@@ -913,16 +914,22 @@ export default function App() {
       )
     }
 
-    const observed = readPreferred(localStorage)
-    if (observed) {
-      const observedCandidate = quickCandidateFor(
-        observed.fingerprint === fingerprint ? observed.variantId : observed.alias,
+    if (fingerprint) {
+      const measuredQuick = bestObserved(
+        readResults(localStorage),
+        fingerprint,
+        DEFAULT_WINDOWS_MODEL_ALIAS,
       )
-      if (observedCandidate) {
-        return observed.fingerprint === fingerprint
-          ? observedCandidate.id
-          : observedCandidate.alias
+      if (measuredQuick) {
+        const measuredCandidate = quickCandidateFor(measuredQuick.variantId)
+        if (measuredCandidate) return measuredCandidate.id
       }
+    }
+
+    const observed = readPreferred(localStorage)
+    if (observed && observed.fingerprint === fingerprint) {
+      const observedCandidate = quickCandidateFor(observed.variantId)
+      if (observedCandidate) return observedCandidate.id
     }
 
     const storedQuick = quickCandidateFor(
