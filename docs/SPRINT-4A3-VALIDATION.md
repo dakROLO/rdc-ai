@@ -279,6 +279,21 @@ Follow-up stabilization:
 - fingerprint migration now carries forward the best accepted legacy result by the same responsiveness score used by Model Analyst, rather than simply the most recent accepted path;
 - previous user messages now expose **↻ Rerun**, which resends that earlier prompt as a new turn using the currently active model and current conversation context. This gives the user a one-click retry path after a failed or stalled generation without retyping the prompt.
 
+### Balanced real-world validation + Quick recovery protection
+
+Physical laptop testing showed that the prior Balanced winner, `mistral-nemo-12b-instruct` on CUDA, could pass the tiny benchmark prompt but repeatedly time out in normal CrownKeep conversation. The model therefore cannot be treated as a usable Balanced winner on this laptop based on the speed benchmark alone.
+
+The selection policy now distinguishes synthetic speed from real chat usability:
+
+- every benchmark still runs the short bounded speed prompt;
+- after the speed prompt passes, CrownKeep runs a representative multi-turn CrownKeep context probe;
+- Balanced and Deep/Experimental results are accepted for role switching only when the representative-context probe also passes;
+- legacy speed-only Balanced/Deep results remain visible as prior measurements but no longer enable the role switcher;
+- if the preferred Balanced family has already been attempted on the current fingerprint without a validated winner, Model Analyst advances to the next Balanced candidate (currently OLMo 3 7B after Mistral Nemo);
+- Quick remains usable from existing accepted measurements so the everyday path does not require unnecessary retesting.
+
+Model Storage also now protects one cached **Quick recovery model** regardless of fingerprint churn or benchmark cleanup. This prevents cleanup from deleting every usable Quick path; the protected row is explicitly labeled and cannot be deleted until another Quick recovery candidate exists.
+
 ## Known implementation limits
 
 - RAM filtering uses disk-size × 1.5 + 2 GB as a conservative estimate, not a guarantee of peak memory or VRAM fit. Native load failures remain benchmark failures.
