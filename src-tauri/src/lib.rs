@@ -1054,6 +1054,15 @@ async fn crownkeep_foundry_remove_cached_model(
         return Err(error);
     }
 
+    // The cache was mutated by the external Foundry CLI. Refresh the SDK
+    // catalog/cache view before reporting success so subsequent candidate
+    // queries do not return stale pre-delete cache state.
+    manager
+        .catalog()
+        .update_models()
+        .await
+        .map_err(|error| format!("Cache cleanup succeeded, but Foundry cache state could not refresh: {error}"))?;
+
     emit_operation_progress(
         &app,
         "cache-removed",
