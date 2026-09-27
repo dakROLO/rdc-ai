@@ -263,6 +263,22 @@ Unmeasured roles remain disabled until they have a valid accepted benchmark. Qui
 
 Fingerprint policy was also hardened again so execution-provider registration state is not part of the device fingerprint. Provider names remain part of the fingerprint, but whether CUDA/OpenVINO/etc. happen to be registered in the current process no longer invalidates measurements. A one-time local migration preserves accepted measurements for exact cached variants across this policy change.
 
+### Physical laptop retest — stable Quick + dictation, remaining cache edge cases
+
+The next physical laptop pass confirmed:
+
+- Quick startup and normal local chat work after restart;
+- Windows dictation works end-to-end;
+- most explicit cache deletions now complete, but two model variants still resisted removal during manual testing;
+- a successful cache deletion could still leave the next chat request stalled, indicating shared native model/cache state was not fully reset after cache mutation.
+
+Follow-up stabilization:
+
+- cache cleanup now fully unloads the currently loaded chat model before mutating the Foundry cache, then re-registers its execution provider, reloads the model, and restarts the embedded service before cleanup is considered complete;
+- Windows startup now resolves the exact best measured Quick winner for the current fingerprint instead of falling back from a stale alias to an arbitrary provider variant;
+- fingerprint migration now carries forward the best accepted legacy result by the same responsiveness score used by Model Analyst, rather than simply the most recent accepted path;
+- previous user messages now expose **↻ Rerun**, which resends that earlier prompt as a new turn using the currently active model and current conversation context. This gives the user a one-click retry path after a failed or stalled generation without retyping the prompt.
+
 ## Known implementation limits
 
 - RAM filtering uses disk-size × 1.5 + 2 GB as a conservative estimate, not a guarantee of peak memory or VRAM fit. Native load failures remain benchmark failures.
