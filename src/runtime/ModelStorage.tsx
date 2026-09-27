@@ -43,18 +43,19 @@ export function ModelStorage({
 }: Props) {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [removedIds, setRemovedIds] = useState<Set<string>>(() => new Set())
 
   const cached = useMemo(
     () =>
       candidates
-        .filter((candidate) => candidate.cached)
+        .filter((candidate) => candidate.cached && !removedIds.has(candidate.id))
         .sort(
           (a, b) =>
             Number(b.loaded) - Number(a.loaded) ||
             a.alias.localeCompare(b.alias) ||
             a.id.localeCompare(b.id),
         ),
-    [candidates],
+    [candidates, removedIds],
   )
 
   const totalKnownMb = cached.reduce(
@@ -146,6 +147,11 @@ export function ModelStorage({
     setMessage(`Deleting ${candidate.alias} from this device…`)
     try {
       const result = await manager.removeCachedModel(candidate.id)
+      setRemovedIds((current) => {
+        const next = new Set(current)
+        next.add(candidate.id)
+        return next
+      })
       setMessage(result.detail)
       await refreshStorage()
     } catch (e) {
@@ -183,6 +189,11 @@ export function ModelStorage({
           `Cleaning benchmark download ${removed + 1}/${measuredLosers.length}: ${candidate.alias}…`,
         )
         await manager.removeCachedModel(candidate.id)
+        setRemovedIds((current) => {
+          const next = new Set(current)
+          next.add(candidate.id)
+          return next
+        })
         removed += 1
       }
       setMessage(
