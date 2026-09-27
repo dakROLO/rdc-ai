@@ -1416,7 +1416,8 @@ body {
   white-space: nowrap;
 }
 
-.message-context-button {
+.message-context-button,
+.message-rerun-button {
   border: 0;
   border-radius: 8px;
   padding: 4px 7px;
@@ -1427,9 +1428,14 @@ body {
   white-space: nowrap;
 }
 
-.message-context-button:hover:not(:disabled) {
+.message-context-button:hover:not(:disabled),
+.message-rerun-button:hover:not(:disabled) {
   background: rgba(232, 228, 218, 0.07);
   color: var(--stone);
+}
+
+.message-rerun-button {
+  color: #9eead6;
 }
 
 .message.context-excluded {
@@ -1460,7 +1466,8 @@ body {
     font-size: 0.62rem;
   }
 
-  .message-context-button {
+  .message-context-button,
+  .message-rerun-button {
     padding: 3px 5px;
     font-size: 0.61rem;
   }
