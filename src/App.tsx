@@ -1316,6 +1316,44 @@ export default function App() {
           localRuntimeManager.mode === 'embedded' &&
           selectedProviderId === 'foundry-local'
         ) {
+          const failedCandidate =
+            modelCandidates.find(
+              (candidate) =>
+                normalizeRuntimeModelKey(candidate.id) ===
+                normalizeRuntimeModelKey(selectedModelId),
+            ) ?? loadedChatCandidate
+
+          if (failedCandidate && fingerprint) {
+            const observed = readResults(localStorage)
+            const failedResult = {
+              fingerprint,
+              alias: failedCandidate.alias,
+              variantId: failedCandidate.id,
+              executionProvider: failedCandidate.executionProvider,
+              device: failedCandidate.device,
+              cached: failedCandidate.cached,
+              supportsToolCalling: failedCandidate.supportsToolCalling,
+              timestamp: new Date().toISOString(),
+              totalMs: performance.now() - startedAt,
+              realWorldValidated: false,
+              outcome: 'error' as const,
+              detail: firstTokenTimedOut
+                ? 'Normal CrownKeep chat timed out before the first token.'
+                : 'Normal CrownKeep chat exceeded the total-response safety limit.',
+            }
+            const next = [
+              ...observed.filter(
+                (result) =>
+                  !(
+                    result.fingerprint === fingerprint &&
+                    result.variantId === failedCandidate.id
+                  ),
+              ),
+              failedResult,
+            ].slice(-200)
+            localStorage.setItem(PROFILE_KEY, JSON.stringify(next))
+            setProviderRefreshNonce((current) => current + 1)
+          }
           const quickRecovery =
             modelCandidates.find(
               (candidate) =>
