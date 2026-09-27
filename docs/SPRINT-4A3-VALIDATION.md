@@ -294,6 +294,10 @@ The selection policy now distinguishes synthetic speed from real chat usability:
 
 Model Storage also now protects one cached **Quick recovery model** regardless of fingerprint churn or benchmark cleanup. This prevents cleanup from deleting every usable Quick path; the protected row is explicitly labeled and cannot be deleted until another Quick recovery candidate exists.
 
+### Normal-chat timeout feeds model selection
+
+A normal CrownKeep chat timeout is now treated as real device evidence for the exact active variant. CrownKeep replaces that variant's current-fingerprint accepted record with an error observation before recovering to Quick. This prevents a path that repeatedly fails normal chat from remaining eligible as a Balanced or Deep role winner solely because it once passed a synthetic speed prompt. A later successful representative-context benchmark can qualify the variant again.
+
 ## Known implementation limits
 
 - RAM filtering uses disk-size × 1.5 + 2 GB as a conservative estimate, not a guarantee of peak memory or VRAM fit. Native load failures remain benchmark failures.
