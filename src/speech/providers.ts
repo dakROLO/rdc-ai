@@ -3,6 +3,7 @@ import type { SpeechInputProvider, SpeechCapability } from './SpeechInputProvide
 import { getNativeAIHost } from '../native/NativeAIHost.ts'
 import type { RuntimeModelCandidate } from '../runtime/LocalRuntimeManager.ts'
 import { taskOf } from '../runtime/modelPolicy.ts'
+import { activeChatAlias, activeSpeechVariant } from './systemFoundrySpeech.ts'
 
 class WindowsSpeechInput implements SpeechInputProvider {
   private stream?: MediaStream
@@ -17,7 +18,7 @@ class WindowsSpeechInput implements SpeechInputProvider {
   private rate = 16000
   async capability(): Promise<SpeechCapability> {
     if (!navigator.mediaDevices?.getUserMedia) return { available: false, detail: 'Microphone capture is unavailable in this host.' }
-    const models = (await invoke<RuntimeModelCandidate[]>('crownkeep_foundry_models'))
+    const models = (await invoke<RuntimeModelCandidate[]>('crownkeep_system_foundry_models'))
       .filter((m) => taskOf(m) === 'speech' && /whisper-(tiny|base|small)/i.test(m.alias))
       .sort((a, b) => (a.fileSizeMb ?? Infinity) - (b.fileSizeMb ?? Infinity))
     // Alias allows the native SDK to resolve the hardware variant normally.
@@ -71,25 +72,44 @@ class WindowsSpeechInput implements SpeechInputProvider {
     try {
       // Windows dictation uses the same installed System Foundry service as chat.
       // The alias is restored after transcription; no CrownKeep-private cache is used.
+      const before = await invoke<RuntimeModelCandidate[]>('crownkeep_system_foundry_models')
+      const previousAlias = activeChatAlias(before)
       const started = performance.now()
-      await invoke('crownkeep_system_foundry_activate_model', { modelId: this.model })
+      let restoreError: unknown
+      let operationError: unknown
+      let transcript = ''
+      try {
+        await invoke('crownkeep_system_foundry_activate_model', { modelId: this.model })
+        const loaded = await invoke<RuntimeModelCandidate[]>('crownkeep_system_foundry_models')
+        const speech = activeSpeechVariant(loaded, this.model)
+        if (!speech) throw new Error(`System Foundry did not expose a loaded Speech variant for ${this.model}.`)
       const endpoint = String(await invoke('crownkeep_system_foundry_endpoint'))
       const body = new FormData()
       body.append('file', new Blob([new Uint8Array(this.wav)], { type: 'audio/wav' }), 'dictation.wav')
-      body.append('model', this.model)
+        body.append('model', speech.id)
       const response = await fetch(`${endpoint.replace(/\/$/, '')}/v1/audio/transcriptions`, { method: 'POST', body, signal: AbortSignal.timeout(90_000) })
       if (!response.ok) throw new Error(`System Foundry transcription failed (${response.status}).`)
       const payload = await response.json() as { text?: string; model?: string }
-      const result = { text: payload.text ?? '', modelId: payload.model ?? this.model, elapsedMs: performance.now() - started }
+        const result = { text: payload.text ?? '', modelId: payload.model ?? speech.id, elapsedMs: performance.now() - started }
       if (!result.text) throw new Error('System Foundry returned no transcript.')
       if (epoch !== this.epoch) throw new Error('Dictation cancelled.')
       // Store only performance metadata; never audio or transcript text.
       localStorage.setItem('crownkeep.speechObservation', JSON.stringify({ alias: this.model, variantId: result.modelId,
         timestamp: new Date().toISOString(), audioSeconds: this.frames / this.rate, transcriptionMs: result.elapsedMs }))
-      return result.text
+        transcript = result.text
+      } catch (error) { operationError = error }
+      if (previousAlias) {
+        try {
+          await invoke('crownkeep_system_foundry_activate_model', { modelId: previousAlias })
+          const endpoint = String(await invoke('crownkeep_system_foundry_endpoint'))
+          const visible = await fetch(`${endpoint.replace(/\/$/, '')}/v1/models`, { signal: AbortSignal.timeout(10_000) })
+          if (!visible.ok) throw new Error(`Chat restore verification failed (${visible.status}).`)
+        } catch (error) { restoreError = error }
+      }
+      if (restoreError) throw new Error(`Dictation ${operationError ? 'failed and' : 'finished, but'} CrownKeep could not restore ${previousAlias}: ${String(restoreError)}`)
+      if (operationError) throw operationError
+      return transcript
     } finally {
-      const previousAlias = localStorage.getItem('crownkeep.preferredWindowsModel')
-      if (previousAlias) await invoke('crownkeep_system_foundry_activate_model', { modelId: previousAlias }).catch(() => {})
       this.wav = undefined
     }
   }

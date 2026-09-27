@@ -19,6 +19,27 @@
 - Windows dictation now loads a System Foundry **Voice alias**, sends the temporary WAV to the current local `/v1/audio/transcriptions` endpoint, and restores the previous chat alias. The legacy SDK transcription command is not registered. Physical Foundry 0.10.3 transcription-endpoint confirmation remains required before acceptance.
 - The initial iOS/shared tool proof uses the existing registries: `/search <query>` reads local `Inside the Keep` knowledge and `/url <https://…>` is read-only and explicitly network-marked. Results are supplied to the current provider as tool context; this never switches to a cloud model. Native iOS OCR/image analysis remains the next small proof because no current image bridge is registered.
 
+## 4A.4J — pre-test cleanup and code freeze — 2026-09-27
+
+### Implemented
+
+- Windows Voice captures the currently loaded **Chat alias** before loading Voice, resolves the actual loaded Speech `variantId`, sends that ID to the local transcription endpoint, and restores/verifies the captured Chat alias on success or failure.
+- Voice discovery uses `crownkeep_system_foundry_models`; no normal webview speech path calls the old CrownKeep SDK catalog.
+- Legacy cache status is cheap and read-only. Detailed size/package inspection is explicit; no delete or migration control exists.
+
+### Automated-validated
+
+- TypeScript, unit tests, lint, and production build pass in this workspace. Native Rust and unsigned iOS builds require the physical build hosts.
+
+### Physical-test-pending
+
+- Confirm the installed Foundry service exposes `/v1/audio/transcriptions`, returns the loaded Speech variant, and restores Quick or Balanced after a real dictation request.
+- Confirm Windows/AVD diagnostics and Rolo15 Apple Foundation Models/native speech baseline.
+
+### Deferred
+
+- Foundation Models automatic tool definitions/selection and image analysis. `/search` and `/url` are manual registered tool commands, not automatic model-selected tools.
+
 ## 4A.4C bridge hardening findings — 2026-09-27
 
 - The first bridge split human-readable CLI rows on whitespace. That is not a valid application contract because Foundry table output can change or wrap.

@@ -2,6 +2,13 @@
 
 **Updated:** 2026-09-27
 
+## Current — Sprint 4A.4 pre-physical-acceptance freeze
+
+- **Completed baseline:** 4A.4A–4A.4J contracts, System Foundry lifecycle/alias convergence, bounded role policy, cheap legacy-cache status, Voice alias restoration, and manual registered tool proofs.
+- **Pending physical acceptance:** primary Windows laptop, AVD, then Rolo15. No model/cache deletion, migration, benchmarking, merge, or role redesign is authorized during this freeze.
+- **Deferred:** native Foundation Models automatic tool calling, image analysis, Deep validation, RDC KnowledgeSource, and explicit cloud escalation.
+- The historical entries below are retained as evidence; they are not current implementation work.
+
 ## Sprint 4A.4 start — 2026-09-27
 
 - Added a lean provider-neutral `LocalRuntime` contract and an adapter over the established provider/lifecycle split. It supports a Windows implementation with lifecycle ownership and an honest iOS Quick/Voice-only implementation without pretending unsupported roles exist.
