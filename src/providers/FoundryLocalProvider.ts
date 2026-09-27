@@ -136,7 +136,7 @@ export class FoundryLocalProvider implements AIProvider {
   }
 
   private async resolveEndpoint(): Promise<{ endpoint: string; mode: ApiMode }> {
-    if (this.activeEndpoint && this.apiMode) {
+    if (!isTauri() && this.activeEndpoint && this.apiMode) {
       return { endpoint: this.activeEndpoint, mode: this.apiMode }
     }
 
@@ -154,6 +154,7 @@ export class FoundryLocalProvider implements AIProvider {
         return { endpoint, mode }
       } catch (error) {
         failures.push(`System Foundry: ${error instanceof Error ? error.message : 'unreachable'}`)
+        throw new Error(`Could not reach the current System Foundry endpoint. ${failures.join(' | ')}`)
       }
     }
 

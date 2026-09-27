@@ -3,6 +3,14 @@
 **Branch:** `sprint-4a3-local-platform-convergence`  
 **Status:** Windows System Foundry bridge implemented; physical acceptance required.
 
+## 4A.4C bridge hardening findings — 2026-09-27
+
+- The first bridge split human-readable CLI rows on whitespace. That is not a valid application contract because Foundry table output can change or wrap.
+- System Foundry candidates also lacked type/task metadata, which could make existing chat classification reject them.
+- Endpoint discovery performed too much work and cached a packaged-app endpoint despite System Foundry being able to restart on another port.
+
+The bridge now requests `--output json` for System Foundry status and model lists, keeps the one-value `cache location` command as a documented narrow fallback, and runs CLI work off the Tauri async executor. Packaged Windows requests ask the native host for the current endpoint each time before probing `/v1/models`; browser development behavior is unchanged.
+
 ## Implemented contract proofs
 
 - `LocalRuntime` is provider-neutral: shared code asks for capabilities, roles, activation, health, and loaded model without assuming Foundry.

@@ -20,6 +20,13 @@
 - The old SDK manager remains only behind the existing Windows dictation implementation and unused legacy native commands. It is not on the normal Windows chat/model path; removing/replacing dictation is a follow-on after this bridge is physically proven.
 - Automated result: Node tests, TypeScript, lint, and production build passed. Native Rust/Tauri check could not run in this workspace because `cargo` is absent. UI tests could launch their local server but Chromium is not provisioned; the attempted Playwright browser download returned a truncated/non-ZIP artifact from the execution environment.
 
+## Sprint 4A.4C — System Foundry bridge hardening — 2026-09-27
+
+- Replaced human-readable CLI-table parsing with JSON status/model surfaces in the System Foundry bridge. The narrow `foundry cache location` fallback is isolated and documented.
+- Lightweight runtime status no longer fetches the full catalog; catalog discovery occurs only for Model Analyst.
+- Structured model metadata now preserves chat type/task, device, provider, cache/load state, size/context, and tool support when emitted by Foundry.
+- Packaged Windows endpoint discovery no longer trusts a cached endpoint across requests; it re-reads System Foundry state before `/v1/models` probing.
+
 ## Active phase
 
 Phase 4A — Windows Product Host
