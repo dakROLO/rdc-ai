@@ -196,6 +196,22 @@ Fix:
 - startup also identifies a cached CPU chat fallback (preferring Phi-4 Mini) so a failed preferred-provider restore cannot leave CrownKeep unusable;
 - the measured preferred model is not discarded when fallback is used; it remains saved for a later retry after provider recovery.
 
+### Model Storage false cache state + stalled chat recovery
+
+Physical laptop retest exposed two additional issues after startup/provider recovery:
+
+- Model Storage could mark the wrong version of a provider variant as cached because cache IDs were normalized by stripping the catalog version suffix. A cached `...generic-gpu:<other-version>` could therefore make `...generic-gpu:1` appear cached even though Foundry CLI correctly reported that exact variant was not cached.
+- Normal chat had no first-token or total-response watchdog. A request could remain on the placeholder indefinitely even when the restored CUDA model showed no useful GPU activity.
+
+Fix:
+
+- cached and loaded model rows now prefer exact full variant IDs; normalized matching is used only when Foundry itself returns an unversioned ID;
+- cache deletion is exact-ID and idempotent: a Foundry `not cached` result is treated as already-clean rather than as a user-facing failure;
+- the SDK's alias/family-level `is_cached` precheck is no longer used as the source of truth for deletion;
+- normal chat now aborts if no first token arrives within 20 seconds or if total generation exceeds 120 seconds;
+- on a timed-out Windows local request, CrownKeep attempts to reactivate the selected local model before releasing the composer and tells the user to retry;
+- explicit user Stop remains a normal cancellation and does not trigger automatic recovery.
+
 ## Known implementation limits
 
 - RAM filtering uses disk-size × 1.5 + 2 GB as a conservative estimate, not a guarantee of peak memory or VRAM fit. Native load failures remain benchmark failures.
