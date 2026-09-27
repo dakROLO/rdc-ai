@@ -789,7 +789,8 @@ export default function App() {
       isRuntimeActionRunning ||
       isGenerating || speechBusy ||
       runtimeSleeping ||
-      providerAvailability?.available !== false ||
+      providerAvailability === null ||
+      loadedChatCandidate !== undefined ||
       fingerprint === undefined ||
       modelCandidates.length === 0
     ) {
@@ -850,6 +851,7 @@ export default function App() {
     isRuntimeActionRunning,
     modelCandidates,
     fingerprint,
+    loadedChatCandidate,
     providerAvailability,
     runtimeSleeping,
     selectedProviderId,
@@ -2461,21 +2463,24 @@ export default function App() {
                         <strong>
                           {runtimeSleeping
                             ? 'Sleeping'
-                            : runtimeSnapshot?.state === 'ready'
+                            : loadedChatCandidate
                               ? setupVerified
-                              ? 'Verified'
-                              : 'Ready to verify'
-                            : runtimeSnapshot?.state === 'model-required'
-                              ? 'Model needed'
-                              : runtimeSnapshot?.state === 'unavailable'
-                                ? 'Runtime not reachable'
-                                : 'Checking'}
+                                ? 'Verified'
+                                : 'Ready to verify'
+                              : isRuntimeActionRunning
+                                ? 'Preparing local AI'
+                                : runtimeSnapshot?.state === 'unavailable'
+                                  ? 'Runtime not reachable'
+                                  : 'Model needs loading'}
                         </strong>
                       </div>
                       <button
                         type="button"
                         className="runtime-refresh-button"
-                        onClick={() => setProviderRefreshNonce((current) => current + 1)}
+                        onClick={() => {
+                          autoRestoreAttemptedRef.current = false
+                          setProviderRefreshNonce((current) => current + 1)
+                        }}
                         disabled={isGenerating || speechBusy || isRuntimeActionRunning || isRuntimeCheckRunning}
                       >
                         Recheck
@@ -2487,9 +2492,18 @@ export default function App() {
                         <span>1</span>
                         <p><strong>Runtime</strong><small>{providerAvailability?.available ? 'Connected' : 'Needs attention'}</small></p>
                       </div>
-                      <div className={selectedModelId ? 'done' : ''}>
+                      <div className={loadedChatCandidate ? 'done' : ''}>
                         <span>2</span>
-                        <p><strong>Model</strong><small>{selectedModelId ? 'Selected' : 'Not ready'}</small></p>
+                        <p>
+                          <strong>Model</strong>
+                          <small>
+                            {loadedChatCandidate
+                              ? `Loaded · ${loadedChatCandidate.alias}`
+                              : modelCandidates.some((candidate) => candidate.cached && taskOf(candidate) === 'chat')
+                                ? 'Cached · loading required'
+                                : 'Not ready'}
+                          </small>
+                        </p>
                       </div>
                       <div className={setupVerified ? 'done' : ''}>
                         <span>3</span>
@@ -2497,7 +2511,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    {runtimeSnapshot?.state === 'ready' && selectedModelId && !setupVerified && (
+                    {loadedChatCandidate && selectedModelId && !setupVerified && (
                       <button
                         type="button"
                         className="runtime-verify-button"
@@ -2525,7 +2539,7 @@ export default function App() {
                               {isRuntimeActionRunning ? 'Waking local AI…' : 'Wake local AI'}
                             </button>
                           ) : providerAvailability?.available &&
-                            runtimeSnapshot?.state === 'ready' ? (
+                            loadedChatCandidate ? (
                             <button
                               type="button"
                               className="runtime-native-button secondary"
@@ -2857,7 +2871,15 @@ export default function App() {
               disabled={!activeConversation || isLoading}
             />
             <div className="composer-footer">
-              <span>Enter to send · Shift+Enter for a new line</span>
+              <span>
+                {localRuntimeManager.mode === 'embedded' &&
+                selectedProviderId === 'foundry-local' &&
+                !loadedChatCandidate
+                  ? isRuntimeActionRunning
+                    ? 'Preparing local model…'
+                    : 'Local model is not loaded yet'
+                  : 'Enter to send · Shift+Enter for a new line'}
+              </span>
               <div className="composer-actions">
                 <DictationControl disabled={isGenerating || isRuntimeActionRunning || isRuntimeCheckRunning || !activeConversation}
                   conversationId={activeConversation?.id} refreshKey={providerRefreshNonce}
@@ -2876,6 +2898,9 @@ export default function App() {
                     !activeConversation ||
                     !selectedModelId ||
                     providerAvailability?.available === false ||
+                    (localRuntimeManager.mode === 'embedded' &&
+                      selectedProviderId === 'foundry-local' &&
+                      !loadedChatCandidate) ||
                     runtimeSleeping
                   }
                 >
