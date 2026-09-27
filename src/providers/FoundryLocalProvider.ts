@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core'
 import type {
   AIModel,
   AIProvider,
@@ -32,6 +33,19 @@ interface StreamDelta {
 }
 
 type ApiMode = 'v1' | 'legacy'
+
+function traceHost(event: string, detail: string, requestId?: string) {
+  try {
+    void invoke('crownkeep_trace', {
+      scope: 'provider',
+      event,
+      detail,
+      requestId,
+    }).catch(() => {})
+  } catch {
+    // Browser-only tests do not have the Tauri bridge.
+  }
+}
 
 function normalizeEndpoint(value: string): string {
   const trimmed = value.trim().replace(/\/+$/, '')
@@ -198,42 +212,119 @@ export class FoundryLocalProvider implements AIProvider {
     request: ChatRequest,
     signal?: AbortSignal,
   ): AsyncIterable<ChatChunk> {
-    const { endpoint } = await this.resolveEndpoint()
+    const traceId = request.traceId
+    const started = performance.now()
+    const messageChars = request.messages.reduce(
+      (total, message) => total + message.content.length,
+      0,
+    )
 
-    const response = await fetch(`${endpoint}/v1/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'text/event-stream',
-      },
-      body: JSON.stringify({
-        model: request.modelId,
-        messages: request.messages,
-        stream: true,
-        ...(request.maxTokens ? { max_tokens: request.maxTokens } : {}),
-      }),
-      signal,
-    })
+    traceHost(
+      'chat-begin',
+      `model=${request.modelId} messages=${request.messages.length} chars=${messageChars} maxTokens=${request.maxTokens ?? 'default'}`,
+      traceId,
+    )
+
+    let endpoint: string
+    try {
+      const resolved = await this.resolveEndpoint()
+      endpoint = resolved.endpoint
+      traceHost(
+        'endpoint-ready',
+        `endpoint=${endpoint} mode=${resolved.mode} elapsedMs=${Math.round(performance.now() - started)}`,
+        traceId,
+      )
+    } catch (error) {
+      traceHost(
+        'endpoint-failed',
+        `elapsedMs=${Math.round(performance.now() - started)} error=${String(error)}`,
+        traceId,
+      )
+      throw error
+    }
+
+    let response: Response
+    const fetchStarted = performance.now()
+    try {
+      response = await fetch(`${endpoint}/v1/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'text/event-stream',
+        },
+        body: JSON.stringify({
+          model: request.modelId,
+          messages: request.messages,
+          stream: true,
+          ...(request.maxTokens ? { max_tokens: request.maxTokens } : {}),
+        }),
+        signal,
+      })
+    } catch (error) {
+      traceHost(
+        'http-fetch-failed',
+        `model=${request.modelId} elapsedMs=${Math.round(performance.now() - fetchStarted)} aborted=${Boolean(signal?.aborted)} error=${String(error)}`,
+        traceId,
+      )
+      throw error
+    }
+
+    traceHost(
+      'http-response',
+      `model=${request.modelId} status=${response.status} contentType=${response.headers.get('content-type') ?? '-'} elapsedMs=${Math.round(performance.now() - fetchStarted)}`,
+      traceId,
+    )
 
     if (response.status === 404) {
+      traceHost('model-not-found', `model=${request.modelId}`, traceId)
       throw new Error(
         `Foundry Local could not find model "${request.modelId}". Load it first with: foundry model load <model-alias>`,
       )
     }
 
-    await assertOk(response, 'Foundry Local chat completion')
+    try {
+      await assertOk(response, 'Foundry Local chat completion')
+    } catch (error) {
+      traceHost(
+        'http-error',
+        `model=${request.modelId} status=${response.status} error=${String(error)}`,
+        traceId,
+      )
+      throw error
+    }
 
     if (!response.body) {
+      traceHost('stream-missing', `model=${request.modelId}`, traceId)
       throw new Error('Foundry Local returned no response stream.')
     }
 
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
     let buffer = ''
+    let outputChars = 0
+    let firstTokenLogged = false
+
+    traceHost(
+      'stream-open',
+      `model=${request.modelId} elapsedMs=${Math.round(performance.now() - started)}`,
+      traceId,
+    )
 
     try {
       while (true) {
-        const { done, value } = await reader.read()
+        let chunk: ReadableStreamReadResult<Uint8Array>
+        try {
+          chunk = await reader.read()
+        } catch (error) {
+          traceHost(
+            'stream-read-failed',
+            `model=${request.modelId} elapsedMs=${Math.round(performance.now() - started)} aborted=${Boolean(signal?.aborted)} outputChars=${outputChars} error=${String(error)}`,
+            traceId,
+          )
+          throw error
+        }
+
+        const { done, value } = chunk
 
         if (done) {
           buffer += decoder.decode()
@@ -252,6 +343,11 @@ export class FoundryLocalProvider implements AIProvider {
           if (!data) continue
 
           if (data === '[DONE]') {
+            traceHost(
+              'stream-done',
+              `model=${request.modelId} elapsedMs=${Math.round(performance.now() - started)} outputChars=${outputChars}`,
+              traceId,
+            )
             yield { text: '', done: true }
             return
           }
@@ -266,6 +362,16 @@ export class FoundryLocalProvider implements AIProvider {
               }
             : undefined
 
+          if (text && !firstTokenLogged) {
+            firstTokenLogged = true
+            traceHost(
+              'first-token',
+              `model=${request.modelId} elapsedMs=${Math.round(performance.now() - started)}`,
+              traceId,
+            )
+          }
+
+          outputChars += text.length
           if (text || usage) {
             yield { text, usage }
           }
@@ -274,6 +380,11 @@ export class FoundryLocalProvider implements AIProvider {
         if (done) break
       }
 
+      traceHost(
+        'stream-eof',
+        `model=${request.modelId} elapsedMs=${Math.round(performance.now() - started)} outputChars=${outputChars}`,
+        traceId,
+      )
       yield { text: '', done: true }
     } finally {
       reader.releaseLock()
