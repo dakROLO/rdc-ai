@@ -145,6 +145,10 @@ fn run_foundry_cache_remove(model_id: &str) -> Result<(), String> {
     if first.status.success() {
         return Ok(());
     }
+    let first_error = String::from_utf8_lossy(&first.stderr).trim().to_string();
+    if first_error.to_ascii_lowercase().contains("not cached") {
+        return Ok(());
+    }
 
     // Newer preview builds renamed remove to rm; support both forms.
     let second = run(&["cache", "rm", model_id, "--force"])?;
@@ -152,8 +156,11 @@ fn run_foundry_cache_remove(model_id: &str) -> Result<(), String> {
         return Ok(());
     }
 
-    let first_error = String::from_utf8_lossy(&first.stderr).trim().to_string();
     let second_error = String::from_utf8_lossy(&second.stderr).trim().to_string();
+    if second_error.to_ascii_lowercase().contains("not cached") {
+        return Ok(());
+    }
+
     Err(format!(
         "Foundry Local could not remove cached model '{}'. remove: {} rm: {}",
         model_id,
@@ -964,17 +971,6 @@ async fn crownkeep_foundry_remove_cached_model(
             "Unload '{}' before deleting it from this device.",
             model.alias()
         ));
-    }
-
-    if !model
-        .is_cached()
-        .await
-        .map_err(|error| format!("Could not inspect cache state for '{}': {error}", model.id()))?
-    {
-        return Ok(FoundryActionResult {
-            supported: true,
-            detail: format!("Foundry Local model '{}' is not cached.", model.id()),
-        });
     }
 
     emit_operation_progress(
