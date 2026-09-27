@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { ModelAnalyst } from './runtime/ModelAnalyst.tsx'
-import { bestObserved, readPreferred, readResults, roleOf, taskOf } from './runtime/modelPolicy.ts'
+import { bestObserved, PROFILE_KEY, readPreferred, readResults, roleOf, taskOf } from './runtime/modelPolicy.ts'
 import type { DeviceProfile, ModelRole } from './runtime/modelPolicy.ts'
 import { DictationControl } from './speech/DictationControl.tsx'
 import {
@@ -701,6 +701,55 @@ export default function App() {
     window.addEventListener('focus', handleFocus)
     return () => window.removeEventListener('focus', handleFocus)
   }, [selectedProviderId])
+
+  useEffect(() => {
+    if (!fingerprint || modelCandidates.length === 0) return
+
+    const migrationKey = 'crownkeep.fingerprintPolicy4Migrated'
+    if (localStorage.getItem(migrationKey) === fingerprint) return
+
+    const results = readResults(localStorage)
+    const aliases = Object.values(CHAT_ROLE_ALIASES)
+    let changed = false
+    const next = [...results]
+
+    for (const alias of aliases) {
+      if (bestObserved(next, fingerprint, alias)) continue
+
+      const legacy = results
+        .filter(
+          (result) =>
+            result.alias.toLocaleLowerCase() === alias.toLocaleLowerCase() &&
+            result.outcome === 'accepted' &&
+            result.firstTokenMs !== undefined &&
+            modelCandidates.some(
+              (candidate) =>
+                candidate.cached && candidate.id === result.variantId,
+            ),
+        )
+        .sort(
+          (a, b) =>
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+        )[0]
+
+      if (!legacy) continue
+
+      next.push({
+        ...legacy,
+        fingerprint,
+        timestamp: new Date().toISOString(),
+        detail: legacy.detail
+          ? `${legacy.detail} · migrated to stable fingerprint policy`
+          : 'Migrated to stable fingerprint policy.',
+      })
+      changed = true
+    }
+
+    if (changed) {
+      localStorage.setItem(PROFILE_KEY, JSON.stringify(next.slice(-200)))
+    }
+    localStorage.setItem(migrationKey, fingerprint)
+  }, [fingerprint, modelCandidates])
 
   useEffect(() => {
     if (
