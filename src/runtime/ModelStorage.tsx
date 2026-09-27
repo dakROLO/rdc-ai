@@ -67,21 +67,28 @@ export function ModelStorage({
   const winnerIds = useMemo(() => {
     const protectedIds = new Set<string>()
     if (!profile) return protectedIds
-    const aliases = new Set(
-      results
-        .filter(
-          (result) =>
-            result.fingerprint === profile.fingerprint &&
-            result.outcome === 'accepted',
-        )
-        .map((result) => result.alias),
-    )
+
+    const eligible = results.filter((result) => {
+      if (
+        result.fingerprint !== profile.fingerprint ||
+        result.outcome !== 'accepted'
+      ) {
+        return false
+      }
+
+      const candidate = candidates.find((item) => item.id === result.variantId)
+      if (!candidate) return false
+
+      return roleOf(candidate) === 'Quick' || result.realWorldValidated === true
+    })
+
+    const aliases = new Set(eligible.map((result) => result.alias))
     for (const alias of aliases) {
-      const winner = bestObserved(results, profile.fingerprint, alias)
+      const winner = bestObserved(eligible, profile.fingerprint, alias)
       if (winner) protectedIds.add(winner.variantId)
     }
     return protectedIds
-  }, [profile, results])
+  }, [candidates, profile, results])
 
   const selectedVoiceAlias =
     localStorage.getItem('crownkeep.speechAlias')?.toLowerCase() ?? ''
