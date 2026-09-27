@@ -212,6 +212,19 @@ Fix:
 - on a timed-out Windows local request, CrownKeep attempts to reactivate the selected local model before releasing the composer and tells the user to retry;
 - explicit user Stop remains a normal cancellation and does not trigger automatic recovery.
 
+### Cache cleanup isolation + GPU path clarity
+
+Physical retest showed that the selected Mistral CUDA model occupied about 7.1 GB of the RTX 5070 Laptop GPU's dedicated 8 GB VRAM while Task Manager reported the NVIDIA adapter as GPU 1. This confirms the `CUDAExecutionProvider` path is using the discrete NVIDIA GPU, not the Intel integrated GPU/APU. The observed 0% utilization while chat was stalled indicates an idle/stuck inference request rather than wrong-GPU placement.
+
+The same retest showed cache cleanup could be invoked while the embedded inference service and CUDA winner were live. Because the Foundry CLI and embedded SDK share the same local model/cache runtime, cleanup is now isolated from active inference:
+
+- CrownKeep pauses the embedded Foundry service before invoking cache removal;
+- cache removal has a 45-second hard process timeout;
+- the previously loaded model remains loaded in memory while a different cached loser is removed;
+- CrownKeep restarts the embedded service before reporting cleanup complete;
+- cleanup errors are reported only after service restoration is attempted;
+- Model Storage labels CUDA and TensorRT RTX paths explicitly as **NVIDIA dGPU** so integrated-vs-discrete routing is visible in the UI.
+
 ## Known implementation limits
 
 - RAM filtering uses disk-size × 1.5 + 2 GB as a conservative estimate, not a guarantee of peak memory or VRAM fit. Native load failures remain benchmark failures.
