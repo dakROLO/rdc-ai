@@ -197,7 +197,7 @@ export function ModelAnalyst({
       await refresh()
       setProgress('Discovery complete. CrownKeep reduced the catalog to recommended model families below.')
     } catch (e) {
-      traceBenchmark('benchmark-error', `alias=${alias} error=${String(e)}`, traceId)
+      traceBenchmark('analyze-error', `error=${String(e)}`)
       setError(String(e))
     } finally {
       setBusy(false)
