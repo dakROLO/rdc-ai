@@ -1249,7 +1249,13 @@ export default function App() {
         }
 
         requestModelId = await syncSelectedModelToNative(loadedNative.id)
-        requestRuntimeDevice = loadedNative.device
+        if (
+          loadedNative.device === 'CPU' ||
+          loadedNative.device === 'GPU' ||
+          loadedNative.device === 'NPU'
+        ) {
+          requestRuntimeDevice = loadedNative.device
+        }
       } catch (error) {
         setRuntimeCheckError(
           `CrownKeep could not synchronize the active local model before sending: ${String(error)}`,
