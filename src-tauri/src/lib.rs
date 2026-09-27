@@ -753,8 +753,8 @@ async fn crownkeep_foundry_activate_model(
         .info()
         .runtime
         .as_ref()
-        .map(|runtime| runtime.execution_provider.as_str())
-        .unwrap_or("unknown");
+        .map(|runtime| runtime.execution_provider.clone())
+        .unwrap_or_else(|| "unknown".to_string());
     let previous_ids = previous
         .iter()
         .map(|item| item.id().to_string())
