@@ -127,71 +127,6 @@ fn normalized_model_key(value: &str) -> String {
 }
 
 
-fn run_foundry_cache_command(args: &[&str]) -> Result<std::process::Output, String> {
-    #[cfg(target_os = "windows")]
-    use std::os::windows::process::CommandExt;
-
-    let mut command = std::process::Command::new("foundry");
-    #[cfg(target_os = "windows")]
-    command.creation_flags(0x08000000);
-
-    let mut child = command
-        .args(args)
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .spawn()
-        .map_err(|error| format!("Could not start Foundry Local CLI: {error}"))?;
-
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(45);
-    loop {
-        match child
-            .try_wait()
-            .map_err(|error| format!("Could not inspect Foundry Local CLI process: {error}"))?
-        {
-            Some(_) => {
-                return child
-                    .wait_with_output()
-                    .map_err(|error| format!("Could not collect Foundry Local CLI output: {error}"));
-            }
-            None if std::time::Instant::now() >= deadline => {
-                let _ = child.kill();
-                let _ = child.wait();
-                return Err("Foundry Local cache cleanup exceeded 45 seconds and was stopped.".into());
-            }
-            None => std::thread::sleep(std::time::Duration::from_millis(100)),
-        }
-    }
-}
-
-fn run_foundry_cache_remove(model_id: &str) -> Result<(), String> {
-    let first = run_foundry_cache_command(&["cache", "remove", model_id, "--force"])?;
-    if first.status.success() {
-        return Ok(());
-    }
-    let first_error = String::from_utf8_lossy(&first.stderr).trim().to_string();
-    if first_error.to_ascii_lowercase().contains("not cached") {
-        return Ok(());
-    }
-
-    // Newer preview builds renamed remove to rm; support both forms.
-    let second = run_foundry_cache_command(&["cache", "rm", model_id, "--force"])?;
-    if second.status.success() {
-        return Ok(());
-    }
-
-    let second_error = String::from_utf8_lossy(&second.stderr).trim().to_string();
-    if second_error.to_ascii_lowercase().contains("not cached") {
-        return Ok(());
-    }
-
-    Err(format!(
-        "Foundry Local could not remove cached model '{}'. remove: {} rm: {}",
-        model_id,
-        if first_error.is_empty() { "command failed" } else { first_error.as_str() },
-        if second_error.is_empty() { "command failed" } else { second_error.as_str() },
-    ))
-}
-
 async fn resolve_model(alias_or_id: &str) -> Result<std::sync::Arc<foundry_local_sdk::Model>, String> {
     let manager = foundry_manager()?;
     let catalog = manager.catalog();
@@ -1025,10 +960,11 @@ async fn crownkeep_foundry_remove_cached_model(
         None,
     );
 
-    let requested = model.id().to_string();
-    let removal = tauri::async_runtime::spawn_blocking(move || run_foundry_cache_remove(&requested))
+    let requested_id = model.id().to_string();
+    let removal = model
+        .remove_from_cache()
         .await
-        .map_err(|error| format!("Cache cleanup task failed: {error}"))?;
+        .map_err(|error| format!("Could not delete cached model '{}': {error}", requested_id));
 
     let restart = if service_was_running && !loaded.is_empty() {
         emit_operation_progress(
@@ -1054,14 +990,31 @@ async fn crownkeep_foundry_remove_cached_model(
         return Err(error);
     }
 
-    // The cache was mutated by the external Foundry CLI. Refresh the SDK
-    // catalog/cache view before reporting success so subsequent candidate
-    // queries do not return stale pre-delete cache state.
     manager
         .catalog()
         .update_models()
         .await
         .map_err(|error| format!("Cache cleanup succeeded, but Foundry cache state could not refresh: {error}"))?;
+
+    let still_cached = manager
+        .catalog()
+        .get_cached_models()
+        .await
+        .map_err(|error| format!("Cache cleanup finished, but cache verification failed: {error}"))?
+        .into_iter()
+        .any(|item| item.id() == requested_id);
+
+    if still_cached {
+        return Err(format!(
+            "Foundry reported cache removal for '{}', but the exact variant is still cached.",
+            requested_id
+        ));
+    }
+
+    eprintln!(
+        "[CrownKeep/Foundry] stage=cache-remove verified id={}",
+        requested_id
+    );
 
     emit_operation_progress(
         &app,
