@@ -86,12 +86,6 @@ const IDLE_UNLOAD_MINUTES_KEY = 'crownkeep.idleUnloadMinutes'
 
 type ChatModelRole = Extract<ModelRole, 'Quick' | 'Balanced' | 'Deep / Experimental'>
 
-const CHAT_ROLE_ALIASES: Record<ChatModelRole, string> = {
-  Quick: 'phi-4-mini',
-  Balanced: 'mistral-nemo-12b-instruct',
-  'Deep / Experimental': 'gpt-oss-20b',
-}
-
 const CHAT_ROLE_LABELS: Record<ChatModelRole, string> = {
   Quick: 'Quick',
   Balanced: 'Balanced',
@@ -909,10 +903,6 @@ export default function App() {
 
   function normalizeRuntimeModelKey(value: string): string {
     return value.split(':')[0].trim().toLocaleLowerCase()
-  }
-
-  function normalizedModelForStorage(value: string): string {
-    return value.split(':')[0].trim()
   }
 
   function preferredNativeModelId(): string {
