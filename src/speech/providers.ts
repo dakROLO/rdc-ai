@@ -69,24 +69,29 @@ class WindowsSpeechInput implements SpeechInputProvider {
     if (!this.wav || !this.model) throw new Error('No local recording or speech model is ready.')
     const epoch = this.epoch
     try {
-      const result = await Promise.race([
-        invoke<{ text: string; elapsedMs: number; modelId: string }>(
-          'crownkeep_transcribe',
-          { audio: this.wav, modelId: this.model },
-        ),
-        new Promise<never>((_, reject) =>
-          window.setTimeout(
-            () => reject(new Error('Local dictation exceeded the 10-minute safety limit. Restart CrownKeep if native cleanup does not finish.')),
-            10 * 60 * 1000,
-          ),
-        ),
-      ])
+      // Windows dictation uses the same installed System Foundry service as chat.
+      // The alias is restored after transcription; no CrownKeep-private cache is used.
+      const started = performance.now()
+      await invoke('crownkeep_system_foundry_activate_model', { modelId: this.model })
+      const endpoint = String(await invoke('crownkeep_system_foundry_endpoint'))
+      const body = new FormData()
+      body.append('file', new Blob([new Uint8Array(this.wav)], { type: 'audio/wav' }), 'dictation.wav')
+      body.append('model', this.model)
+      const response = await fetch(`${endpoint.replace(/\/$/, '')}/v1/audio/transcriptions`, { method: 'POST', body, signal: AbortSignal.timeout(90_000) })
+      if (!response.ok) throw new Error(`System Foundry transcription failed (${response.status}).`)
+      const payload = await response.json() as { text?: string; model?: string }
+      const result = { text: payload.text ?? '', modelId: payload.model ?? this.model, elapsedMs: performance.now() - started }
+      if (!result.text) throw new Error('System Foundry returned no transcript.')
       if (epoch !== this.epoch) throw new Error('Dictation cancelled.')
       // Store only performance metadata; never audio or transcript text.
       localStorage.setItem('crownkeep.speechObservation', JSON.stringify({ alias: this.model, variantId: result.modelId,
         timestamp: new Date().toISOString(), audioSeconds: this.frames / this.rate, transcriptionMs: result.elapsedMs }))
       return result.text
-    } finally { this.wav = undefined }
+    } finally {
+      const previousAlias = localStorage.getItem('crownkeep.preferredWindowsModel')
+      if (previousAlias) await invoke('crownkeep_system_foundry_activate_model', { modelId: previousAlias }).catch(() => {})
+      this.wav = undefined
+    }
   }
   private async release() {
     this.stream?.getTracks().forEach((t) => t.stop()); this.stream = undefined

@@ -34,6 +34,12 @@
 - CrownKeep activates role aliases rather than selecting CUDA/OpenVINO/etc. variants. Actual API-visible variants are retained as benchmark evidence. Balanced discovery is live-catalog-driven; Deep remains gated.
 - Added read-only legacy CrownKeep cache inventory and explicit cleanup-pending diagnostics. No cache data was deleted or migrated.
 
+## Sprint 4A.4G–4I — final convergence preparation — 2026-09-27
+
+- Legacy cache inspection is on-demand only; normal System Foundry health is cheap. Foundry device labels are normalized at the bridge and cache-location fallback accepts all observed JSON forms.
+- Windows dictation now follows the installed System Foundry alias/service path and restores the chat alias after transcription. The old Rust SDK dictation command is no longer exposed to the webview.
+- Registered local-search and URL-read tools provide a small local-agent proof while preserving the selected Apple Foundation Models provider. Image analysis and native Foundation Models automatic tool-calling remain physical/iOS follow-up evidence, not claimed complete.
+
 ## Active phase
 
 Phase 4A — Windows Product Host

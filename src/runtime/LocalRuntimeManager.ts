@@ -93,4 +93,5 @@ export interface LocalRuntimeManager {
   removeCachedModel(modelId: string): Promise<RuntimeActionResult>
   listModelCandidates(): Promise<RuntimeModelCandidate[]>
   analyzeDevice(): Promise<RuntimeDeviceAnalysis>
+  inspectLegacyCache?(): Promise<NonNullable<RuntimeSnapshot['legacyCache']>>
 }

@@ -184,6 +184,10 @@ export class TauriLocalRuntimeManager implements LocalRuntimeManager {
     return invoke<NativeFoundryModelCandidate[]>('crownkeep_system_foundry_models')
   }
 
+  inspectLegacyCache(): Promise<NativeLegacyCacheInventory> {
+    return invoke<NativeLegacyCacheInventory>('crownkeep_system_foundry_legacy_inventory')
+  }
+
   analyzeDevice(): Promise<RuntimeDeviceAnalysis> {
     return invoke<NativeFoundryDeviceAnalysis>('crownkeep_system_foundry_analyze_device')
   }

@@ -12,6 +12,13 @@
 - Model Analyst groups variants by alias. Quick retains `phi-4-mini` bootstrap; Balanced advances through a small live Chat-family shortlist after current-fingerprint failures; Deep remains gated; Speech is Voice-only. System Foundry chooses the activated variant and CrownKeep synchronizes the API-visible model.
 - Diagnostics now perform a read-only inventory of `%USERPROFILE%\\.CrownKeep\\cache\\models` (existence, approximate size, top-level package folders). It is explicitly not used by normal Windows chat and has no deletion control. The remaining `FoundryLocalConfig::new("CrownKeep")` dependency is Windows dictation and dormant legacy commands only.
 
+## 4A.4G–4I final convergence package — 2026-09-27
+
+- Normal status no longer walks the legacy cache. It reports only path, existence, and pending cleanup; the detailed size/package inventory is an explicit diagnostics action on a blocking worker.
+- Foundry device values are normalized once at the native bridge (`Gpu`/`Cpu`/`Npu` → `GPU`/`CPU`/`NPU`). Cache-location JSON accepts either a string or `path`/`location`/`cacheLocation`, then uses the single narrow text fallback.
+- Windows dictation now loads a System Foundry **Voice alias**, sends the temporary WAV to the current local `/v1/audio/transcriptions` endpoint, and restores the previous chat alias. The legacy SDK transcription command is not registered. Physical Foundry 0.10.3 transcription-endpoint confirmation remains required before acceptance.
+- The initial iOS/shared tool proof uses the existing registries: `/search <query>` reads local `Inside the Keep` knowledge and `/url <https://…>` is read-only and explicitly network-marked. Results are supplied to the current provider as tool context; this never switches to a cloud model. Native iOS OCR/image analysis remains the next small proof because no current image bridge is registered.
+
 ## 4A.4C bridge hardening findings — 2026-09-27
 
 - The first bridge split human-readable CLI rows on whitespace. That is not a valid application contract because Foundry table output can change or wrap.
