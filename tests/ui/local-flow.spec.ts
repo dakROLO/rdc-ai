@@ -9,10 +9,17 @@ test('local conversation persists and unsupported dictation does not block chat'
 
   await page.getByRole('button', { name: '↻ Rerun' }).first().click()
   await expect(page.getByRole('button', { name: 'Stop', exact: true })).toBeHidden({ timeout: 15000 })
-  await expect(page.getByText('Keep this local test message', { exact: true })).toHaveCount(2)
+  const repeatedUserMessages = page.locator('.message.user').filter({
+    hasText: 'Keep this local test message',
+  })
+  await expect(repeatedUserMessages).toHaveCount(2)
 
   await page.reload()
-  await expect(page.getByText('Keep this local test message', { exact: true })).toHaveCount(2)
+  await expect(
+    page.locator('.message.user').filter({
+      hasText: 'Keep this local test message',
+    }),
+  ).toHaveCount(2)
 })
 
 test('native dictation requires review, preserves drafts on cancellation, and fits mobile', async ({ page }) => {
