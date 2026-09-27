@@ -127,21 +127,44 @@ fn normalized_model_key(value: &str) -> String {
 }
 
 
-fn run_foundry_cache_remove(model_id: &str) -> Result<(), String> {
-    fn run(args: &[&str]) -> Result<std::process::Output, String> {
-        #[cfg(target_os = "windows")]
-        use std::os::windows::process::CommandExt;
+fn run_foundry_cache_command(args: &[&str]) -> Result<std::process::Output, String> {
+    #[cfg(target_os = "windows")]
+    use std::os::windows::process::CommandExt;
 
-        let mut command = std::process::Command::new("foundry");
-        #[cfg(target_os = "windows")]
-        command.creation_flags(0x08000000);
-        command
-            .args(args)
-            .output()
-            .map_err(|error| format!("Could not start Foundry Local CLI: {error}"))
+    let mut command = std::process::Command::new("foundry");
+    #[cfg(target_os = "windows")]
+    command.creation_flags(0x08000000);
+
+    let mut child = command
+        .args(args)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .map_err(|error| format!("Could not start Foundry Local CLI: {error}"))?;
+
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(45);
+    loop {
+        match child
+            .try_wait()
+            .map_err(|error| format!("Could not inspect Foundry Local CLI process: {error}"))?
+        {
+            Some(_) => {
+                return child
+                    .wait_with_output()
+                    .map_err(|error| format!("Could not collect Foundry Local CLI output: {error}"));
+            }
+            None if std::time::Instant::now() >= deadline => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err("Foundry Local cache cleanup exceeded 45 seconds and was stopped.".into());
+            }
+            None => std::thread::sleep(std::time::Duration::from_millis(100)),
+        }
     }
+}
 
-    let first = run(&["cache", "remove", model_id, "--force"])?;
+fn run_foundry_cache_remove(model_id: &str) -> Result<(), String> {
+    let first = run_foundry_cache_command(&["cache", "remove", model_id, "--force"])?;
     if first.status.success() {
         return Ok(());
     }
@@ -151,7 +174,7 @@ fn run_foundry_cache_remove(model_id: &str) -> Result<(), String> {
     }
 
     // Newer preview builds renamed remove to rm; support both forms.
-    let second = run(&["cache", "rm", model_id, "--force"])?;
+    let second = run_foundry_cache_command(&["cache", "rm", model_id, "--force"])?;
     if second.status.success() {
         return Ok(());
     }
@@ -973,6 +996,26 @@ async fn crownkeep_foundry_remove_cached_model(
         ));
     }
 
+    let service_was_running = !manager
+        .urls()
+        .map_err(|error| format!("Could not inspect Foundry Local service state: {error}"))?
+        .is_empty();
+
+    if service_was_running {
+        emit_operation_progress(
+            &app,
+            "pausing-service",
+            "Pausing local inference while cache cleanup runs…",
+            Some(model.id().to_string()),
+            Some(model.alias().to_string()),
+            None,
+        );
+        manager
+            .stop_web_service()
+            .await
+            .map_err(|error| format!("Could not pause Foundry Local before cache cleanup: {error}"))?;
+    }
+
     emit_operation_progress(
         &app,
         "removing-cache",
@@ -983,9 +1026,33 @@ async fn crownkeep_foundry_remove_cached_model(
     );
 
     let requested = model.id().to_string();
-    tauri::async_runtime::spawn_blocking(move || run_foundry_cache_remove(&requested))
+    let removal = tauri::async_runtime::spawn_blocking(move || run_foundry_cache_remove(&requested))
         .await
-        .map_err(|error| format!("Cache cleanup task failed: {error}"))??;
+        .map_err(|error| format!("Cache cleanup task failed: {error}"))?;
+
+    let restart = if service_was_running && !loaded.is_empty() {
+        emit_operation_progress(
+            &app,
+            "restoring-service",
+            "Restoring local inference after cache cleanup…",
+            Some(model.id().to_string()),
+            Some(model.alias().to_string()),
+            None,
+        );
+        manager
+            .start_web_service()
+            .await
+            .map_err(|error| format!("Cache cleanup finished, but local inference could not restart: {error}"))
+    } else {
+        Ok(())
+    };
+
+    if let Err(error) = restart {
+        return Err(error);
+    }
+    if let Err(error) = removal {
+        return Err(error);
+    }
 
     emit_operation_progress(
         &app,
