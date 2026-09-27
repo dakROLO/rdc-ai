@@ -286,10 +286,21 @@ async fn crownkeep_foundry_models() -> Result<Vec<FoundryModelCandidate>, String
 
     let loaded_ids: HashSet<String> = loaded
         .iter()
+        .map(|model| model.id().to_string())
+        .collect();
+    let loaded_unversioned: HashSet<String> = loaded
+        .iter()
+        .filter(|model| !model.id().contains(':'))
         .map(|model| normalized_model_key(model.id()))
         .collect();
+
     let cached_ids: HashSet<String> = cached
         .iter()
+        .map(|model| model.id().to_string())
+        .collect();
+    let cached_unversioned: HashSet<String> = cached
+        .iter()
+        .filter(|model| !model.id().contains(':'))
         .map(|model| normalized_model_key(model.id()))
         .collect();
 
@@ -300,6 +311,10 @@ async fn crownkeep_foundry_models() -> Result<Vec<FoundryModelCandidate>, String
             let info = variant.info();
             let runtime = info.runtime.as_ref();
             let variant_key = normalized_model_key(&info.id);
+            let is_cached =
+                cached_ids.contains(&info.id) || cached_unversioned.contains(&variant_key);
+            let is_loaded =
+                loaded_ids.contains(&info.id) || loaded_unversioned.contains(&variant_key);
             candidates.push(FoundryModelCandidate {
                 id: info.id.clone(),
                 alias: info.alias.clone(),
@@ -307,8 +322,8 @@ async fn crownkeep_foundry_models() -> Result<Vec<FoundryModelCandidate>, String
                     .display_name
                     .clone()
                     .unwrap_or_else(|| info.name.clone()),
-                cached: cached_ids.contains(&variant_key),
-                loaded: loaded_ids.contains(&variant_key),
+                cached: is_cached,
+                loaded: is_loaded,
                 device: runtime.map(|value| format!("{:?}", value.device_type)),
                 execution_provider: runtime.map(|value| value.execution_provider.clone()),
                 file_size_mb: info.file_size_mb,
