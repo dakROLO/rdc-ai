@@ -480,7 +480,17 @@ export function ModelAnalyst({
   }
 
   function renderFamily(family: ModelFamily, recommended = false) {
-    const observed = profile && bestObserved(results, profile.fingerprint, family.alias)
+    const observedRaw =
+      profile && bestObserved(results, profile.fingerprint, family.alias)
+    const observed =
+      observedRaw &&
+      (family.role === 'Quick' || observedRaw.realWorldValidated === true)
+        ? observedRaw
+        : undefined
+    const legacyObserved =
+      observedRaw && family.role !== 'Quick' && observedRaw.realWorldValidated !== true
+        ? observedRaw
+        : undefined
     const viable = profile ? benchmarkPaths(family) : []
     const voiceCompatible = /whisper-(tiny|base|small)/i.test(family.alias)
 
@@ -511,6 +521,13 @@ export function ModelAnalyst({
             {observed.tokensPerSecond
               ? ` · ${observed.tokensPerSecond.toFixed(1)} tok/s`
               : ''}
+            {observed.realWorldValidated ? ' · normal context passed' : ''}
+          </span>
+        )}
+        {legacyObserved && (
+          <span>
+            Prior speed-only result: {legacyObserved.executionProvider ?? legacyObserved.device} ·{' '}
+            {Math.round(legacyObserved.firstTokenMs!)} ms first token · needs normal-context revalidation
           </span>
         )}
         {family.role !== 'Voice' && (
@@ -560,7 +577,7 @@ export function ModelAnalyst({
                 <br />
                 {profile && memoryFit(variant, profile)}
                 {result &&
-                  `${result.outcome} · ${(result.totalMs / 1000).toFixed(2)} s · ${result.timestamp}${result.detail ? ` · ${result.detail}` : ''}`}
+                  `${result.outcome} · ${(result.totalMs / 1000).toFixed(2)} s speed test${result.realWorldValidated ? ' · context passed' : ''}${result.contextTotalMs ? ` · context ${(result.contextTotalMs / 1000).toFixed(2)} s` : ''} · ${result.timestamp}${result.detail ? ` · ${result.detail}` : ''}`}
               </p>
             )
           })}
@@ -577,9 +594,10 @@ export function ModelAnalyst({
   return (
     <div className="model-analyst-panel">
       <p>
-        CrownKeep shows one recommended family per role. Compare measures the same
-        short prompt on each useful execution path; raw variants and the rest of
-        the catalog stay under Advanced / More models.
+        CrownKeep shows one recommended family per role. Compare first measures a
+        short speed prompt, then requires a representative normal-chat context
+        probe before Balanced or Deep can become a usable winner. Raw variants and
+        the rest of the catalog stay under Advanced / More models.
       </p>
       <button type="button" disabled={busy} onClick={() => void analyze()}>
         Analyze this device
