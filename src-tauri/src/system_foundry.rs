@@ -54,7 +54,22 @@ async fn mutation(args:Vec<String>,detail:String)->Result<ActionResult,String>{t
 #[tauri::command] pub async fn crownkeep_system_foundry_start()->Result<ActionResult,String>{mutation(vec!["server".into(),"start".into()],"Started System Foundry.".into()).await}
 #[tauri::command] pub async fn crownkeep_system_foundry_stop()->Result<ActionResult,String>{mutation(vec!["server".into(),"stop".into()],"Stopped System Foundry.".into()).await}
 #[tauri::command] pub async fn crownkeep_system_foundry_install_model(model_id:String)->Result<ActionResult,String>{mutation(vec!["model".into(),"download".into(),model_id.clone()],format!("System Foundry downloaded alias '{model_id}'.")).await}
-#[tauri::command] pub async fn crownkeep_system_foundry_activate_model(model_id:String)->Result<ActionResult,String>{mutation(vec!["model".into(),"load".into(),model_id.clone()],format!("System Foundry activated alias '{model_id}'. CrownKeep will confirm /v1 before chat.")).await}
+async fn unload_other_loaded_models(target:&str)->Result<(),String>{
+    let loaded=variants(vec!["model","list","--loaded","--variants","--output","json"]).await.unwrap_or_default();
+    let mut aliases=loaded.into_iter().filter_map(|v|{
+        if v.alias.eq_ignore_ascii_case(target) || v.variant_id.eq_ignore_ascii_case(target) || v.variant_name.eq_ignore_ascii_case(target) { None } else { Some(v.alias) }
+    }).collect::<Vec<_>>();
+    aliases.sort();
+    aliases.dedup();
+    for alias in aliases {
+        mutation(vec!["model".into(),"unload".into(),alias.clone()],format!("System Foundry unloaded '{alias}' before switching models.")).await?;
+    }
+    Ok(())
+}
+#[tauri::command] pub async fn crownkeep_system_foundry_activate_model(model_id:String)->Result<ActionResult,String>{
+    unload_other_loaded_models(&model_id).await?;
+    mutation(vec!["model".into(),"load".into(),model_id.clone()],format!("System Foundry activated alias '{model_id}'. CrownKeep will confirm /v1 before chat.")).await
+}
 #[tauri::command] pub async fn crownkeep_system_foundry_load_model(model_id:String)->Result<ActionResult,String>{crownkeep_system_foundry_activate_model(model_id).await}
 #[tauri::command] pub async fn crownkeep_system_foundry_unload_model(model_id:String)->Result<ActionResult,String>{mutation(vec!["model".into(),"unload".into(),model_id.clone()],format!("System Foundry unloaded '{model_id}'.")).await}
 #[tauri::command] pub async fn crownkeep_system_foundry_remove_cached_model(model_id:String)->Result<ActionResult,String>{mutation(vec!["cache".into(),"remove".into(),model_id.clone(),"--force".into()],format!("System Foundry removed '{model_id}'.")).await}
