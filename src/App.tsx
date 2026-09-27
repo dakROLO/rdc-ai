@@ -1009,13 +1009,32 @@ export default function App() {
     }
 
     const controller = new AbortController()
+    const firstTokenWatchdog = new AbortController()
+    const totalWatchdog = new AbortController()
     abortController.current = controller
     let assistantContent = ''
     let latestUsage: TokenUsage | undefined
     let firstTokenAt: number | undefined
     let runOutcome: RunOutcome = 'complete'
+    let firstTokenTimedOut = false
+    let totalTimedOut = false
     const startedAt = performance.now()
     const startedAtIso = new Date().toISOString()
+    const firstTokenTimer = window.setTimeout(() => {
+      if (firstTokenAt === undefined) {
+        firstTokenTimedOut = true
+        firstTokenWatchdog.abort()
+      }
+    }, 20_000)
+    const totalTimer = window.setTimeout(() => {
+      totalTimedOut = true
+      totalWatchdog.abort()
+    }, 120_000)
+    const generationSignal = AbortSignal.any([
+      controller.signal,
+      firstTokenWatchdog.signal,
+      totalWatchdog.signal,
+    ])
 
     setLastRun({
       providerId: provider.id,
@@ -1044,10 +1063,11 @@ export default function App() {
 
       for await (const chunk of provider.streamChat(
         { modelId: selectedModelId, messages: requestMessages },
-        controller.signal,
+        generationSignal,
       )) {
         if (chunk.text && firstTokenAt === undefined) {
           firstTokenAt = performance.now()
+          window.clearTimeout(firstTokenTimer)
         }
         if (chunk.usage) latestUsage = chunk.usage
 
@@ -1076,7 +1096,31 @@ export default function App() {
         )
       }
     } catch (error) {
-      if (!(error instanceof DOMException && error.name === 'AbortError')) {
+      const aborted =
+        error instanceof DOMException && error.name === 'AbortError'
+
+      if (firstTokenTimedOut || totalTimedOut) {
+        runOutcome = 'error'
+        assistantContent = firstTokenTimedOut
+          ? 'Anne’s local response timed out before it began. CrownKeep is recovering the local model; try again in a moment.'
+          : 'Anne’s local response exceeded the safety limit. CrownKeep is recovering the local model; try again in a moment.'
+
+        if (
+          localRuntimeManager.mode === 'embedded' &&
+          selectedProviderId === 'foundry-local'
+        ) {
+          try {
+            setRuntimeActionMessage('Recovering the local model after a timed-out response…')
+            await localRuntimeManager.activateModel(selectedModelId)
+            setRuntimeActionMessage('Local model recovered. You can retry the message.')
+            setProviderRefreshNonce((current) => current + 1)
+          } catch (recoveryError) {
+            setRuntimeCheckError(
+              `The local response timed out and runtime recovery failed: ${String(recoveryError)}`,
+            )
+          }
+        }
+      } else if (!aborted) {
         runOutcome = 'error'
         assistantContent = 'Anne hit a local provider error. Open Local AI diagnostics for details.'
         console.error(error)
@@ -1093,6 +1137,8 @@ export default function App() {
         ),
       )
     } finally {
+      window.clearTimeout(firstTokenTimer)
+      window.clearTimeout(totalTimer)
       assistantContent = cleanTemporalArtifact(assistantContent)
       setMessages((current) =>
         current.map((message) =>
