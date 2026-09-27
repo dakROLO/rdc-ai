@@ -322,11 +322,15 @@ export function ModelAnalyst({
           `Loading measured winner: ${alias} · ${winner.executionProvider ?? winner.device}…`,
         )
         await manager.activateModel(winner.variantId)
-        localStorage.setItem(PREFERRED_PROFILE_KEY, JSON.stringify(winner))
-        localStorage.setItem('crownkeep.preferredWindowsModel', winner.alias)
+        if (family.role === 'Quick') {
+          localStorage.setItem(PREFERRED_PROFILE_KEY, JSON.stringify(winner))
+          localStorage.setItem('crownkeep.preferredWindowsModel', winner.alias)
+        }
         selected = true
         setProgress(
-          `Ready · ${alias} · measured ${Math.round(winner.firstTokenMs!)} ms to first token. Preferred family saved for this device.`,
+          family.role === 'Quick'
+            ? `Ready · ${alias} · measured ${Math.round(winner.firstTokenMs!)} ms to first token. Quick startup preference saved for this device.`
+            : `Ready · ${alias} · measured ${Math.round(winner.firstTokenMs!)} ms to first token. ${family.role} winner recorded without changing the Quick startup model.`,
         )
       } else if (previous) {
         setProgress(
