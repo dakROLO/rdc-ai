@@ -1,8 +1,8 @@
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { ModelAnalyst } from './runtime/ModelAnalyst.tsx'
-import { readPreferred, roleOf, taskOf } from './runtime/modelPolicy.ts'
-import type { DeviceProfile } from './runtime/modelPolicy.ts'
+import { bestObserved, readPreferred, readResults, roleOf, taskOf } from './runtime/modelPolicy.ts'
+import type { DeviceProfile, ModelRole } from './runtime/modelPolicy.ts'
 import { DictationControl } from './speech/DictationControl.tsx'
 import {
   type DragEvent as ReactDragEvent,
@@ -83,6 +83,20 @@ const LOCAL_AI_SETUP_STORAGE_KEY = 'crownkeep.localAiSetup'
 const DEFAULT_WINDOWS_MODEL_ALIAS = 'phi-4-mini'
 const PREFERRED_WINDOWS_MODEL_KEY = 'crownkeep.preferredWindowsModel'
 const IDLE_UNLOAD_MINUTES_KEY = 'crownkeep.idleUnloadMinutes'
+
+type ChatModelRole = Extract<ModelRole, 'Quick' | 'Balanced' | 'Deep / Experimental'>
+
+const CHAT_ROLE_ALIASES: Record<ChatModelRole, string> = {
+  Quick: 'phi-4-mini',
+  Balanced: 'mistral-nemo-12b-instruct',
+  'Deep / Experimental': 'gpt-oss-20b',
+}
+
+const CHAT_ROLE_LABELS: Record<ChatModelRole, string> = {
+  Quick: 'Quick',
+  Balanced: 'Balanced',
+  'Deep / Experimental': 'Deep',
+}
 
 interface FoundryOperationProgress {
   stage: string
@@ -374,6 +388,32 @@ export default function App() {
   const setupVerified =
     setupRecord?.providerId === selectedProviderId &&
     setupRecord.modelId === selectedModelId
+
+  const loadedChatCandidate = useMemo(
+    () =>
+      modelCandidates.find(
+        (candidate) => candidate.loaded && taskOf(candidate) === 'chat',
+      ),
+    [modelCandidates],
+  )
+  const activeChatRole = loadedChatCandidate
+    ? (roleOf(loadedChatCandidate) as ChatModelRole)
+    : undefined
+
+  const measuredRoleWinners = useMemo(() => {
+    const results = readResults(localStorage)
+    const winnerFor = (role: ChatModelRole) =>
+      fingerprint
+        ? bestObserved(results, fingerprint, CHAT_ROLE_ALIASES[role])
+        : undefined
+
+    return {
+      Quick: winnerFor('Quick'),
+      Balanced: winnerFor('Balanced'),
+      'Deep / Experimental': winnerFor('Deep / Experimental'),
+    } satisfies Record<ChatModelRole, ReturnType<typeof winnerFor>>
+  }, [fingerprint, providerRefreshNonce, modelCandidates])
+
   const projectById = useMemo(
     () => new Map(projects.map((project) => [project.id, project])),
     [projects],
@@ -959,6 +999,51 @@ export default function App() {
     } finally {
       setIsRuntimeActionRunning(false)
       setProviderRefreshNonce((value) => value + 1)
+    }
+  }
+
+  async function switchModelRole(role: ChatModelRole) {
+    if (
+      localRuntimeManager.mode !== 'embedded' ||
+      selectedProviderId !== 'foundry-local' ||
+      isRuntimeActionRunning ||
+      isGenerating ||
+      speechBusy ||
+      isRuntimeCheckRunning
+    ) {
+      return
+    }
+
+    const winner = measuredRoleWinners[role]
+    if (!winner) return
+
+    setIsRuntimeActionRunning(true)
+    setRuntimeCheckError(null)
+    setRuntimeOperation(null)
+    setRuntimeActionMessage(
+      `Switching to ${CHAT_ROLE_LABELS[role]} · ${winner.alias}…`,
+    )
+
+    try {
+      await localRuntimeManager.activateModel(winner.variantId)
+      setRuntimeSleeping(false)
+      setSetupRecord(null)
+      localStorage.removeItem(LOCAL_AI_SETUP_STORAGE_KEY)
+      localStorage.setItem(
+        modelStorageKey(selectedProviderId),
+        normalizedModelForStorage(winner.variantId),
+      )
+      setRuntimeActionMessage(
+        `${CHAT_ROLE_LABELS[role]} ready · ${winner.alias} · ${winner.executionProvider ?? winner.device ?? 'Default'}.`,
+      )
+      setProviderRefreshNonce((current) => current + 1)
+      await refreshModelAnalyst()
+    } catch (error) {
+      setRuntimeCheckError(
+        `Could not switch to ${CHAT_ROLE_LABELS[role]}: ${String(error)}`,
+      )
+    } finally {
+      setIsRuntimeActionRunning(false)
     }
   }
 
@@ -1915,6 +2000,45 @@ export default function App() {
                     </select>
                   </label>
                 </div>
+
+                {selectedProviderId === 'foundry-local' &&
+                  localRuntimeManager.mode === 'embedded' && (
+                    <div className="model-mode-control" aria-label="Measured model mode">
+                      <div className="model-mode-copy">
+                        <strong>Model mode</strong>
+                        <span>Quick starts by default. Balanced and Deep use their measured winners.</span>
+                      </div>
+                      <div className="model-mode-segments" role="group" aria-label="Model mode">
+                        {(['Quick', 'Balanced', 'Deep / Experimental'] as ChatModelRole[]).map((role) => {
+                          const winner = measuredRoleWinners[role]
+                          const active = activeChatRole === role
+                          return (
+                            <button
+                              type="button"
+                              key={role}
+                              className={active ? 'active' : ''}
+                              aria-pressed={active}
+                              disabled={
+                                !winner ||
+                                isGenerating ||
+                                speechBusy ||
+                                isRuntimeActionRunning ||
+                                isRuntimeCheckRunning
+                              }
+                              title={
+                                winner
+                                  ? `${winner.alias} · ${winner.executionProvider ?? winner.device ?? 'Default'}`
+                                  : `Benchmark ${CHAT_ROLE_LABELS[role]} first`
+                              }
+                              onClick={() => void switchModelRole(role)}
+                            >
+                              {CHAT_ROLE_LABELS[role]}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                 <div className="runtime-grid" aria-label="Local AI runtime status">
                   <div>
