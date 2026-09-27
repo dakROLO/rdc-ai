@@ -136,7 +136,10 @@ export function ModelAnalyst({
     let disposed = false
     void invoke<DeviceProfile>('crownkeep_device_profile')
       .then((value) => {
-        if (!disposed) setProfile(value)
+        if (!disposed) {
+          setProfile(value)
+          setResults(readResults(localStorage))
+        }
       })
       .catch(() => {
         if (!disposed) setError('Hardware inspection unavailable. Retry device analysis before benchmarking.')
@@ -171,6 +174,7 @@ export function ModelAnalyst({
     try {
       await manager.analyzeDevice()
       setProfile(await invoke<DeviceProfile>('crownkeep_device_profile'))
+      setResults(readResults(localStorage))
       onCatalogChanged()
       await refresh()
       setProgress('Discovery complete. CrownKeep reduced the catalog to recommended model families below.')
