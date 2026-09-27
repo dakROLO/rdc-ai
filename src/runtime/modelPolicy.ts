@@ -35,6 +35,10 @@ export const PREFERRED_PROFILE_KEY = 'crownkeep.preferredProfile.v2'
 
 export function taskOf(model: RuntimeModelCandidate): 'chat' | 'speech' | 'other' {
   const metadata = `${model.modelType ?? ''} ${model.task ?? ''}`.toLowerCase()
+  // Foundry 0.10.3 exposes `type`, not the old task/capability fields.
+  if (model.modelType?.toLowerCase() === 'chat') return 'chat'
+  if (model.modelType?.toLowerCase() === 'speech') return 'speech'
+  if (/^(embedding|multimodal)$/i.test(model.modelType ?? '')) return 'other'
   if (/speech|transcri|automatic-speech-recognition|whisper/.test(`${metadata} ${model.alias}`)) return 'speech'
   if (/embed|image|vision-only|rerank/.test(metadata)) return 'other'
   if (/chat|\btext\b|text-generation|completion|llm/.test(metadata)) return 'chat'

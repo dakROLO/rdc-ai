@@ -4,6 +4,7 @@ import { listen } from '@tauri-apps/api/event'
 import type { AIProvider } from '../providers/AIProvider.ts'
 import type { LocalRuntimeManager, RuntimeModelCandidate } from './LocalRuntimeManager.ts'
 import { ModelStorage } from './ModelStorage.tsx'
+import { apiModelMatchesAlias } from './systemFoundryState.ts'
 import {
   bestObserved,
   groupFamilies,
@@ -59,7 +60,7 @@ function traceBenchmark(event: string, detail: string, requestId?: string) {
 const ROLE_ORDER: ModelRole[] = ['Quick', 'Balanced', 'Deep', 'Voice']
 const ROLE_PRIORITIES: Record<ModelRole, string[]> = {
   Quick: ['phi-4-mini'],
-  Balanced: ['mistral-nemo-12b-instruct', 'olmo-3-7b-instruct'],
+  Balanced: [],
   Deep: ['gpt-oss-20b'],
   Voice: ['whisper-base', 'whisper-tiny', 'whisper-small'],
 }
@@ -216,13 +217,13 @@ export function ModelAnalyst({
     }
   }
 
-  async function waitForLoadedModel(candidate: RuntimeModelCandidate) {
+  async function waitForLoadedModel(alias: string) {
     let lastError: unknown
     for (let attempt = 0; attempt < 12; attempt += 1) {
       try {
         const models = await provider.listModels()
         const actual = models.find(
-          (model) => normalized(model.id) === normalized(candidate.id),
+          (model) => apiModelMatchesAlias(alias, model.id),
         )
         if (actual) return actual
       } catch (error) {
@@ -244,29 +245,9 @@ export function ModelAnalyst({
           (a.fileSizeMb ?? Infinity) - (b.fileSizeMb ?? Infinity),
       )
 
-    // When hardware-specific GPU variants exist, the unbound generic-GPU package
-    // adds another large download without identifying a distinct execution
-    // provider. Keep it in Advanced rather than the normal compare loop.
-    const hasExplicitAcceleratedPath = viable.some(
-      (candidate) =>
-        (candidate.device === 'GPU' || candidate.device === 'NPU') &&
-        Boolean(candidate.executionProvider),
-    )
-    const filtered = viable.filter(
-      (candidate) =>
-        !(
-          hasExplicitAcceleratedPath &&
-          (candidate.device === 'GPU' || candidate.device === 'NPU') &&
-          !candidate.executionProvider
-        ),
-    )
-
-    const paths = new Map<string, RuntimeModelCandidate>()
-    for (const candidate of filtered) {
-      const key = `${candidate.device ?? 'Auto'}/${candidate.executionProvider ?? 'Default'}`
-      if (!paths.has(key)) paths.set(key, candidate)
-    }
-    return [...paths.values()]
+    // CrownKeep evaluates an alias once. System Foundry chooses its compatible
+    // variant/device path; the variant rows remain diagnostic-only.
+    return viable.slice(0, 1)
   }
 
   async function benchmark(alias: string) {
@@ -339,7 +320,7 @@ export function ModelAnalyst({
           setProgress(
             `${index}/${paths.length} · Preparing ${alias} · ${candidate.executionProvider ?? candidate.device ?? 'Default'}…`,
           )
-          await manager.activateModel(candidate.id)
+          await manager.activateModel(alias)
           traceBenchmark(
             'candidate-activated',
             `variant=${candidate.id}`,
@@ -348,7 +329,11 @@ export function ModelAnalyst({
           record.cached = true
           if (abort.signal.aborted) break
 
-          const actual = await waitForLoadedModel(candidate)
+          const actual = await waitForLoadedModel(alias)
+          const actualCandidate = candidates.find((item) => normalized(item.id) === normalized(actual.id))
+          record.variantId = actual.id
+          record.executionProvider = actualCandidate?.executionProvider
+          record.device = actualCandidate?.device
           traceBenchmark(
             'candidate-api-model',
             `variant=${candidate.id} apiModel=${actual.id}`,
@@ -520,7 +505,7 @@ export function ModelAnalyst({
           setProgress(
             `Loading measured winner: ${alias} · ${winner.executionProvider ?? winner.device}…`,
           )
-          await manager.activateModel(winner.variantId)
+          await manager.activateModel(winner.alias)
           localStorage.setItem(PREFERRED_PROFILE_KEY, JSON.stringify(winner))
           localStorage.setItem('crownkeep.preferredWindowsModel', winner.alias)
           selected = true
@@ -532,7 +517,7 @@ export function ModelAnalyst({
             `${family.role} winner recorded: ${alias} · ${winner.executionProvider ?? winner.device} · ${Math.round(winner.firstTokenMs!)} ms. Restoring the everyday Quick model…`,
           )
           traceBenchmark('restore-quick-begin', `id=${previous.id}`, traceId)
-          await manager.activateModel(previous.id)
+          await manager.activateModel(previous.alias)
           traceBenchmark('restore-quick-ready', `id=${previous.id}`, traceId)
           selected = true
           setProgress(
@@ -541,7 +526,7 @@ export function ModelAnalyst({
         } else {
           // With no prior chat model to restore, leave the measured winner active,
           // but do not promote it to the Windows startup preference.
-          await manager.activateModel(winner.variantId)
+          await manager.activateModel(winner.alias)
           selected = true
           setProgress(
             `Recorded ${family.role} winner: ${alias} · ${winner.executionProvider ?? winner.device} · ${Math.round(winner.firstTokenMs!)} ms. No prior Quick model was available to restore.`,
@@ -554,7 +539,7 @@ export function ModelAnalyst({
             : 'No interactive path passed. Restoring the previous model…',
         )
         traceBenchmark('restore-previous-begin', `id=${previous.id}`, traceId)
-        await manager.activateModel(previous.id)
+        await manager.activateModel(previous.alias)
         traceBenchmark('restore-previous-ready', `id=${previous.id}`, traceId)
       } else {
         setProgress(
@@ -570,7 +555,7 @@ export function ModelAnalyst({
       setError(String(e))
       if (previous) {
         try {
-          await manager.activateModel(previous.id)
+          await manager.activateModel(previous.alias)
           await refresh()
         } catch (recoveryError) {
           traceBenchmark(

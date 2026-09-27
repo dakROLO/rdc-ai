@@ -26,6 +26,15 @@ export interface RuntimeSnapshot {
   runtimeVersion?: string
   cacheLocation?: string
   legacyCacheLocation?: string
+  legacyCache?: {
+    path: string
+    exists: boolean
+    approximateSizeBytes: number
+    entries: string[]
+    entryCount: number
+    status: string
+    cleanup: string
+  }
 }
 
 export interface RuntimeActionResult {

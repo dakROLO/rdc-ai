@@ -32,6 +32,13 @@ test('native text catalogs are chat-capable but embedding and unknown tasks are 
   assert.equal(taskOf({ ...cpu, modelType: 'unknown' }), 'other')
 })
 
+test('Foundry 0.10.3 type values classify Chat, Speech, and Embedding correctly', () => {
+  assert.equal(taskOf({ ...cpu, modelType: 'Chat' }), 'chat')
+  assert.equal(taskOf({ ...cpu, modelType: 'Speech', alias: 'any-speech' }), 'speech')
+  assert.equal(taskOf({ ...cpu, modelType: 'Embedding' }), 'other')
+  assert.equal(taskOf({ ...cpu, modelType: 'Multimodal' }), 'other')
+})
+
 
 test('reasoning variants stay out of the default Quick role', () => {
   assert.equal(roleOf({ ...cpu, alias: 'phi-4-mini-reasoning' }), 'Deep')

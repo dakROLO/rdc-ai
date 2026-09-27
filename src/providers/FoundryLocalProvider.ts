@@ -204,14 +204,21 @@ export class FoundryLocalProvider implements AIProvider {
   }
 
   async listModels(): Promise<AIModel[]> {
-    const { endpoint, mode } = await this.resolveEndpoint()
-    const url =
-      mode === 'v1'
-        ? `${endpoint}/v1/models`
-        : `${endpoint}/openai/models`
-
-    const response = await fetch(url)
-    await assertOk(response, 'Foundry Local model discovery')
+    let response: Response | undefined
+    let lastError: unknown
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        const { endpoint, mode } = await this.resolveEndpoint()
+        response = await fetch(mode === 'v1' ? `${endpoint}/v1/models` : `${endpoint}/openai/models`)
+        await assertOk(response, 'Foundry Local model discovery')
+        break
+      } catch (error) {
+        lastError = error
+        this.activeEndpoint = undefined
+        this.apiMode = undefined
+      }
+    }
+    if (!response?.ok) throw new Error(`System Foundry endpoint retry failed: ${String(lastError)}`)
 
     const payload = (await response.json()) as unknown
     const modelNames = parseModelNames(payload)
@@ -259,23 +266,27 @@ export class FoundryLocalProvider implements AIProvider {
       throw error
     }
 
-    let response: Response
+    let response!: Response
     const fetchStarted = performance.now()
     try {
-      response = await fetch(`${endpoint}/v1/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'text/event-stream',
-        },
-        body: JSON.stringify({
-          model: request.modelId,
-          messages: request.messages,
-          stream: true,
-          ...(request.maxTokens ? { max_tokens: request.maxTokens } : {}),
-        }),
-        signal,
-      })
+      let lastError: unknown
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        try {
+          response = await fetch(`${endpoint}/v1/chat/completions`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
+            body: JSON.stringify({ model: request.modelId, messages: request.messages, stream: true, ...(request.maxTokens ? { max_tokens: request.maxTokens } : {}) }), signal,
+          })
+          if (response.ok || attempt === 1 || signal?.aborted) break
+          this.activeEndpoint = undefined; this.apiMode = undefined
+          endpoint = (await this.resolveEndpoint()).endpoint
+        } catch (error) {
+          lastError = error
+          if (attempt === 1 || signal?.aborted) throw error
+          this.activeEndpoint = undefined; this.apiMode = undefined
+          endpoint = (await this.resolveEndpoint()).endpoint
+        }
+      }
+      if (!response!) throw lastError
     } catch (error) {
       traceHost(
         'http-fetch-failed',

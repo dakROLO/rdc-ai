@@ -3,6 +3,15 @@
 **Branch:** `sprint-4a3-local-platform-convergence`  
 **Status:** Windows System Foundry bridge implemented; physical acceptance required.
 
+## 4A.4D–4F contract, roles, and cleanup readiness — 2026-09-27
+
+- The observed Foundry 0.10.3 contract is now typed: `foundry status --output json` supplies `system`, `service`, `models`, and `connectivity`; `foundry server status --output json` supplies the current `webUrls`; and model lists use the single `variants[]` root.
+- CrownKeep treats `alias` as the role/startup preference and `variantId` as evidence. `type`, `device`, `executionProvider`, `fileSizeMb`, and `cached` are the current catalog facts; missing task, context-window, and tool-call fields remain unset.
+- Packaged endpoint use re-reads server status and retries one fresh endpoint once if a request fails. It does not fall back to port 39839. Normal status uses Foundry's `available`, `loaded`, and `cached` counts without catalog enumeration.
+- Foundry status is the primary durable Windows hardware source. The fingerprint excludes transient available memory and includes OS, architecture, CPU, installed RAM, GPU/NPU facts, and Foundry runtime versions.
+- Model Analyst groups variants by alias. Quick retains `phi-4-mini` bootstrap; Balanced advances through a small live Chat-family shortlist after current-fingerprint failures; Deep remains gated; Speech is Voice-only. System Foundry chooses the activated variant and CrownKeep synchronizes the API-visible model.
+- Diagnostics now perform a read-only inventory of `%USERPROFILE%\\.CrownKeep\\cache\\models` (existence, approximate size, top-level package folders). It is explicitly not used by normal Windows chat and has no deletion control. The remaining `FoundryLocalConfig::new("CrownKeep")` dependency is Windows dictation and dormant legacy commands only.
+
 ## 4A.4C bridge hardening findings — 2026-09-27
 
 - The first bridge split human-readable CLI rows on whitespace. That is not a valid application contract because Foundry table output can change or wrap.
@@ -25,7 +34,7 @@ The bridge now requests `--output json` for System Foundry status and model list
 
 Run these in both environments. Do not create environment-specific policy.
 
-1. Run `foundry --version`, `foundry cache location`, `foundry cache list`, `foundry model list --cached --variants`, and `foundry server status`; attach only non-sensitive results to the sprint evidence.
+1. Run `foundry status --output json`, `foundry server status --output json`, `foundry cache location`, `foundry model list --variants --output json`, and `foundry model list --loaded --variants --output json`; attach only non-sensitive results to the sprint evidence.
 2. Start CrownKeep and confirm Diagnostics shows the exact same System Foundry cache location and a separate legacy-cache note. Record runtime version, service URL, loaded model, and selected alias/actual variant.
 3. Verify Quick chat, restart, Quick restoration, rerun, and a model download/cache operation through the system Foundry environment. Dictation is intentionally not revalidated for this bridge; it remains on the prior SDK path and must not be used as evidence that System Foundry convergence is complete.
 4. Benchmark Balanced. Run its representative-context and normal-chat checks before it becomes selectable. Attempt Deep only after Quick and Balanced are stable.

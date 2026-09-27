@@ -27,6 +27,13 @@
 - Structured model metadata now preserves chat type/task, device, provider, cache/load state, size/context, and tool support when emitted by Foundry.
 - Packaged Windows endpoint discovery no longer trusts a cached endpoint across requests; it re-reads System Foundry state before `/v1/models` probing.
 
+## Sprint 4A.4D–4F — Foundry contract, alias roles, cleanup readiness — 2026-09-27
+
+- Replaced generic JSON traversal with small serde structures for the physical Foundry 0.10.3 contract: `service.webUrls`, `variants[]`, and actual type/device/provider/size/cache fields.
+- Endpoint discovery now uses only `foundry server status --output json`; normal status uses `foundry status --output json` counts and structured hardware facts. A failing API request refreshes the endpoint and retries once.
+- CrownKeep activates role aliases rather than selecting CUDA/OpenVINO/etc. variants. Actual API-visible variants are retained as benchmark evidence. Balanced discovery is live-catalog-driven; Deep remains gated.
+- Added read-only legacy CrownKeep cache inventory and explicit cleanup-pending diagnostics. No cache data was deleted or migrated.
+
 ## Active phase
 
 Phase 4A — Windows Product Host

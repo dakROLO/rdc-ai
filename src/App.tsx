@@ -834,11 +834,11 @@ export default function App() {
 
     autoRestoreAttemptedRef.current = true
     setRuntimeActionMessage(`Restoring ${candidate.alias} from the local cache…`)
-    void prepareNativeLocalAi(candidate.id, {
+    void prepareNativeLocalAi(candidate.alias, {
       quiet: true,
       fallbackModelId:
-        fallbackCandidate && fallbackCandidate.id !== candidate.id
-          ? fallbackCandidate.id
+        fallbackCandidate && fallbackCandidate.alias !== candidate.alias
+          ? fallbackCandidate.alias
           : undefined,
     })
   }, [
@@ -1149,11 +1149,12 @@ export default function App() {
     setIsRuntimeActionRunning(true)
     setRuntimeCheckError(null)
     setRuntimeOperation(null)
-    setRuntimeActionMessage(`Switching local AI to ${modelId}…`)
+    const alias = modelCandidates.find((candidate) => candidate.id === modelId)?.alias ?? modelId
+    setRuntimeActionMessage(`Switching local AI to ${alias}…`)
     try {
-      await localRuntimeManager.activateModel(modelId)
-      traceTerminal('model-switch', 'native-activated', `requested=${modelId}`, traceId)
-      const activeModelId = await syncSelectedModelToNative(modelId, traceId)
+      await localRuntimeManager.activateModel(alias)
+      traceTerminal('model-switch', 'native-activated', `requestedAlias=${alias}`, traceId)
+      const activeModelId = await syncSelectedModelToNative(alias, traceId)
       setSetupRecord(null)
       localStorage.removeItem(LOCAL_AI_SETUP_STORAGE_KEY)
       setRuntimeSleeping(false)
@@ -1200,15 +1201,15 @@ export default function App() {
     )
 
     try {
-      await localRuntimeManager.activateModel(winner.variantId)
+      await localRuntimeManager.activateModel(winner.alias)
       traceTerminal(
         'role-switch',
         'native-activated',
-        `role=${role} variant=${winner.variantId}`,
+        `role=${role} alias=${winner.alias}`,
         traceId,
       )
       const activeModelId = await syncSelectedModelToNative(
-        winner.variantId,
+        winner.alias,
         traceId,
       )
       setRuntimeSleeping(false)
@@ -2694,6 +2695,11 @@ export default function App() {
                     )}
                     {runtimeSnapshot?.legacyCacheLocation && (
                       <p className="diagnostic-footnote">Legacy CrownKeep cache (not used; cleanup pending validation) · {runtimeSnapshot.legacyCacheLocation}</p>
+                    )}
+                    {runtimeSnapshot?.legacyCache && (
+                      <p className="diagnostic-footnote">
+                        Legacy cache inventory · {runtimeSnapshot.legacyCache.exists ? `${runtimeSnapshot.legacyCache.entryCount} package folder(s) · ${(runtimeSnapshot.legacyCache.approximateSizeBytes / 1024 / 1024).toFixed(1)} MB` : 'not present'} · {runtimeSnapshot.legacyCache.status} · cleanup {runtimeSnapshot.legacyCache.cleanup}
+                      </p>
                     )}
                   </div>
                 </details>

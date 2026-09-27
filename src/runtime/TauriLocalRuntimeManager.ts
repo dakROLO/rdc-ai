@@ -24,17 +24,34 @@ interface NativeFoundryModelSummary {
   id: string
   alias: string
 }
+interface NativeLegacyCacheInventory {
+  path: string
+  exists: boolean
+  approximateSizeBytes: number
+  entries: string[]
+  entryCount: number
+  status: string
+  cleanup: string
+}
 
 interface NativeFoundryRuntimeStatus {
   sdkReady: boolean
   serviceUrls: string[]
   catalogModelCount: number
+  cachedModelCount: number
+  loadedModelCount: number
   cachedModels: NativeFoundryModelSummary[]
   loadedModels: NativeFoundryModelSummary[]
   runtimeVersion?: string
   cacheLocation?: string
   authority?: string
   legacyCacheLocation?: string
+  legacyCache: NativeLegacyCacheInventory
+  serviceReady: boolean
+  serviceState: string
+  foundryLocalCoreVersion: string
+  ortVersion: string
+  ortGenAiVersion: string
 }
 
 interface NativeFoundryDeviceAnalysis extends RuntimeDeviceAnalysis {}
@@ -87,11 +104,11 @@ export class TauriLocalRuntimeManager implements LocalRuntimeManager {
         ? (models ?? (await provider.listModels()))
         : []
 
-    const loadedText = nativeStatus.loadedModels.length > 0
-      ? ` Loaded: ${nativeStatus.loadedModels.map((model) => model.alias).join(', ')}.`
+    const loadedText = nativeStatus.loadedModelCount > 0
+      ? ` Loaded: ${nativeStatus.loadedModelCount}.`
       : ''
-    const cachedText = nativeStatus.cachedModels.length > 0
-      ? ` Cached: ${nativeStatus.cachedModels.length}.`
+    const cachedText = nativeStatus.cachedModelCount > 0
+      ? ` Cached: ${nativeStatus.cachedModelCount}.`
       : ''
 
     if (!resolvedAvailability.available) {
@@ -104,6 +121,7 @@ export class TauriLocalRuntimeManager implements LocalRuntimeManager {
         runtimeVersion: nativeStatus.runtimeVersion,
         cacheLocation: nativeStatus.cacheLocation,
         legacyCacheLocation: nativeStatus.legacyCacheLocation,
+        legacyCache: nativeStatus.legacyCache,
       }
     }
 
@@ -117,6 +135,7 @@ export class TauriLocalRuntimeManager implements LocalRuntimeManager {
         runtimeVersion: nativeStatus.runtimeVersion,
         cacheLocation: nativeStatus.cacheLocation,
         legacyCacheLocation: nativeStatus.legacyCacheLocation,
+        legacyCache: nativeStatus.legacyCache,
       }
     }
 
@@ -129,6 +148,7 @@ export class TauriLocalRuntimeManager implements LocalRuntimeManager {
       runtimeVersion: nativeStatus.runtimeVersion,
       cacheLocation: nativeStatus.cacheLocation,
       legacyCacheLocation: nativeStatus.legacyCacheLocation,
+      legacyCache: nativeStatus.legacyCache,
     }
   }
 

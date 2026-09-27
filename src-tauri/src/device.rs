@@ -1,128 +1,14 @@
-use serde::Serialize;
 use std::hash::{Hash, Hasher};
 
-#[derive(Serialize)]
+#[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct DeviceProfile {
-    fingerprint: String,
-    memory_mb: Option<u64>,
-    detail: String,
-}
+pub struct DeviceProfile { fingerprint: String, memory_mb: Option<u64>, detail: String }
 
 #[tauri::command]
 pub async fn crownkeep_device_profile() -> Result<DeviceProfile, String> {
-    let hardware = tauri::async_runtime::spawn_blocking(inspect_hardware)
-        .await
-        .map_err(|e| e.to_string())??;
-    let variants = tauri::async_runtime::spawn_blocking(system_foundry_catalog_ids)
-        .await
-        .map_err(|e| e.to_string())??;
-
-    let memory_mb = hardware["memoryMb"].as_u64();
-    let cpu = hardware["cpu"].as_str().unwrap_or("unknown").to_string();
-    let os = hardware["os"].as_str().unwrap_or("unknown").to_string();
-    let mut gpus = hardware["gpu"]
-        .as_array()
-        .map(|items| {
-            items
-                .iter()
-                .map(|item| {
-                    format!(
-                        "{}:{}",
-                        item["Name"].as_str().unwrap_or("unknown"),
-                        item["DriverVersion"].as_str().unwrap_or("unknown")
-                    )
-                })
-                .collect::<Vec<_>>()
-        })
-        .unwrap_or_default();
-    gpus.sort();
-
+    let (durable, memory_mb, detail) = super::system_foundry::foundry_device_profile().await?;
     let mut hash = std::collections::hash_map::DefaultHasher::new();
-    // Fingerprints represent durable device/runtime capability, not transient
-    // process state. Execution-provider registration/discovery can differ before
-    // and after Foundry startup, so it is intentionally omitted. GPU driver,
-    // OS, memory, CPU, catalog variants, and policy version remain durable inputs.
-    (
-        memory_mb,
-        cpu.as_str(),
-        os.as_str(),
-        &gpus,
-        &variants,
-        "system-foundry-cli-policy-6",
-    )
-        .hash(&mut hash);
-
-    Ok(DeviceProfile {
-        fingerprint: format!("{:016x}", hash.finish()),
-        memory_mb,
-        detail: format!(
-            "{} MB system RAM · {} · {}. Memory fit is estimated; benchmark results decide.",
-            memory_mb
-                .map(|v| v.to_string())
-                .unwrap_or_else(|| "Unknown".into()),
-            cpu,
-            hardware["gpu"]
-                .as_array()
-                .map(|items| {
-                    items
-                        .iter()
-                        .filter_map(|item| item["Name"].as_str())
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                })
-                .unwrap_or_else(|| "GPU details unavailable".into())
-        ),
-    })
-}
-
-fn system_foundry_catalog_ids() -> Result<Vec<String>, String> {
-    let output = std::process::Command::new("foundry")
-        .args(["model", "list", "--variants"])
-        .output()
-        .map_err(|error| format!("System Foundry catalog inspection failed: {error}"))?;
-    if !output.status.success() {
-        return Err("System Foundry catalog inspection failed.".into());
-    }
-    let mut ids = String::from_utf8_lossy(&output.stdout)
-        .lines()
-        .filter_map(|line| line.split_whitespace().next())
-        .filter(|value| !value.eq_ignore_ascii_case("id") && !value.starts_with('-'))
-        .map(ToString::to_string)
-        .collect::<Vec<_>>();
-    ids.sort();
-    Ok(ids)
-}
-
-#[cfg(target_os = "windows")]
-fn inspect_hardware() -> Result<serde_json::Value, String> {
-    use std::os::windows::process::CommandExt;
-
-    // Fixed, read-only query. No shell text comes from the webview or user.
-    let script = r#"
-$ErrorActionPreference='Stop';
-$ram=(Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory;
-$cpu=(Get-CimInstance Win32_Processor | Select-Object -First 1).Name;
-$gpu=@(Get-CimInstance Win32_VideoController | Sort-Object Name | Select-Object Name,DriverVersion);
-$os=(Get-CimInstance Win32_OperatingSystem).Version;
-@{memoryMb=[math]::Floor($ram/1MB);cpu=$cpu;gpu=$gpu;os=$os} | ConvertTo-Json -Compress -Depth 4
-"#;
-
-    let output = std::process::Command::new("powershell.exe")
-        .creation_flags(0x08000000)
-        .args(["-NoProfile", "-NonInteractive", "-Command", script])
-        .output()
-        .map_err(|e| format!("Hardware inspection failed: {e}"))?;
-
-    if !output.status.success() {
-        return Err("Windows hardware inspection unavailable. Retry device analysis.".into());
-    }
-
-    serde_json::from_slice(&output.stdout)
-        .map_err(|e| format!("Hardware response invalid: {e}"))
-}
-
-#[cfg(not(target_os = "windows"))]
-fn inspect_hardware() -> Result<serde_json::Value, String> {
-    Err("Windows hardware inspection is unavailable on this platform.".into())
+    // Foundry's current available-memory value is deliberately excluded: it is transient.
+    (durable, "system-foundry-alias-policy-7").hash(&mut hash);
+    Ok(DeviceProfile { fingerprint: format!("{:016x}", hash.finish()), memory_mb, detail })
 }
