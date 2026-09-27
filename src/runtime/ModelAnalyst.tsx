@@ -43,6 +43,19 @@ interface NativeOperationProgress {
 const normalized = (id: string) => id.split(':')[0].toLowerCase()
 const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms))
 
+function traceBenchmark(event: string, detail: string, requestId?: string) {
+  try {
+    void invoke('crownkeep_trace', {
+      scope: 'benchmark',
+      event,
+      detail,
+      requestId,
+    }).catch(() => {})
+  } catch {
+    // Browser-only tests do not have the Tauri bridge.
+  }
+}
+
 const ROLE_ORDER: ModelRole[] = ['Quick', 'Balanced', 'Deep / Experimental', 'Voice']
 const ROLE_PRIORITIES: Record<ModelRole, string[]> = {
   Quick: ['phi-4-mini'],
@@ -184,6 +197,7 @@ export function ModelAnalyst({
       await refresh()
       setProgress('Discovery complete. CrownKeep reduced the catalog to recommended model families below.')
     } catch (e) {
+      traceBenchmark('benchmark-error', `alias=${alias} error=${String(e)}`, traceId)
       setError(String(e))
     } finally {
       setBusy(false)
@@ -249,6 +263,17 @@ export function ModelAnalyst({
     if (!family || family.role === 'Voice') return
 
     const paths = benchmarkPaths(family)
+    const traceId = crypto.randomUUID()
+    traceBenchmark(
+      'begin',
+      `alias=${alias} role=${family.role} fingerprint=${profile.fingerprint} paths=[${paths
+        .map(
+          (candidate) =>
+            `${candidate.id}|${candidate.executionProvider ?? '-'}|${candidate.device ?? '-'}|cached=${candidate.cached}`,
+        )
+        .join(',')}]`,
+      traceId,
+    )
     if (!paths.length) {
       setError('No compatible variants meet these requirements.')
       return
@@ -262,6 +287,11 @@ export function ModelAnalyst({
     controller.current = abort
 
     const previous = candidates.find((item) => item.loaded && taskOf(item) === 'chat')
+    traceBenchmark(
+      'previous-model',
+      `id=${previous?.id ?? '-'} ep=${previous?.executionProvider ?? '-'} device=${previous?.device ?? '-'}`,
+      traceId,
+    )
     let accumulated = readResults(localStorage)
     const measured: BenchmarkResult[] = []
     let selected = false
@@ -286,16 +316,32 @@ export function ModelAnalyst({
           outcome: 'error',
         }
 
+        traceBenchmark(
+          'candidate-begin',
+          `index=${index}/${paths.length} variant=${candidate.id} ep=${candidate.executionProvider ?? '-'} device=${candidate.device ?? '-'} cached=${candidate.cached}`,
+          traceId,
+        )
+
         let started = performance.now()
         try {
           setProgress(
             `${index}/${paths.length} · Preparing ${alias} · ${candidate.executionProvider ?? candidate.device ?? 'Default'}…`,
           )
           await manager.activateModel(candidate.id)
+          traceBenchmark(
+            'candidate-activated',
+            `variant=${candidate.id}`,
+            traceId,
+          )
           record.cached = true
           if (abort.signal.aborted) break
 
           const actual = await waitForLoadedModel(candidate)
+          traceBenchmark(
+            'candidate-api-model',
+            `variant=${candidate.id} apiModel=${actual.id}`,
+            traceId,
+          )
           setProgress(
             `${index}/${paths.length} · Measuring ${alias} · ${candidate.executionProvider ?? candidate.device ?? 'Default'}…`,
           )
@@ -311,6 +357,7 @@ export function ModelAnalyst({
             {
               modelId: actual.id,
               maxTokens: 48,
+              traceId,
               messages: [
                 {
                   role: 'user',
@@ -337,6 +384,12 @@ export function ModelAnalyst({
           const speedAccepted =
             (record.firstTokenMs ?? Infinity) <= 8000 && record.totalMs <= 20000
 
+          traceBenchmark(
+            'speed-result',
+            `variant=${candidate.id} apiModel=${actual.id} firstTokenMs=${Math.round(record.firstTokenMs ?? -1)} totalMs=${Math.round(record.totalMs)} tokPerSec=${record.tokensPerSecond?.toFixed(1) ?? '-'} accepted=${speedAccepted}`,
+            traceId,
+          )
+
           if (!speedAccepted) {
             record.outcome = 'slow'
           } else {
@@ -351,10 +404,17 @@ export function ModelAnalyst({
               AbortSignal.timeout(30_000),
             ])
 
+            traceBenchmark(
+              'context-begin',
+              `variant=${candidate.id} apiModel=${actual.id}`,
+              traceId,
+            )
+
             for await (const chunk of provider.streamChat(
               {
                 modelId: actual.id,
                 maxTokens: 64,
+                traceId,
                 messages: [
                   {
                     role: 'system',
@@ -395,6 +455,11 @@ export function ModelAnalyst({
               (record.contextFirstTokenMs ?? Infinity) <= 12_000 &&
               record.contextTotalMs <= 30_000
             record.outcome = record.realWorldValidated ? 'accepted' : 'slow'
+            traceBenchmark(
+              'context-result',
+              `variant=${candidate.id} apiModel=${actual.id} firstTokenMs=${Math.round(record.contextFirstTokenMs ?? -1)} totalMs=${Math.round(record.contextTotalMs)} validated=${record.realWorldValidated}`,
+              traceId,
+            )
             record.detail = record.realWorldValidated
               ? `Normal-context probe passed in ${Math.round(record.contextTotalMs)} ms.`
               : `Normal-context probe was too slow: ${Math.round(record.contextFirstTokenMs ?? 0)} ms first token / ${Math.round(record.contextTotalMs)} ms total.`
@@ -403,8 +468,18 @@ export function ModelAnalyst({
           record.totalMs = performance.now() - started
           record.outcome = abort.signal.aborted ? 'cancelled' : 'error'
           record.detail = String(e)
+          traceBenchmark(
+            'candidate-error',
+            `variant=${candidate.id} elapsedMs=${Math.round(record.totalMs)} aborted=${abort.signal.aborted} error=${String(e)}`,
+            traceId,
+          )
         }
 
+        traceBenchmark(
+          'candidate-finish',
+          `variant=${candidate.id} outcome=${record.outcome} firstTokenMs=${Math.round(record.firstTokenMs ?? -1)} totalMs=${Math.round(record.totalMs)} contextValidated=${record.realWorldValidated ?? false}`,
+          traceId,
+        )
         measured.push(record)
         accumulated = [
           ...accumulated.filter(
@@ -421,6 +496,13 @@ export function ModelAnalyst({
       }
 
       const winner = bestObserved(measured, profile.fingerprint, alias)
+      traceBenchmark(
+        'selection',
+        winner
+          ? `winner=${winner.variantId} ep=${winner.executionProvider ?? '-'} device=${winner.device ?? '-'} firstTokenMs=${Math.round(winner.firstTokenMs ?? -1)} contextValidated=${winner.realWorldValidated ?? false}`
+          : 'winner=-',
+        traceId,
+      )
       if (winner && !abort.signal.aborted) {
         if (family.role === 'Quick') {
           setProgress(
@@ -437,7 +519,9 @@ export function ModelAnalyst({
           setProgress(
             `${family.role} winner recorded: ${alias} · ${winner.executionProvider ?? winner.device} · ${Math.round(winner.firstTokenMs!)} ms. Restoring the everyday Quick model…`,
           )
+          traceBenchmark('restore-quick-begin', `id=${previous.id}`, traceId)
           await manager.activateModel(previous.id)
+          traceBenchmark('restore-quick-ready', `id=${previous.id}`, traceId)
           selected = true
           setProgress(
             `Recorded ${family.role} winner: ${alias} · ${winner.executionProvider ?? winner.device} · ${Math.round(winner.firstTokenMs!)} ms. Quick model restored.`,
@@ -457,7 +541,9 @@ export function ModelAnalyst({
             ? 'Cancel requested. Restoring the previous model after native cleanup…'
             : 'No interactive path passed. Restoring the previous model…',
         )
+        traceBenchmark('restore-previous-begin', `id=${previous.id}`, traceId)
         await manager.activateModel(previous.id)
+        traceBenchmark('restore-previous-ready', `id=${previous.id}`, traceId)
       } else {
         setProgress(
           abort.signal.aborted
@@ -475,12 +561,22 @@ export function ModelAnalyst({
           await manager.activateModel(previous.id)
           await refresh()
         } catch (recoveryError) {
+          traceBenchmark(
+            'recovery-failed',
+            `previous=${previous.id} error=${String(recoveryError)}`,
+            traceId,
+          )
           setError(
             `Model recovery needs attention: ${String(recoveryError)}`,
           )
         }
       }
     } finally {
+      traceBenchmark(
+        'end',
+        `alias=${alias} selected=${selected} previous=${previous?.id ?? '-'}`,
+        traceId,
+      )
       controller.current = null
       setRunning(false)
       setBusy(false)
