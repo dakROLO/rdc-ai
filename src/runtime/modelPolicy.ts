@@ -115,15 +115,20 @@ export function bestObservedForRole(results: BenchmarkResult[], fingerprint: str
     if (result.fingerprint !== fingerprint) continue
     if (result.outcome !== 'accepted') continue
     if (result.firstTokenMs === undefined) continue
-    let candidate: RuntimeModelCandidate | undefined
-    for (const model of models) {
-      if (model.id === result.variantId) {
-        candidate = model
-        break
-      }
-    }
-    if (!candidate) continue
-    if (taskOf(candidate) !== 'chat') continue
+    const familyCandidates = models.filter(
+      (model) =>
+        model.alias.toLowerCase() === result.alias.toLowerCase() &&
+        taskOf(model) === 'chat',
+    )
+    if (!familyCandidates.length) continue
+    // Role qualification is alias-first. The API-visible model ID may omit or
+    // otherwise differ from the catalog's exact variant suffix, so a validated
+    // family result must not disappear solely because variant IDs differ.
+    const normalizedVariant = result.variantId.split(':')[0].toLowerCase()
+    const candidate =
+      familyCandidates.find(
+        (model) => model.id.split(':')[0].toLowerCase() === normalizedVariant,
+      ) ?? familyCandidates[0]
     if (roleOf(candidate) !== role) continue
     if (role !== 'Quick' && result.realWorldValidated !== true) continue
     matches.push(result)
