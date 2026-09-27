@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { LocalRuntimeManager, RuntimeModelCandidate } from './LocalRuntimeManager.ts'
-import { bestObserved } from './modelPolicy.ts'
+import { bestObserved, roleOf, taskOf } from './modelPolicy.ts'
 import type { BenchmarkResult, DeviceProfile } from './modelPolicy.ts'
 
 interface Props {
@@ -85,6 +85,48 @@ export function ModelStorage({
 
   const selectedVoiceAlias =
     localStorage.getItem('crownkeep.speechAlias')?.toLowerCase() ?? ''
+
+  const quickRecoveryId = useMemo(() => {
+    const quickCached = cached.filter(
+      (candidate) => taskOf(candidate) === 'chat' && roleOf(candidate) === 'Quick',
+    )
+    if (!quickCached.length) return undefined
+
+    const measured = quickCached
+      .map((candidate) => ({
+        candidate,
+        result: results
+          .filter(
+            (result) =>
+              result.variantId === candidate.id &&
+              result.outcome === 'accepted' &&
+              result.firstTokenMs !== undefined,
+          )
+          .sort(
+            (a, b) =>
+              (a.firstTokenMs! * 2 + a.totalMs) -
+              (b.firstTokenMs! * 2 + b.totalMs),
+          )[0],
+      }))
+      .filter((item) => item.result)
+      .sort(
+        (a, b) =>
+          (a.result!.firstTokenMs! * 2 + a.result!.totalMs) -
+          (b.result!.firstTokenMs! * 2 + b.result!.totalMs),
+      )[0]?.candidate
+
+    if (measured) return measured.id
+
+    return (
+      quickCached.find(
+        (candidate) =>
+          candidate.alias.toLowerCase() === 'phi-4-mini' &&
+          candidate.executionProvider?.toLowerCase() === 'cpuexecutionprovider',
+      )?.id ??
+      quickCached.find((candidate) => candidate.alias.toLowerCase() === 'phi-4-mini')?.id ??
+      quickCached[0].id
+    )
+  }, [cached, results])
 
   const measuredLosers = useMemo(() => {
     if (!profile) return []
