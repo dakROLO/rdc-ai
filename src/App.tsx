@@ -1238,11 +1238,41 @@ export default function App() {
       return
     }
 
+    let requestModelId = selectedModelId
+    let requestRuntimeDevice = selectedModel?.runtimeDevice
+
+    if (
+      localRuntimeManager.mode === 'embedded' &&
+      selectedProviderId === 'foundry-local'
+    ) {
+      try {
+        const nativeCandidates = await localRuntimeManager.listModelCandidates()
+        const loadedNative = nativeCandidates.find(
+          (candidate) => candidate.loaded && taskOf(candidate) === 'chat',
+        )
+
+        if (!loadedNative) {
+          setRuntimeCheckError(
+            'No local chat model is loaded. Open Local AI and select Quick, Balanced, or Deep again.',
+          )
+          return
+        }
+
+        requestModelId = await syncSelectedModelToNative(loadedNative.id)
+        requestRuntimeDevice = loadedNative.device
+      } catch (error) {
+        setRuntimeCheckError(
+          `CrownKeep could not synchronize the active local model before sending: ${String(error)}`,
+        )
+        return
+      }
+    }
+
     const userMessage = makeMessage(conversation.id, 'user', text)
     const assistantMessage: Message = {
       ...makeMessage(conversation.id, 'assistant', ''),
       providerId: provider.id,
-      modelId: selectedModelId,
+      modelId: requestModelId,
       inferenceLocation: provider.location,
     }
 
@@ -1289,8 +1319,8 @@ export default function App() {
 
     setLastRun({
       providerId: provider.id,
-      modelId: selectedModelId,
-      runtimeDevice: selectedModel?.runtimeDevice,
+      modelId: requestModelId,
+      runtimeDevice: requestRuntimeDevice,
       startedAt: startedAtIso,
       outputChars: 0,
       outcome: 'running',
@@ -1313,7 +1343,7 @@ export default function App() {
       ]
 
       for await (const chunk of provider.streamChat(
-        { modelId: selectedModelId, messages: requestMessages },
+        { modelId: requestModelId, messages: requestMessages },
         generationSignal,
       )) {
         if (chunk.text && firstTokenAt === undefined) {
@@ -1326,8 +1356,8 @@ export default function App() {
         const now = performance.now()
         setLastRun({
           providerId: provider.id,
-          modelId: selectedModelId,
-          runtimeDevice: selectedModel?.runtimeDevice,
+          modelId: requestModelId,
+          runtimeDevice: requestRuntimeDevice,
           startedAt: startedAtIso,
           firstTokenMs:
             firstTokenAt === undefined ? undefined : firstTokenAt - startedAt,
@@ -1364,7 +1394,7 @@ export default function App() {
             modelCandidates.find(
               (candidate) =>
                 normalizeRuntimeModelKey(candidate.id) ===
-                normalizeRuntimeModelKey(selectedModelId),
+                normalizeRuntimeModelKey(requestModelId),
             ) ?? loadedChatCandidate
 
           if (failedCandidate && fingerprint) {
@@ -1479,8 +1509,8 @@ export default function App() {
         firstTokenAt === undefined ? undefined : firstTokenAt - startedAt
       setLastRun({
         providerId: provider.id,
-        modelId: selectedModelId,
-        runtimeDevice: selectedModel?.runtimeDevice,
+        modelId: requestModelId,
+        runtimeDevice: requestRuntimeDevice,
         startedAt: startedAtIso,
         firstTokenMs,
         totalMs,
@@ -1498,7 +1528,7 @@ export default function App() {
           !(selectedModel?.runtimeDevice === 'GPU' && totalMs > 10_000)
         const record: LocalAiSetupRecord = {
           providerId: provider.id,
-          modelId: selectedModelId,
+          modelId: requestModelId,
           validatedAt: new Date().toISOString(),
           firstTokenMs,
           totalMs,
