@@ -16,15 +16,6 @@ pub async fn crownkeep_device_profile() -> Result<DeviceProfile, String> {
         .await
         .map_err(|e| e.to_string())??;
 
-    let mut providers: Vec<_> = manager
-        .discover_eps()
-        .map_err(|e| e.to_string())?
-        .into_iter()
-        .map(|ep| ep.name)
-        .collect();
-    providers.sort();
-    providers.dedup();
-
     let mut variants = Vec::new();
     for model in manager
         .catalog()
@@ -59,17 +50,17 @@ pub async fn crownkeep_device_profile() -> Result<DeviceProfile, String> {
     gpus.sort();
 
     let mut hash = std::collections::hash_map::DefaultHasher::new();
-    // Fingerprints must change for durable capability changes, not because a
-    // Foundry/ONNX DLL happened to be loaded at a different point in the app
-    // lifecycle. Cache/load state and transient process-module state are omitted.
+    // Fingerprints represent durable device/runtime capability, not transient
+    // process state. Execution-provider registration/discovery can differ before
+    // and after Foundry startup, so it is intentionally omitted. GPU driver,
+    // OS, memory, CPU, catalog variants, and policy version remain durable inputs.
     (
         memory_mb,
         cpu.as_str(),
         os.as_str(),
         &gpus,
-        &providers,
         &variants,
-        "foundry-sdk-1.2.3-policy-4",
+        "foundry-sdk-1.2.3-policy-5",
     )
         .hash(&mut hash);
 
