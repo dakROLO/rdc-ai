@@ -84,6 +84,24 @@ const DEFAULT_WINDOWS_MODEL_ALIAS = 'phi-4-mini'
 const PREFERRED_WINDOWS_MODEL_KEY = 'crownkeep.preferredWindowsModel'
 const IDLE_UNLOAD_MINUTES_KEY = 'crownkeep.idleUnloadMinutes'
 
+function traceTerminal(
+  scope: string,
+  event: string,
+  detail: string,
+  requestId?: string,
+) {
+  try {
+    void invoke('crownkeep_trace', {
+      scope,
+      event,
+      detail,
+      requestId,
+    }).catch(() => {})
+  } catch {
+    // Browser-only tests do not have the Tauri bridge.
+  }
+}
+
 type ChatModelRole = Extract<ModelRole, 'Quick' | 'Balanced' | 'Deep / Experimental'>
 
 const CHAT_ROLE_LABELS: Record<ChatModelRole, string> = {
@@ -1044,32 +1062,80 @@ export default function App() {
     }
   }
 
-  async function syncSelectedModelToNative(modelId: string) {
+  async function syncSelectedModelToNative(
+    modelId: string,
+    requestId?: string,
+  ) {
     const normalizedTarget = normalizeRuntimeModelKey(modelId)
     let lastError: unknown
+    let lastVisible = ''
+
+    traceTerminal(
+      'model-sync',
+      'begin',
+      `target=${modelId} normalized=${normalizedTarget}`,
+      requestId,
+    )
 
     for (let attempt = 0; attempt < 20; attempt += 1) {
       try {
         const provider = providerRegistry.require(selectedProviderId)
         const availableModels = await provider.listModels()
+        const visible = availableModels.map((model) => model.id).join(',')
         const actual = availableModels.find(
           (model) =>
             normalizeRuntimeModelKey(model.id) === normalizedTarget,
         )
 
         if (actual) {
+          traceTerminal(
+            'model-sync',
+            'matched',
+            `attempt=${attempt + 1} target=${modelId} actual=${actual.id} visible=[${visible}]`,
+            requestId,
+          )
           setModels(availableModels)
           setSelectedModelId(actual.id)
           localStorage.setItem(modelStorageKey(selectedProviderId), actual.id)
           return actual.id
         }
+
+        if (
+          attempt === 0 ||
+          attempt === 4 ||
+          attempt === 9 ||
+          attempt === 19 ||
+          visible !== lastVisible
+        ) {
+          traceTerminal(
+            'model-sync',
+            'waiting',
+            `attempt=${attempt + 1} target=${modelId} visible=[${visible}]`,
+            requestId,
+          )
+        }
+        lastVisible = visible
       } catch (error) {
         lastError = error
+        if (attempt === 0 || attempt === 4 || attempt === 9 || attempt === 19) {
+          traceTerminal(
+            'model-sync',
+            'probe-error',
+            `attempt=${attempt + 1} target=${modelId} error=${String(error)}`,
+            requestId,
+          )
+        }
       }
 
       await new Promise((resolve) => window.setTimeout(resolve, 250))
     }
 
+    traceTerminal(
+      'model-sync',
+      'failed',
+      `target=${modelId} visible=[${lastVisible}] error=${lastError ? String(lastError) : '-'}`,
+      requestId,
+    )
     throw new Error(
       `Loaded model '${modelId}' was not exposed by the local inference API${lastError ? `: ${String(lastError)}` : '.'}`,
     )
@@ -1077,20 +1143,25 @@ export default function App() {
 
   async function useAnalystModel(modelId: string) {
     if (!modelId || isRuntimeActionRunning || isGenerating || speechBusy || isRuntimeCheckRunning) return
+    const traceId = createId()
+    traceTerminal('model-switch', 'manual-begin', `requested=${modelId}`, traceId)
     setIsRuntimeActionRunning(true)
     setRuntimeCheckError(null)
     setRuntimeOperation(null)
     setRuntimeActionMessage(`Switching local AI to ${modelId}…`)
     try {
       await localRuntimeManager.activateModel(modelId)
-      const activeModelId = await syncSelectedModelToNative(modelId)
+      traceTerminal('model-switch', 'native-activated', `requested=${modelId}`, traceId)
+      const activeModelId = await syncSelectedModelToNative(modelId, traceId)
       setSetupRecord(null)
       localStorage.removeItem(LOCAL_AI_SETUP_STORAGE_KEY)
       setRuntimeSleeping(false)
       setRuntimeActionMessage(
         `Model switch complete · ${activeModelId}. Benchmark the family to save it as the measured preference.`,
       )
+      traceTerminal('model-switch', 'manual-ready', `active=${activeModelId}`, traceId)
     } catch (error) {
+      traceTerminal('model-switch', 'manual-failed', `requested=${modelId} error=${String(error)}`, traceId)
       setRuntimeCheckError(String(error))
     } finally {
       setIsRuntimeActionRunning(false)
@@ -1112,6 +1183,13 @@ export default function App() {
 
     const winner = measuredRoleWinners[role]
     if (!winner) return
+    const traceId = createId()
+    traceTerminal(
+      'role-switch',
+      'begin',
+      `role=${role} alias=${winner.alias} variant=${winner.variantId} ep=${winner.executionProvider ?? '-'} device=${winner.device ?? '-'}`,
+      traceId,
+    )
 
     setIsRuntimeActionRunning(true)
     setRuntimeCheckError(null)
@@ -1122,7 +1200,16 @@ export default function App() {
 
     try {
       await localRuntimeManager.activateModel(winner.variantId)
-      const activeModelId = await syncSelectedModelToNative(winner.variantId)
+      traceTerminal(
+        'role-switch',
+        'native-activated',
+        `role=${role} variant=${winner.variantId}`,
+        traceId,
+      )
+      const activeModelId = await syncSelectedModelToNative(
+        winner.variantId,
+        traceId,
+      )
       setRuntimeSleeping(false)
       setSetupRecord(null)
       localStorage.removeItem(LOCAL_AI_SETUP_STORAGE_KEY)
@@ -1131,7 +1218,19 @@ export default function App() {
       )
       setProviderRefreshNonce((current) => current + 1)
       await refreshModelAnalyst()
+      traceTerminal(
+        'role-switch',
+        'ready',
+        `role=${role} active=${activeModelId}`,
+        traceId,
+      )
     } catch (error) {
+      traceTerminal(
+        'role-switch',
+        'failed',
+        `role=${role} variant=${winner.variantId} error=${String(error)}`,
+        traceId,
+      )
       setRuntimeCheckError(
         `Could not switch to ${CHAT_ROLE_LABELS[role]}: ${String(error)}`,
       )
@@ -1228,8 +1327,15 @@ export default function App() {
       return
     }
 
+    const traceId = createId()
     let requestModelId = selectedModelId
     let requestRuntimeDevice = selectedModel?.runtimeDevice
+    traceTerminal(
+      'chat',
+      'begin',
+      `uiSelected=${selectedModelId} provider=${selectedProviderId} conversation=${conversation.id}`,
+      traceId,
+    )
 
     if (
       localRuntimeManager.mode === 'embedded' &&
@@ -1237,8 +1343,20 @@ export default function App() {
     ) {
       try {
         const nativeCandidates = await localRuntimeManager.listModelCandidates()
-        const loadedNative = nativeCandidates.find(
+        const loadedChats = nativeCandidates.filter(
           (candidate) => candidate.loaded && taskOf(candidate) === 'chat',
+        )
+        const loadedNative = loadedChats[0]
+        traceTerminal(
+          'chat',
+          'native-preflight',
+          `uiSelected=${selectedModelId} loaded=[${loadedChats
+            .map(
+              (candidate) =>
+                `${candidate.id}|${candidate.executionProvider ?? '-'}|${candidate.device ?? '-'}`,
+            )
+            .join(',')}]`,
+          traceId,
         )
 
         if (!loadedNative) {
@@ -1248,7 +1366,10 @@ export default function App() {
           return
         }
 
-        requestModelId = await syncSelectedModelToNative(loadedNative.id)
+        requestModelId = await syncSelectedModelToNative(
+          loadedNative.id,
+          traceId,
+        )
         if (
           loadedNative.device === 'CPU' ||
           loadedNative.device === 'GPU' ||
@@ -1257,12 +1378,25 @@ export default function App() {
           requestRuntimeDevice = loadedNative.device
         }
       } catch (error) {
+        traceTerminal(
+          'chat',
+          'preflight-failed',
+          `uiSelected=${selectedModelId} error=${String(error)}`,
+          traceId,
+        )
         setRuntimeCheckError(
           `CrownKeep could not synchronize the active local model before sending: ${String(error)}`,
         )
         return
       }
     }
+
+    traceTerminal(
+      'chat',
+      'request-model',
+      `requestModel=${requestModelId} runtimeDevice=${requestRuntimeDevice ?? '-'}`,
+      traceId,
+    )
 
     const userMessage = makeMessage(conversation.id, 'user', text)
     const assistantMessage: Message = {
@@ -1339,12 +1473,22 @@ export default function App() {
       ]
 
       for await (const chunk of provider.streamChat(
-        { modelId: requestModelId, messages: requestMessages },
+        {
+          modelId: requestModelId,
+          messages: requestMessages,
+          traceId,
+        },
         generationSignal,
       )) {
         if (chunk.text && firstTokenAt === undefined) {
           firstTokenAt = performance.now()
           window.clearTimeout(firstTokenTimer)
+          traceTerminal(
+            'chat',
+            'first-token',
+            `model=${requestModelId} firstTokenMs=${Math.round(firstTokenAt - startedAt)}`,
+            traceId,
+          )
         }
         if (chunk.usage) latestUsage = chunk.usage
 
@@ -1377,6 +1521,12 @@ export default function App() {
         error instanceof DOMException && error.name === 'AbortError'
 
       if (firstTokenTimedOut || totalTimedOut) {
+        traceTerminal(
+          'chat',
+          'timeout',
+          `model=${requestModelId} firstTokenTimedOut=${firstTokenTimedOut} totalTimedOut=${totalTimedOut} elapsedMs=${Math.round(performance.now() - startedAt)}`,
+          traceId,
+        )
         runOutcome = 'error'
         assistantContent = firstTokenTimedOut
           ? 'Anne’s local response timed out before it began. CrownKeep is recovering the local model; try again in a moment.'
@@ -1456,7 +1606,13 @@ export default function App() {
                   ),
                 ),
               ])
-              await syncSelectedModelToNative(quickRecovery.id)
+              await syncSelectedModelToNative(quickRecovery.id, traceId)
+              traceTerminal(
+                'chat',
+                'recovered-quick',
+                `failedModel=${requestModelId} quick=${quickRecovery.id}`,
+                traceId,
+              )
               setRuntimeActionMessage(
                 `Recovered with Quick · ${quickRecovery.alias}. You can retry the message.`,
               )
@@ -1473,6 +1629,12 @@ export default function App() {
           }
         }
       } else if (!aborted) {
+        traceTerminal(
+          'chat',
+          'error',
+          `model=${requestModelId} elapsedMs=${Math.round(performance.now() - startedAt)} error=${String(error)}`,
+          traceId,
+        )
         runOutcome = 'error'
         assistantContent = 'Anne hit a local provider error. Open Local AI diagnostics for details.'
         console.error(error)
@@ -1501,6 +1663,12 @@ export default function App() {
       )
       const completedAt = performance.now()
       const totalMs = completedAt - startedAt
+      traceTerminal(
+        'chat',
+        'complete',
+        `model=${requestModelId} outcome=${runOutcome} totalMs=${Math.round(totalMs)} firstTokenMs=${firstTokenAt === undefined ? '-' : Math.round(firstTokenAt - startedAt)} outputChars=${assistantContent.length}`,
+        traceId,
+      )
       const firstTokenMs =
         firstTokenAt === undefined ? undefined : firstTokenAt - startedAt
       setLastRun({
