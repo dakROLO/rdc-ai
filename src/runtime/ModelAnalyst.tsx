@@ -291,10 +291,71 @@ export function ModelAnalyst({
             tokens && record.totalMs > (record.firstTokenMs ?? 0)
               ? tokens / ((record.totalMs - (record.firstTokenMs ?? 0)) / 1000)
               : undefined
-          record.outcome =
+          const speedAccepted =
             (record.firstTokenMs ?? Infinity) <= 8000 && record.totalMs <= 20000
-              ? 'accepted'
-              : 'slow'
+
+          if (!speedAccepted) {
+            record.outcome = 'slow'
+          } else {
+            setProgress(
+              `${index}/${paths.length} · Validating normal chat context · ${candidate.executionProvider ?? candidate.device ?? 'Default'}…`,
+            )
+
+            const contextStarted = performance.now()
+            let contextText = ''
+            const contextSignal = AbortSignal.any([
+              abort.signal,
+              AbortSignal.timeout(30_000),
+            ])
+
+            for await (const chunk of provider.streamChat(
+              {
+                modelId: actual.id,
+                maxTokens: 64,
+                messages: [
+                  {
+                    role: 'system',
+                    content:
+                      'You are Anne, a concise local assistant. Use the supplied project context and answer the final request directly.',
+                  },
+                  {
+                    role: 'user',
+                    content:
+                      'Project context: CrownKeep is a local-first assistant. Recent work includes runtime startup, model selection, benchmark cleanup, dictation, recovery after stalled requests, and preserving a dependable Quick model. The user wants visible progress, predictable recovery, and model choices based on measured behavior. A previous model answered a tiny benchmark quickly but stalled when normal conversation context was present.',
+                  },
+                  {
+                    role: 'assistant',
+                    content:
+                      'Understood. I will use the project context and keep the answer concise.',
+                  },
+                  {
+                    role: 'user',
+                    content:
+                      'In exactly two bullets, state the current priority and the next action.',
+                  },
+                ],
+              },
+              contextSignal,
+            )) {
+              if (chunk.text && record.contextFirstTokenMs === undefined) {
+                record.contextFirstTokenMs = performance.now() - contextStarted
+              }
+              contextText += chunk.text
+            }
+
+            record.contextTotalMs = performance.now() - contextStarted
+            if (!contextText.trim()) {
+              throw new Error('The representative-context probe returned no text.')
+            }
+
+            record.realWorldValidated =
+              (record.contextFirstTokenMs ?? Infinity) <= 12_000 &&
+              record.contextTotalMs <= 30_000
+            record.outcome = record.realWorldValidated ? 'accepted' : 'slow'
+            record.detail = record.realWorldValidated
+              ? `Normal-context probe passed in ${Math.round(record.contextTotalMs)} ms.`
+              : `Normal-context probe was too slow: ${Math.round(record.contextFirstTokenMs ?? 0)} ms first token / ${Math.round(record.contextTotalMs)} ms total.`
+          }
         } catch (e) {
           record.totalMs = performance.now() - started
           record.outcome = abort.signal.aborted ? 'cancelled' : 'error'
