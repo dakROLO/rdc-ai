@@ -25,6 +25,7 @@ export interface ChatRequest {
   messages: ChatMessageInput[]
   maxTokens?: number
   context?: unknown
+  traceId?: string
 }
 
 export interface TokenUsage {
