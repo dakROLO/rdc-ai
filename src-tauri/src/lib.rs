@@ -7,6 +7,41 @@ mod device;
 const FOUNDRY_WEB_URL: &str = "http://127.0.0.1:39839";
 static FOUNDRY_LIFECYCLE_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
+
+fn trace_timestamp_ms() -> u128 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|value| value.as_millis())
+        .unwrap_or(0)
+}
+
+fn trace_clean(value: &str) -> String {
+    value.replace(['\r', '\n'], " ")
+}
+
+#[tauri::command]
+fn crownkeep_trace(
+    scope: String,
+    event: String,
+    detail: Option<String>,
+    request_id: Option<String>,
+) {
+    eprintln!(
+        "[CrownKeep/Trace] t={} scope={} event={} request={} detail={}",
+        trace_timestamp_ms(),
+        trace_clean(&scope),
+        trace_clean(&event),
+        request_id
+            .as_deref()
+            .map(trace_clean)
+            .unwrap_or_else(|| "-".into()),
+        detail
+            .as_deref()
+            .map(trace_clean)
+            .unwrap_or_else(|| "-".into()),
+    );
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct CrownKeepHostInfo {
@@ -710,10 +745,32 @@ async fn crownkeep_foundry_activate_model(
         .get_loaded_models()
         .await
         .map_err(|error| format!("Could not inspect loaded Foundry models: {error}"))?;
-    let service_was_running = !manager
+    let service_urls_before = manager
         .urls()
-        .map_err(|error| format!("Could not inspect Foundry service state: {error}"))?
-        .is_empty();
+        .map_err(|error| format!("Could not inspect Foundry service state: {error}"))?;
+    let service_was_running = !service_urls_before.is_empty();
+    let required_ep = model
+        .info()
+        .runtime
+        .as_ref()
+        .map(|runtime| runtime.execution_provider.as_str())
+        .unwrap_or("unknown");
+    let previous_ids = previous
+        .iter()
+        .map(|item| item.id().to_string())
+        .collect::<Vec<_>>()
+        .join(",");
+
+    eprintln!(
+        "[CrownKeep/Foundry] stage=activate begin requested={} resolved={} alias={} ep={} previous=[{}] service_running={} urls=[{}]",
+        model_id,
+        model.id(),
+        model.alias(),
+        required_ep,
+        previous_ids,
+        service_was_running,
+        service_urls_before.join(",")
+    );
 
     emit_operation_progress(
         &app,
@@ -724,10 +781,15 @@ async fn crownkeep_foundry_activate_model(
         None,
     );
     if service_was_running {
+        eprintln!("[CrownKeep/Foundry] stage=activate stop-service begin target={}", model.id());
         manager
             .stop_web_service()
             .await
-            .map_err(|error| format!("Could not pause Foundry Local before model change: {error}"))?;
+            .map_err(|error| {
+                eprintln!("[CrownKeep/Foundry] stage=activate stop-service failed target={} error={error}", model.id());
+                format!("Could not pause Foundry Local before model change: {error}")
+            })?;
+        eprintln!("[CrownKeep/Foundry] stage=activate stop-service complete target={}", model.id());
     }
 
     let result: Result<(), String> = async {
@@ -744,10 +806,15 @@ async fn crownkeep_foundry_activate_model(
         );
         for loaded in &previous {
             if normalized_model_key(loaded.id()) != normalized_model_key(model.id()) {
+                eprintln!("[CrownKeep/Foundry] stage=activate unload begin id={}", loaded.id());
                 loaded
                     .unload()
                     .await
-                    .map_err(|error| format!("Could not unload '{}': {error}", loaded.id()))?;
+                    .map_err(|error| {
+                        eprintln!("[CrownKeep/Foundry] stage=activate unload failed id={} error={error}", loaded.id());
+                        format!("Could not unload '{}': {error}", loaded.id())
+                    })?;
+                eprintln!("[CrownKeep/Foundry] stage=activate unload complete id={}", loaded.id());
             }
         }
 
@@ -763,10 +830,15 @@ async fn crownkeep_foundry_activate_model(
                 Some(model.alias().to_string()),
                 None,
             );
+            eprintln!("[CrownKeep/Foundry] stage=activate load begin id={} ep={}", model.id(), required_ep);
             model
                 .load()
                 .await
-                .map_err(|error| format!("Could not load '{}': {error}", model.id()))?;
+                .map_err(|error| {
+                    eprintln!("[CrownKeep/Foundry] stage=activate load failed id={} ep={} error={error}", model.id(), required_ep);
+                    format!("Could not load '{}': {error}", model.id())
+                })?;
+            eprintln!("[CrownKeep/Foundry] stage=activate load complete id={} ep={}", model.id(), required_ep);
         }
 
         emit_operation_progress(
@@ -777,15 +849,34 @@ async fn crownkeep_foundry_activate_model(
             Some(model.alias().to_string()),
             None,
         );
+        eprintln!("[CrownKeep/Foundry] stage=activate start-service begin target={}", model.id());
         manager
             .start_web_service()
             .await
-            .map_err(|error| format!("Could not start Foundry Local after model change: {error}"))?;
+            .map_err(|error| {
+                eprintln!("[CrownKeep/Foundry] stage=activate start-service failed target={} error={error}", model.id());
+                format!("Could not start Foundry Local after model change: {error}")
+            })?;
+
+        let urls_after = manager.urls().unwrap_or_default();
+        let loaded_after = manager
+            .catalog()
+            .get_loaded_models()
+            .await
+            .map(|items| items.into_iter().map(|item| item.id().to_string()).collect::<Vec<_>>())
+            .unwrap_or_default();
+        eprintln!(
+            "[CrownKeep/Foundry] stage=activate ready target={} loaded=[{}] urls=[{}]",
+            model.id(),
+            loaded_after.join(","),
+            urls_after.join(",")
+        );
         Ok(())
     }
     .await;
 
     if let Err(error) = result {
+        eprintln!("[CrownKeep/Foundry] stage=activate failed target={} error={}", model.id(), error);
         let _ = model.unload().await;
         for loaded in &previous {
             let _ = loaded.load().await;
@@ -1069,6 +1160,7 @@ pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             crownkeep_host_info,
+            crownkeep_trace,
             device::crownkeep_device_profile,
             speech::crownkeep_transcribe,
             crownkeep_foundry_status,
