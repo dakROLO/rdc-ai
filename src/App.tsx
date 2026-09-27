@@ -747,6 +747,7 @@ export default function App() {
 
     if (changed) {
       localStorage.setItem(PROFILE_KEY, JSON.stringify(next.slice(-200)))
+      setProviderRefreshNonce((current) => current + 1)
     }
     localStorage.setItem(migrationKey, fingerprint)
   }, [fingerprint, modelCandidates])
