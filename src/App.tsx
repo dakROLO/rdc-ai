@@ -790,7 +790,6 @@ export default function App() {
       isGenerating || speechBusy ||
       runtimeSleeping ||
       providerAvailability === null ||
-      loadedChatCandidate !== undefined ||
       fingerprint === undefined ||
       modelCandidates.length === 0
     ) {
@@ -817,6 +816,15 @@ export default function App() {
       chatCandidates.find((item) => item.cached)
 
     if (!candidate) return
+
+    const loadedChats = chatCandidates.filter((item) => item.loaded)
+    if (
+      loadedChats.length === 1 &&
+      loadedChats[0].alias.toLocaleLowerCase() === candidate.alias.toLocaleLowerCase()
+    ) {
+      autoRestoreAttemptedRef.current = true
+      return
+    }
 
     const fallbackCandidate =
       chatCandidates.find(
@@ -851,7 +859,6 @@ export default function App() {
     isRuntimeActionRunning,
     modelCandidates,
     fingerprint,
-    loadedChatCandidate,
     providerAvailability,
     runtimeSleeping,
     selectedProviderId,
