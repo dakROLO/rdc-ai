@@ -310,12 +310,18 @@ export function ModelStorage({
                           : protectedVoice
                             ? 'The selected Voice model is protected. Choose another Voice model first.'
                             : candidate.loaded
-                              ? 'Unload this model before deleting its cached files.'
+                              ? 'Unload or switch away from this active model before deleting its cached files.'
                               : 'Delete this cached variant from the device.'
                       }
                       onClick={() => void remove(candidate)}
                     >
-                      Delete from device
+                      {candidate.loaded
+                        ? 'Active · switch first'
+                        : protectedWinner
+                          ? 'Measured winner · protected'
+                          : protectedVoice
+                            ? 'Voice model · protected'
+                            : 'Delete from device'}
                     </button>
                   </div>
                 </div>
