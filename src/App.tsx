@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { ModelAnalyst } from './runtime/ModelAnalyst.tsx'
-import { readPreferred, taskOf } from './runtime/modelPolicy.ts'
+import { readPreferred, roleOf, taskOf } from './runtime/modelPolicy.ts'
 import type { DeviceProfile } from './runtime/modelPolicy.ts'
 import { DictationControl } from './speech/DictationControl.tsx'
 import {
@@ -811,13 +811,39 @@ export default function App() {
   }
 
   function preferredNativeModelId(): string {
+    const quickCandidateFor = (value?: string | null) => {
+      if (!value) return undefined
+      const normalized = normalizeRuntimeModelKey(value)
+      return modelCandidates.find(
+        (candidate) =>
+          taskOf(candidate) === 'chat' &&
+          roleOf(candidate) === 'Quick' &&
+          (normalizeRuntimeModelKey(candidate.id) === normalized ||
+            candidate.alias.toLocaleLowerCase() === value.toLocaleLowerCase()),
+      )
+    }
+
     const observed = readPreferred(localStorage)
-    if (observed) return observed.fingerprint === fingerprint ? observed.variantId : observed.alias
-    return (
-      localStorage.getItem(PREFERRED_WINDOWS_MODEL_KEY) ||
-      setupRecord?.modelId ||
-      DEFAULT_WINDOWS_MODEL_ALIAS
+    if (observed) {
+      const observedCandidate = quickCandidateFor(
+        observed.fingerprint === fingerprint ? observed.variantId : observed.alias,
+      )
+      if (observedCandidate) {
+        return observed.fingerprint === fingerprint
+          ? observedCandidate.id
+          : observedCandidate.alias
+      }
+    }
+
+    const storedQuick = quickCandidateFor(
+      localStorage.getItem(PREFERRED_WINDOWS_MODEL_KEY),
     )
+    if (storedQuick) return storedQuick.alias
+
+    const setupQuick = quickCandidateFor(setupRecord?.modelId)
+    if (setupQuick) return setupQuick.alias
+
+    return DEFAULT_WINDOWS_MODEL_ALIAS
   }
 
   async function prepareNativeLocalAi(
