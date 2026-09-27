@@ -298,6 +298,17 @@ Model Storage also now protects one cached **Quick recovery model** regardless o
 
 A normal CrownKeep chat timeout is now treated as real device evidence for the exact active variant. CrownKeep replaces that variant's current-fingerprint accepted record with an error observation before recovering to Quick. This prevents a path that repeatedly fails normal chat from remaining eligible as a Balanced or Deep role winner solely because it once passed a synthetic speed prompt. A later successful representative-context benchmark can qualify the variant again.
 
+### Benchmark persistence across restart
+
+A physical-laptop restart showed a completed Balanced benchmark could appear to vanish. The benchmark record itself was persisted in local app storage; the lookup failed because the device fingerprint still included the execution-provider discovery list. That list can differ before and after CUDA/OpenVINO registration in a fresh Foundry process, producing different fingerprints for the same physical machine.
+
+Fix:
+
+- device fingerprints no longer include runtime execution-provider discovery state;
+- durable inputs remain RAM, CPU, OS, GPU names/driver versions, catalog variants, and fingerprint-policy version;
+- accepted benchmark results are migrated to the stable fingerprint by **model role** rather than by hard-coded model alias, so a validated OLMo Balanced result can survive the migration just like Phi Quick or a future Deep winner;
+- Model Analyst re-reads persisted benchmark records whenever the stable profile/candidate state is refreshed.
+
 ## Known implementation limits
 
 - RAM filtering uses disk-size × 1.5 + 2 GB as a conservative estimate, not a guarantee of peak memory or VRAM fit. Native load failures remain benchmark failures.
