@@ -981,6 +981,7 @@ export default function App() {
 
     try {
       const activateResult = await localRuntimeManager.activateModel(modelId)
+      await syncSelectedModelToNative(modelId)
       if (!options.quiet) setRuntimeActionMessage(activateResult.detail)
       setProviderRefreshNonce((current) => current + 1)
     } catch (error) {
@@ -995,6 +996,7 @@ export default function App() {
           const fallbackResult = await localRuntimeManager.activateModel(
             options.fallbackModelId,
           )
+          await syncSelectedModelToNative(options.fallbackModelId)
           setRuntimeActionMessage(
             `${fallbackResult.detail} Preferred model remains saved and can be retried after provider recovery.`,
           )
@@ -1052,6 +1054,37 @@ export default function App() {
     }
   }
 
+  async function syncSelectedModelToNative(modelId: string) {
+    const normalizedTarget = normalizeRuntimeModelKey(modelId)
+    let lastError: unknown
+
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      try {
+        const provider = providerRegistry.require(selectedProviderId)
+        const availableModels = await provider.listModels()
+        const actual = availableModels.find(
+          (model) =>
+            normalizeRuntimeModelKey(model.id) === normalizedTarget,
+        )
+
+        if (actual) {
+          setModels(availableModels)
+          setSelectedModelId(actual.id)
+          localStorage.setItem(modelStorageKey(selectedProviderId), actual.id)
+          return actual.id
+        }
+      } catch (error) {
+        lastError = error
+      }
+
+      await new Promise((resolve) => window.setTimeout(resolve, 250))
+    }
+
+    throw new Error(
+      `Loaded model '${modelId}' was not exposed by the local inference API${lastError ? `: ${String(lastError)}` : '.'}`,
+    )
+  }
+
   async function useAnalystModel(modelId: string) {
     if (!modelId || isRuntimeActionRunning || isGenerating || speechBusy || isRuntimeCheckRunning) return
     setIsRuntimeActionRunning(true)
@@ -1060,11 +1093,13 @@ export default function App() {
     setRuntimeActionMessage(`Switching local AI to ${modelId}…`)
     try {
       await localRuntimeManager.activateModel(modelId)
+      const activeModelId = await syncSelectedModelToNative(modelId)
       setSetupRecord(null)
       localStorage.removeItem(LOCAL_AI_SETUP_STORAGE_KEY)
       setRuntimeSleeping(false)
-      localStorage.setItem(modelStorageKey(selectedProviderId), normalizedModelForStorage(modelId))
-      setRuntimeActionMessage('Model switch complete. Benchmark the family to save it as the measured preference.')
+      setRuntimeActionMessage(
+        `Model switch complete · ${activeModelId}. Benchmark the family to save it as the measured preference.`,
+      )
     } catch (error) {
       setRuntimeCheckError(String(error))
     } finally {
@@ -1097,15 +1132,12 @@ export default function App() {
 
     try {
       await localRuntimeManager.activateModel(winner.variantId)
+      const activeModelId = await syncSelectedModelToNative(winner.variantId)
       setRuntimeSleeping(false)
       setSetupRecord(null)
       localStorage.removeItem(LOCAL_AI_SETUP_STORAGE_KEY)
-      localStorage.setItem(
-        modelStorageKey(selectedProviderId),
-        normalizedModelForStorage(winner.variantId),
-      )
       setRuntimeActionMessage(
-        `${CHAT_ROLE_LABELS[role]} ready · ${winner.alias} · ${winner.executionProvider ?? winner.device ?? 'Default'}.`,
+        `${CHAT_ROLE_LABELS[role]} ready · ${winner.alias} · ${winner.executionProvider ?? winner.device ?? 'Default'} · ${activeModelId}.`,
       )
       setProviderRefreshNonce((current) => current + 1)
       await refreshModelAnalyst()
@@ -1398,10 +1430,7 @@ export default function App() {
                   ),
                 ),
               ])
-              localStorage.setItem(
-                modelStorageKey(selectedProviderId),
-                normalizedModelForStorage(quickRecovery.id),
-              )
+              await syncSelectedModelToNative(quickRecovery.id)
               setRuntimeActionMessage(
                 `Recovered with Quick · ${quickRecovery.alias}. You can retry the message.`,
               )
