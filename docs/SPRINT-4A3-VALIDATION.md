@@ -240,6 +240,29 @@ Fix:
 - automatic Quick recovery is itself bounded to 20 seconds so the timeout path cannot hold the composer indefinitely;
 - if bounded recovery fails, CrownKeep releases the chat flow and instructs the user to restart the local runtime rather than waiting forever.
 
+### Physical laptop retest — Quick chat and dictation pass
+
+After the Quick-startup and bounded-recovery fixes, the physical laptop retest passed both of the next user-facing gates:
+
+- normal chat succeeded on the restored Quick path;
+- Windows local dictation completed successfully and returned text for review before send.
+
+This confirms the repaired startup/recovery flow can return CrownKeep to a usable everyday local model and that the speech path works on the physical laptop.
+
+### Role switching and SDK-native cache deletion
+
+Follow-up physical testing showed the CLI-based cache-removal path could report success without permanently removing an exact model variant. CrownKeep now uses the Foundry Local Rust SDK's native `remove_from_cache()` lifecycle method for the resolved variant instead of shelling out to the CLI. After removal, CrownKeep refreshes the catalog and verifies the exact variant ID is absent before reporting success.
+
+The Local AI panel now also includes a measured-role selector:
+
+- **Quick** — intended everyday/startup model;
+- **Balanced** — switches to the measured Balanced winner when one exists;
+- **Deep** — switches to the measured Deep/Experimental winner when one exists.
+
+Unmeasured roles remain disabled until they have a valid accepted benchmark. Quick remains the only role that controls Windows startup preference.
+
+Fingerprint policy was also hardened again so execution-provider registration state is not part of the device fingerprint. Provider names remain part of the fingerprint, but whether CUDA/OpenVINO/etc. happen to be registered in the current process no longer invalidates measurements. A one-time local migration preserves accepted measurements for exact cached variants across this policy change.
+
 ## Known implementation limits
 
 - RAM filtering uses disk-size × 1.5 + 2 GB as a conservative estimate, not a guarantee of peak memory or VRAM fit. Native load failures remain benchmark failures.
