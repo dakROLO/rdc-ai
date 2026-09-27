@@ -73,39 +73,51 @@ function preferredFamilyForRole(
   const inRole = families.filter((family) => family.role === role)
   if (!inRole.length) return undefined
 
-  if (fingerprint && role !== 'Voice') {
-    const validated = inRole.find((family) =>
-      results.some(
-        (result) =>
-          result.fingerprint === fingerprint &&
-          result.alias.toLowerCase() === family.alias.toLowerCase() &&
-          result.outcome === 'accepted' &&
-          result.firstTokenMs !== undefined &&
-          (role === 'Quick' || result.realWorldValidated === true),
-      ),
+  const currentResults = fingerprint
+    ? results.filter((result) => result.fingerprint === fingerprint)
+    : []
+
+  const familyWasAttempted = (family: ModelFamily) =>
+    currentResults.some(
+      (result) =>
+        result.alias.toLowerCase() === family.alias.toLowerCase(),
     )
+
+  const familyIsValidated = (family: ModelFamily) =>
+    currentResults.some(
+      (result) =>
+        result.alias.toLowerCase() === family.alias.toLowerCase() &&
+        result.outcome === 'accepted' &&
+        result.firstTokenMs !== undefined &&
+        (role === 'Quick' || result.realWorldValidated === true),
+    )
+
+  if (fingerprint && role !== 'Voice') {
+    const validated = inRole.find(familyIsValidated)
     if (validated) return validated
   }
 
   for (const alias of ROLE_PRIORITIES[role]) {
-    const match = inRole.find((family) => family.alias.toLowerCase() === alias)
+    const match = inRole.find(
+      (family) => family.alias.toLowerCase() === alias,
+    )
     if (!match) continue
 
     if (!fingerprint || role === 'Quick' || role === 'Voice') return match
-
-    const attempted = results.some(
-      (result) =>
-        result.fingerprint === fingerprint &&
-        result.alias.toLowerCase() === match.alias.toLowerCase(),
-    )
-    if (!attempted) return match
+    if (!familyWasAttempted(match)) return match
   }
 
   if (role === 'Quick') {
-    return inRole.find((family) => !/reason|deepseek|gpt-oss/i.test(family.alias))
+    return inRole.find(
+      (family) => !/reason|deepseek|gpt-oss/i.test(family.alias),
+    )
   }
 
-  return inRole[0]
+  // A failed/slow family is evidence, not a recommendation. Once the preferred
+  // candidates have been attempted without a validated winner, advance through
+  // the remaining untried families instead of falling back alphabetically to a
+  // family that has already failed on this device.
+  return inRole.find((family) => !familyWasAttempted(family))
 }
 
 export function ModelAnalyst({
@@ -682,7 +694,7 @@ export function ModelAnalyst({
                 <br />
                 {profile && memoryFit(variant, profile)}
                 {result &&
-                  `${result.outcome} · ${(result.totalMs / 1000).toFixed(2)} s speed test${result.realWorldValidated ? ' · context passed' : ''}${result.contextTotalMs ? ` · context ${(result.contextTotalMs / 1000).toFixed(2)} s` : ''} · ${result.timestamp}${result.detail ? ` · ${result.detail}` : ''}`}
+                  `${result.outcome === 'error' ? 'runtime/benchmark error' : result.outcome} · ${(result.totalMs / 1000).toFixed(2)} s${result.realWorldValidated ? ' · context passed' : ''}${result.contextTotalMs ? ` · context ${(result.contextTotalMs / 1000).toFixed(2)} s` : ''} · ${result.timestamp}${result.detail ? ` · ${result.detail}` : ''}`}
               </p>
             )
           })}
