@@ -11,6 +11,15 @@
 - Verified from current Foundry documentation that the Rust SDK defaults model storage to an app-specific `{app_data_dir}/cache/models`; this confirms why `FoundryLocalConfig::new("CrownKeep")` produced a separate cache. The exact installed CLI cache/service migration needs physical Windows discovery and remains open.
 - Do not merge, tag, delete branches, or delete legacy cache data. `docs/SPRINT-4A4-VALIDATION.md` is the handoff record.
 
+## Sprint 4A.4B — Windows System Foundry bridge — 2026-09-27
+
+- Normal packaged Windows lifecycle calls now use the installed `foundry` CLI instead of the CrownKeep SDK manager: runtime/cache discovery, dynamic service endpoint, alias download/load, unload, cache removal, and catalog/cache inspection.
+- `FoundryLocalProvider` asks the native host for the current System Foundry service URL before using the OpenAI-compatible `/v1` API; it no longer assumes port 39839 in a packaged build.
+- Startup restores the saved Quick **alias**, then adopts the actual API-visible model selected by System Foundry. A missing alias or model/API mismatch keeps chat blocked.
+- System Foundry and the untouched legacy `.CrownKeep\\cache\\models` path now appear separately in diagnostics.
+- The old SDK manager remains only behind the existing Windows dictation implementation and unused legacy native commands. It is not on the normal Windows chat/model path; removing/replacing dictation is a follow-on after this bridge is physically proven.
+- Automated result: Node tests, TypeScript, lint, and production build passed. Native Rust/Tauri check could not run in this workspace because `cargo` is absent. UI tests could launch their local server but Chromium is not provisioned; the attempted Playwright browser download returned a truncated/non-ZIP artifact from the execution environment.
+
 ## Active phase
 
 Phase 4A — Windows Product Host

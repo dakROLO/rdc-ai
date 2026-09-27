@@ -22,6 +22,10 @@ export interface RuntimeSnapshot {
   state: RuntimeLifecycleState
   detail: string
   models: AIModel[]
+  authority?: string
+  runtimeVersion?: string
+  cacheLocation?: string
+  legacyCacheLocation?: string
 }
 
 export interface RuntimeActionResult {

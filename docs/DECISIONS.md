@@ -502,3 +502,14 @@ The installed Foundry CLI's cache location and local service are discovered at p
 **Date:** 2026-09-27
 
 Shared CrownKeep code depends on a minimal `LocalRuntime` contract, not Foundry-specific types. Tool and knowledge-source contracts declare network/access requirements explicitly. An RDC integration, when authorized later, will be a configured `KnowledgeSource`, not a CrownKeep product mode or direct data dependency.
+
+---
+
+## ADR-0027 — Installed System Foundry is the Windows chat/model authority
+
+**Status:** Implemented; physical validation pending
+**Date:** 2026-09-27
+
+The packaged Windows chat/model path invokes the installed `foundry` CLI for lifecycle and discovery, then uses that reported service endpoint for OpenAI-compatible inference. CrownKeep activates aliases and records the actual API-visible model rather than restoring a stale exact variant.
+
+The prior embedded SDK manager remains temporarily for native dictation and dormant legacy commands. It is not registered as the normal chat/model runtime. The legacy `.CrownKeep` model cache is marked diagnostic-only and must not be deleted until physical evidence proves all normal model operations use the System Foundry cache.

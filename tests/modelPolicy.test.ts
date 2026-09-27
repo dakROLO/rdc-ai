@@ -38,6 +38,12 @@ test('reasoning variants stay out of the default Quick role', () => {
   assert.equal(roleOf({ ...cpu, alias: 'phi-4-mini' }), 'Quick')
 })
 
+test('CrownKeep role names remain Quick, Balanced, Deep, and Voice', () => {
+  assert.equal(roleOf({ ...cpu, alias: 'mistral-nemo-12b-instruct' }), 'Balanced')
+  assert.equal(roleOf({ ...cpu, alias: 'whisper-tiny', modelType: 'speech' }), 'Voice')
+  assert.equal(roleOf({ ...cpu, alias: 'gpt-oss-20b' }), 'Deep')
+})
+
 
 test('Phi-4 Mini remains Quick even when a package is over the generic size threshold', () => {
   assert.equal(roleOf({ ...cpu, alias: 'phi-4-mini', fileSizeMb: 4915 }), 'Quick')

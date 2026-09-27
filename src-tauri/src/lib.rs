@@ -3,6 +3,7 @@ use serde::Serialize;
 use tauri::Emitter;
 mod speech;
 mod device;
+mod system_foundry;
 
 const FOUNDRY_WEB_URL: &str = "http://127.0.0.1:39839";
 static FOUNDRY_LIFECYCLE_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
@@ -1163,16 +1164,17 @@ pub fn run() {
             crownkeep_trace,
             device::crownkeep_device_profile,
             speech::crownkeep_transcribe,
-            crownkeep_foundry_status,
-            crownkeep_foundry_models,
-            crownkeep_foundry_analyze_device,
-            crownkeep_foundry_start,
-            crownkeep_foundry_stop,
-            crownkeep_foundry_install_model,
-            crownkeep_foundry_activate_model,
-            crownkeep_foundry_load_model,
-            crownkeep_foundry_unload_model,
-            crownkeep_foundry_remove_cached_model
+            system_foundry::crownkeep_system_foundry_status,
+            system_foundry::crownkeep_system_foundry_endpoint,
+            system_foundry::crownkeep_system_foundry_models,
+            system_foundry::crownkeep_system_foundry_analyze_device,
+            system_foundry::crownkeep_system_foundry_start,
+            system_foundry::crownkeep_system_foundry_stop,
+            system_foundry::crownkeep_system_foundry_install_model,
+            system_foundry::crownkeep_system_foundry_activate_model,
+            system_foundry::crownkeep_system_foundry_load_model,
+            system_foundry::crownkeep_system_foundry_unload_model,
+            system_foundry::crownkeep_system_foundry_remove_cached_model
         ])
         .run(tauri::generate_context!())
         .expect("error while running CrownKeep");

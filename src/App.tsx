@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { ModelAnalyst } from './runtime/ModelAnalyst.tsx'
 import { bestObserved, bestObservedForRole, PROFILE_KEY, readPreferred, readResults, roleOf, taskOf } from './runtime/modelPolicy.ts'
+import { apiModelMatchesAlias, startupAlias } from './runtime/systemFoundryState.ts'
 import type { DeviceProfile, ModelRole } from './runtime/modelPolicy.ts'
 import { DictationControl } from './speech/DictationControl.tsx'
 import {
@@ -944,14 +945,14 @@ export default function App() {
       )
       if (measuredQuick) {
         const measuredCandidate = quickCandidateFor(measuredQuick.variantId)
-        if (measuredCandidate) return measuredCandidate.id
+        if (measuredCandidate) return startupAlias(measuredCandidate.alias)
       }
     }
 
     const observed = readPreferred(localStorage)
     if (observed && observed.fingerprint === fingerprint) {
       const observedCandidate = quickCandidateFor(observed.variantId)
-      if (observedCandidate) return observedCandidate.id
+      if (observedCandidate) return startupAlias(observedCandidate.alias)
     }
 
     const storedQuick = quickCandidateFor(
@@ -962,7 +963,7 @@ export default function App() {
     const setupQuick = quickCandidateFor(setupRecord?.modelId)
     if (setupQuick) return setupQuick.alias
 
-    return DEFAULT_WINDOWS_MODEL_ALIAS
+    return startupAlias(undefined, DEFAULT_WINDOWS_MODEL_ALIAS)
   }
 
   async function prepareNativeLocalAi(
@@ -1084,7 +1085,7 @@ export default function App() {
         const visible = availableModels.map((model) => model.id).join(',')
         const actual = availableModels.find(
           (model) =>
-            normalizeRuntimeModelKey(model.id) === normalizedTarget,
+            apiModelMatchesAlias(normalizedTarget, model.id),
         )
 
         if (actual) {
@@ -2668,6 +2669,8 @@ export default function App() {
                       <div><span>Output rate</span><strong>{formatTokenRate(lastRun)}</strong></div>
                       <div><span>Prompt tokens</span><strong>{lastRun?.promptTokens ?? '—'}</strong></div>
                       <div><span>Completion tokens</span><strong>{lastRun?.completionTokens ?? '—'}</strong></div>
+                      <div><span>Runtime</span><strong>{runtimeSnapshot?.authority ?? 'Local runtime'}</strong></div>
+                      <div><span>Runtime version</span><strong>{runtimeSnapshot?.runtimeVersion ?? '—'}</strong></div>
                     </div>
                     <p className={`performance-guidance ${
                       performanceGuidance?.includes('slow') ||
@@ -2685,6 +2688,12 @@ export default function App() {
                         {lastRun.runtimeDevice ? ` · ${lastRun.runtimeDevice}` : ''}
                         {lastRun.totalTokens ? ` · ${lastRun.totalTokens} total tokens` : ''}
                       </p>
+                    )}
+                    {runtimeSnapshot?.cacheLocation && (
+                      <p className="diagnostic-footnote">System Foundry cache · {runtimeSnapshot.cacheLocation}</p>
+                    )}
+                    {runtimeSnapshot?.legacyCacheLocation && (
+                      <p className="diagnostic-footnote">Legacy CrownKeep cache (not used; cleanup pending validation) · {runtimeSnapshot.legacyCacheLocation}</p>
                     )}
                   </div>
                 </details>

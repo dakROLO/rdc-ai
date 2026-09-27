@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core'
+import { invoke, isTauri } from '@tauri-apps/api/core'
 import type {
   AIModel,
   AIProvider,
@@ -141,6 +141,21 @@ export class FoundryLocalProvider implements AIProvider {
     }
 
     const failures: string[] = []
+
+    // A packaged Windows app follows the installed System Foundry service,
+    // including its dynamically reported endpoint. Browser development keeps
+    // its explicitly configured/proxied loopback behavior.
+    if (isTauri()) {
+      try {
+        const endpoint = normalizeEndpoint(await invoke<string>('crownkeep_system_foundry_endpoint'))
+        const mode = await this.probeEndpoint(endpoint)
+        this.activeEndpoint = endpoint
+        this.apiMode = mode
+        return { endpoint, mode }
+      } catch (error) {
+        failures.push(`System Foundry: ${error instanceof Error ? error.message : 'unreachable'}`)
+      }
+    }
 
     for (const endpoint of this.endpointCandidates) {
       try {

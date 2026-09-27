@@ -31,6 +31,10 @@ interface NativeFoundryRuntimeStatus {
   catalogModelCount: number
   cachedModels: NativeFoundryModelSummary[]
   loadedModels: NativeFoundryModelSummary[]
+  runtimeVersion?: string
+  cacheLocation?: string
+  authority?: string
+  legacyCacheLocation?: string
 }
 
 interface NativeFoundryDeviceAnalysis extends RuntimeDeviceAnalysis {}
@@ -73,7 +77,7 @@ export class TauriLocalRuntimeManager implements LocalRuntimeManager {
   ): Promise<RuntimeSnapshot> {
     const [host, nativeStatus] = await Promise.all([
       invoke<CrownKeepHostInfo>('crownkeep_host_info'),
-      invoke<NativeFoundryRuntimeStatus>('crownkeep_foundry_status'),
+      invoke<NativeFoundryRuntimeStatus>('crownkeep_system_foundry_status'),
     ])
 
     const resolvedAvailability =
@@ -94,8 +98,12 @@ export class TauriLocalRuntimeManager implements LocalRuntimeManager {
       return {
         state: 'unavailable',
         detail:
-          `Native CrownKeep host v${host.version} connected on ${host.platform}/${host.arch}. Foundry Local SDK is ready with ${nativeStatus.catalogModelCount} compatible catalog models, but CrownKeep's embedded OpenAI service is not currently reachable.${cachedText}${loadedText}`,
+          `Native CrownKeep host v${host.version} connected on ${host.platform}/${host.arch}. ${nativeStatus.authority ?? 'System Foundry'} is available with ${nativeStatus.catalogModelCount} catalog models, but its OpenAI service is not currently reachable.${cachedText}${loadedText}`,
         models: [],
+        authority: nativeStatus.authority,
+        runtimeVersion: nativeStatus.runtimeVersion,
+        cacheLocation: nativeStatus.cacheLocation,
+        legacyCacheLocation: nativeStatus.legacyCacheLocation,
       }
     }
 
@@ -103,53 +111,61 @@ export class TauriLocalRuntimeManager implements LocalRuntimeManager {
       return {
         state: 'model-required',
         detail:
-          `Native CrownKeep host v${host.version} connected. CrownKeep owns the Foundry Local lifecycle, but no loaded chat model is currently exposed to the local API.${cachedText}${loadedText}`,
+          `Native CrownKeep host v${host.version} connected. ${nativeStatus.authority ?? 'System Foundry'} owns model lifecycle, but no loaded chat model is currently exposed to the local API.${cachedText}${loadedText}`,
         models: [],
+        authority: nativeStatus.authority,
+        runtimeVersion: nativeStatus.runtimeVersion,
+        cacheLocation: nativeStatus.cacheLocation,
+        legacyCacheLocation: nativeStatus.legacyCacheLocation,
       }
     }
 
     return {
       state: 'ready',
       detail:
-        `Native CrownKeep host v${host.version} connected on ${host.platform}/${host.arch}. CrownKeep owns the Foundry Local lifecycle. ${resolvedAvailability.detail ?? 'Local AI is ready.'}${loadedText}`,
+        `Native CrownKeep host v${host.version} connected on ${host.platform}/${host.arch}. ${nativeStatus.authority ?? 'System Foundry'} is the lifecycle authority. ${resolvedAvailability.detail ?? 'Local AI is ready.'}${loadedText}`,
       models: resolvedModels,
+      authority: nativeStatus.authority,
+      runtimeVersion: nativeStatus.runtimeVersion,
+      cacheLocation: nativeStatus.cacheLocation,
+      legacyCacheLocation: nativeStatus.legacyCacheLocation,
     }
   }
 
   start(): Promise<RuntimeActionResult> {
-    return invokeAction('crownkeep_foundry_start')
+    return invokeAction('crownkeep_system_foundry_start')
   }
 
   stop(): Promise<RuntimeActionResult> {
-    return invokeAction('crownkeep_foundry_stop')
+    return invokeAction('crownkeep_system_foundry_stop')
   }
 
   installModel(modelId: string): Promise<RuntimeActionResult> {
-    return invokeAction('crownkeep_foundry_install_model', { modelId })
+    return invokeAction('crownkeep_system_foundry_install_model', { modelId })
   }
 
   activateModel(modelId: string): Promise<RuntimeActionResult> {
-    return invokeAction('crownkeep_foundry_activate_model', { modelId })
+    return invokeAction('crownkeep_system_foundry_activate_model', { modelId })
   }
 
   loadModel(modelId: string): Promise<RuntimeActionResult> {
-    return invokeAction('crownkeep_foundry_load_model', { modelId })
+    return invokeAction('crownkeep_system_foundry_load_model', { modelId })
   }
 
   unloadModel(modelId: string): Promise<RuntimeActionResult> {
-    return invokeAction('crownkeep_foundry_unload_model', { modelId })
+    return invokeAction('crownkeep_system_foundry_unload_model', { modelId })
   }
 
   removeCachedModel(modelId: string): Promise<RuntimeActionResult> {
-    return invokeAction('crownkeep_foundry_remove_cached_model', { modelId })
+    return invokeAction('crownkeep_system_foundry_remove_cached_model', { modelId })
   }
 
   listModelCandidates(): Promise<RuntimeModelCandidate[]> {
-    return invoke<NativeFoundryModelCandidate[]>('crownkeep_foundry_models')
+    return invoke<NativeFoundryModelCandidate[]>('crownkeep_system_foundry_models')
   }
 
   analyzeDevice(): Promise<RuntimeDeviceAnalysis> {
-    return invoke<NativeFoundryDeviceAnalysis>('crownkeep_foundry_analyze_device')
+    return invoke<NativeFoundryDeviceAnalysis>('crownkeep_system_foundry_analyze_device')
   }
 }
 

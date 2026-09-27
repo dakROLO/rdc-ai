@@ -11,23 +11,12 @@ pub struct DeviceProfile {
 
 #[tauri::command]
 pub async fn crownkeep_device_profile() -> Result<DeviceProfile, String> {
-    let manager = super::foundry_manager()?;
     let hardware = tauri::async_runtime::spawn_blocking(inspect_hardware)
         .await
         .map_err(|e| e.to_string())??;
-
-    let mut variants = Vec::new();
-    for model in manager
-        .catalog()
-        .get_models()
+    let variants = tauri::async_runtime::spawn_blocking(system_foundry_catalog_ids)
         .await
-        .map_err(|e| e.to_string())?
-    {
-        for variant in model.variants() {
-            variants.push(variant.id().to_string());
-        }
-    }
-    variants.sort();
+        .map_err(|e| e.to_string())??;
 
     let memory_mb = hardware["memoryMb"].as_u64();
     let cpu = hardware["cpu"].as_str().unwrap_or("unknown").to_string();
@@ -60,7 +49,7 @@ pub async fn crownkeep_device_profile() -> Result<DeviceProfile, String> {
         os.as_str(),
         &gpus,
         &variants,
-        "foundry-sdk-1.2.3-policy-5",
+        "system-foundry-cli-policy-6",
     )
         .hash(&mut hash);
 
@@ -85,6 +74,24 @@ pub async fn crownkeep_device_profile() -> Result<DeviceProfile, String> {
                 .unwrap_or_else(|| "GPU details unavailable".into())
         ),
     })
+}
+
+fn system_foundry_catalog_ids() -> Result<Vec<String>, String> {
+    let output = std::process::Command::new("foundry")
+        .args(["model", "list", "--variants"])
+        .output()
+        .map_err(|error| format!("System Foundry catalog inspection failed: {error}"))?;
+    if !output.status.success() {
+        return Err("System Foundry catalog inspection failed.".into());
+    }
+    let mut ids = String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .filter_map(|line| line.split_whitespace().next())
+        .filter(|value| !value.eq_ignore_ascii_case("id") && !value.starts_with('-'))
+        .map(ToString::to_string)
+        .collect::<Vec<_>>();
+    ids.sort();
+    Ok(ids)
 }
 
 #[cfg(target_os = "windows")]
