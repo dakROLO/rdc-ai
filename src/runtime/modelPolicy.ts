@@ -19,6 +19,9 @@ export interface BenchmarkResult {
   firstTokenMs?: number
   totalMs: number
   tokensPerSecond?: number
+  realWorldValidated?: boolean
+  contextFirstTokenMs?: number
+  contextTotalMs?: number
   outcome: 'accepted' | 'slow' | 'error' | 'cancelled'
   detail?: string
 }
