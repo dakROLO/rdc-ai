@@ -1143,7 +1143,7 @@ export default function App() {
 
   async function useAnalystModel(modelId: string) {
     if (!modelId || isRuntimeActionRunning || isGenerating || speechBusy || isRuntimeCheckRunning) return
-    const traceId = createId()
+    const traceId = createId('trace')
     traceTerminal('model-switch', 'manual-begin', `requested=${modelId}`, traceId)
     setIsRuntimeActionRunning(true)
     setRuntimeCheckError(null)
@@ -1183,7 +1183,7 @@ export default function App() {
 
     const winner = measuredRoleWinners[role]
     if (!winner) return
-    const traceId = createId()
+    const traceId = createId('trace')
     traceTerminal(
       'role-switch',
       'begin',
@@ -1327,7 +1327,7 @@ export default function App() {
       return
     }
 
-    const traceId = createId()
+    const traceId = createId('trace')
     let requestModelId = selectedModelId
     let requestRuntimeDevice = selectedModel?.runtimeDevice
     traceTerminal(
