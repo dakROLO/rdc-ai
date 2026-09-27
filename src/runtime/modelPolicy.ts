@@ -103,3 +103,27 @@ export function readPreferred(storage: Pick<Storage, 'getItem'>): BenchmarkResul
       typeof r.fingerprint === 'string' && r.outcome === 'accepted' ? r : undefined
   } catch { return undefined }
 }
+
+
+export function bestObservedForRole(results: BenchmarkResult[], fingerprint: string, role: ModelRole, models: RuntimeModelCandidate[]) {
+  const matches: BenchmarkResult[] = []
+  for (const result of results) {
+    if (result.fingerprint !== fingerprint) continue
+    if (result.outcome !== 'accepted') continue
+    if (result.firstTokenMs === undefined) continue
+    let candidate: RuntimeModelCandidate | undefined
+    for (const model of models) {
+      if (model.id === result.variantId) {
+        candidate = model
+        break
+      }
+    }
+    if (!candidate) continue
+    if (taskOf(candidate) !== 'chat') continue
+    if (roleOf(candidate) !== role) continue
+    if (role !== 'Quick' && result.realWorldValidated !== true) continue
+    matches.push(result)
+  }
+  matches.sort((a, b) => ((a.firstTokenMs! * 2 + a.totalMs) - (b.firstTokenMs! * 2 + b.totalMs)))
+  return matches[0]
+}
