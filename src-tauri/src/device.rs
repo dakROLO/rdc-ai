@@ -20,9 +20,10 @@ pub async fn crownkeep_device_profile() -> Result<DeviceProfile, String> {
         .discover_eps()
         .map_err(|e| e.to_string())?
         .into_iter()
-        .map(|ep| format!("{}:{}", ep.name, ep.is_registered))
+        .map(|ep| ep.name)
         .collect();
     providers.sort();
+    providers.dedup();
 
     let mut variants = Vec::new();
     for model in manager
@@ -68,7 +69,7 @@ pub async fn crownkeep_device_profile() -> Result<DeviceProfile, String> {
         &gpus,
         &providers,
         &variants,
-        "foundry-sdk-1.2.3-policy-3",
+        "foundry-sdk-1.2.3-policy-4",
     )
         .hash(&mut hash);
 
