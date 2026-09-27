@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { ModelAnalyst } from './runtime/ModelAnalyst.tsx'
-import { bestObserved, PROFILE_KEY, readPreferred, readResults, roleOf, taskOf } from './runtime/modelPolicy.ts'
+import { bestObserved, bestObservedForRole, PROFILE_KEY, readPreferred, readResults, roleOf, taskOf } from './runtime/modelPolicy.ts'
 import type { DeviceProfile, ModelRole } from './runtime/modelPolicy.ts'
 import { DictationControl } from './speech/DictationControl.tsx'
 import {
@@ -406,14 +406,14 @@ export default function App() {
     const results = readResults(localStorage)
     const winnerFor = (role: ChatModelRole) =>
       fingerprint
-        ? bestObserved(results, fingerprint, CHAT_ROLE_ALIASES[role])
+        ? bestObservedForRole(results, fingerprint, role, modelCandidates)
         : undefined
 
     return {
       Quick: winnerFor('Quick'),
       Balanced: winnerFor('Balanced'),
       'Deep / Experimental': winnerFor('Deep / Experimental'),
-    } satisfies Record<ChatModelRole, ReturnType<typeof winnerFor>>
+    }
   }, [fingerprint, providerRefreshNonce, modelCandidates])
 
   const projectById = useMemo(
