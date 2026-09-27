@@ -309,6 +309,25 @@ Fix:
 - accepted benchmark results are migrated to the stable fingerprint by **model role** rather than by hard-coded model alias, so a validated OLMo Balanced result can survive the migration just like Phi Quick or a future Deep winner;
 - Model Analyst re-reads persisted benchmark records whenever the stable profile/candidate state is refreshed.
 
+### Balanced role-switch model-ID mismatch
+
+The physical laptop Balanced retest exposed a concrete host/UI synchronization bug.
+
+Observed behavior:
+
+- the native runtime could activate the measured Balanced winner (including OLMo), but the React `selectedModelId` could remain on the previously active Quick Phi model until a later provider refresh;
+- normal chat sends `selectedModelId` to the OpenAI-compatible Foundry endpoint, so CrownKeep could load OLMo natively and then submit a Phi model ID to that OLMo-backed service;
+- this explains the repeated pattern of successful role switching followed by a no-token timeout, provider-unavailable state, and screenshots showing Quick/Phi after recovery;
+- it also meant timeout evidence could be attributed to the stale UI model rather than the model actually loaded natively.
+
+Fix:
+
+- every native activation path now waits until the newly loaded variant is exposed by the Foundry API, then synchronizes `selectedModelId`, the provider model list, and stored active-model state before releasing the UI;
+- this synchronization applies to explicit role switching, analyst model switching, startup preparation/fallback, and timeout recovery;
+- every normal local chat now performs a preflight against the natively loaded chat model and uses that exact API-visible model ID for the request;
+- inference-run metadata and timeout demotion use the preflighted request model ID rather than stale UI state;
+- the user cannot send while the model switch remains in progress.
+
 ## Known implementation limits
 
 - RAM filtering uses disk-size × 1.5 + 2 GB as a conservative estimate, not a guarantee of peak memory or VRAM fit. Native load failures remain benchmark failures.
