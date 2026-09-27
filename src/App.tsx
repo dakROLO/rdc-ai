@@ -698,9 +698,31 @@ export default function App() {
 
     if (!candidate) return
 
+    const fallbackCandidate =
+      chatCandidates.find(
+        (item) =>
+          item.cached &&
+          item.alias.toLocaleLowerCase() ===
+            DEFAULT_WINDOWS_MODEL_ALIAS.toLocaleLowerCase() &&
+          item.executionProvider?.toLocaleLowerCase() ===
+            'cpuexecutionprovider',
+      ) ??
+      chatCandidates.find(
+        (item) =>
+          item.cached &&
+          item.executionProvider?.toLocaleLowerCase() ===
+            'cpuexecutionprovider',
+      )
+
     autoRestoreAttemptedRef.current = true
     setRuntimeActionMessage(`Restoring ${candidate.alias} from the local cache…`)
-    void prepareNativeLocalAi(candidate.id, { quiet: true })
+    void prepareNativeLocalAi(candidate.id, {
+      quiet: true,
+      fallbackModelId:
+        fallbackCandidate && fallbackCandidate.id !== candidate.id
+          ? fallbackCandidate.id
+          : undefined,
+    })
   }, [
     speechBusy,
     isRuntimeCheckRunning,
@@ -800,7 +822,7 @@ export default function App() {
 
   async function prepareNativeLocalAi(
     modelId = preferredNativeModelId(),
-    options: { quiet?: boolean } = {},
+    options: { quiet?: boolean; fallbackModelId?: string } = {},
   ) {
     if (
       localRuntimeManager.mode !== 'embedded' ||
@@ -823,14 +845,33 @@ export default function App() {
     try {
       const activateResult = await localRuntimeManager.activateModel(modelId)
       if (!options.quiet) setRuntimeActionMessage(activateResult.detail)
-
       setProviderRefreshNonce((current) => current + 1)
     } catch (error) {
-      setRuntimeCheckError(
-        error instanceof Error
-          ? error.message
-          : 'CrownKeep could not prepare local AI.',
-      )
+      const primaryError =
+        error instanceof Error ? error.message : String(error)
+
+      if (options.fallbackModelId) {
+        try {
+          setRuntimeActionMessage(
+            `Preferred model could not start. Falling back to ${options.fallbackModelId}…`,
+          )
+          const fallbackResult = await localRuntimeManager.activateModel(
+            options.fallbackModelId,
+          )
+          setRuntimeActionMessage(
+            `${fallbackResult.detail} Preferred model remains saved and can be retried after provider recovery.`,
+          )
+          setProviderRefreshNonce((current) => current + 1)
+          return
+        } catch (fallbackError) {
+          setRuntimeCheckError(
+            `Preferred model failed: ${primaryError} Fallback also failed: ${String(fallbackError)}`,
+          )
+          return
+        }
+      }
+
+      setRuntimeCheckError(primaryError)
     } finally {
       setIsRuntimeActionRunning(false)
     }
