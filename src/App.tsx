@@ -352,6 +352,8 @@ export default function App() {
   const [providerAvailability, setProviderAvailability] =
     useState<ProviderAvailability | null>(null)
   const abortController = useRef<AbortController | null>(null)
+  const composerFormRef = useRef<HTMLFormElement | null>(null)
+  const pendingRerunRef = useRef<string | null>(null)
   const conversationScrollRef = useRef<HTMLElement | null>(null)
   const nearBottomRef = useRef(true)
   const [isNearBottom, setIsNearBottom] = useState(true)
@@ -1138,6 +1140,43 @@ export default function App() {
       setRuntimeCheckError('CrownKeep could not copy that code block.')
     }
   }
+
+  function rerunMessage(message: Message) {
+    if (
+      message.role !== 'user' ||
+      !message.content.trim() ||
+      isGenerating ||
+      speechBusy ||
+      isRuntimeActionRunning ||
+      isRuntimeCheckRunning ||
+      providerAvailability?.available === false
+    ) {
+      return
+    }
+
+    const text = cleanTemporalArtifact(message.content).trim()
+    if (!text) return
+
+    pendingRerunRef.current = text
+    if (prompt.trim() === text) {
+      queueMicrotask(() => {
+        if (pendingRerunRef.current !== text) return
+        pendingRerunRef.current = null
+        composerFormRef.current?.requestSubmit()
+      })
+      return
+    }
+
+    setPrompt(text)
+  }
+
+  useEffect(() => {
+    const pending = pendingRerunRef.current
+    if (!pending || prompt.trim() !== pending) return
+
+    pendingRerunRef.current = null
+    composerFormRef.current?.requestSubmit()
+  }, [prompt])
 
   async function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -2406,6 +2445,24 @@ export default function App() {
                         ◆ {message.inferenceLocation === 'cloud' ? 'Cloud' : 'Local'}
                       </span>
                     )}
+                    {message.role === 'user' && (
+                      <button
+                        className="message-rerun-button"
+                        type="button"
+                        onClick={() => rerunMessage(message)}
+                        disabled={
+                          isGenerating ||
+                          speechBusy ||
+                          isRuntimeActionRunning ||
+                          isRuntimeCheckRunning ||
+                          providerAvailability?.available === false ||
+                          !message.content.trim()
+                        }
+                        title="Send this earlier prompt again using the current model and current conversation context"
+                      >
+                        ↻ Rerun
+                      </button>
+                    )}
                     <button
                       className="message-context-button"
                       type="button"
@@ -2480,7 +2537,7 @@ export default function App() {
             <span>{activeConversation?.syncState === 'local-only' ? 'Stored on this device' : status}</span>
           </div>
 
-          <form className="composer" onSubmit={sendMessage}>
+          <form className="composer" ref={composerFormRef} onSubmit={sendMessage}>
             <textarea
               aria-label="Message Anne"
               placeholder="Message Anne…"
