@@ -225,6 +225,21 @@ The same retest showed cache cleanup could be invoked while the embedded inferen
 - cleanup errors are reported only after service restoration is attempted;
 - Model Storage labels CUDA and TensorRT RTX paths explicitly as **NVIDIA dGPU** so integrated-vs-discrete routing is visible in the UI.
 
+### Heavy-model benchmark promotion + timeout recovery loop
+
+Physical laptop retest showed that normal chat could remain stuck even after the 20-second first-token watchdog fired. The timeout handler was awaiting reactivation of the same stalled Mistral CUDA model, so the recovery action itself could become the new indefinite wait.
+
+The same testing exposed a policy problem: benchmarking Balanced had promoted its winner to the global Windows startup preference and left it active after benchmarking. That is not the intended role model.
+
+Fix:
+
+- only a Quick-family benchmark winner can update CrownKeep's Windows startup preference;
+- Balanced and Deep/Experimental winners remain measured and available for deliberate use, but they no longer replace Quick as the everyday startup model;
+- after a successful non-Quick benchmark, CrownKeep restores the previously active chat model when one exists;
+- a timed-out normal chat now prefers a cached Quick Phi-4 Mini CPU variant for recovery instead of retrying the same stalled heavy model;
+- automatic Quick recovery is itself bounded to 20 seconds so the timeout path cannot hold the composer indefinitely;
+- if bounded recovery fails, CrownKeep releases the chat flow and instructs the user to restart the local runtime rather than waiting forever.
+
 ## Known implementation limits
 
 - RAM filtering uses disk-size × 1.5 + 2 GB as a conservative estimate, not a guarantee of peak memory or VRAM fit. Native load failures remain benchmark failures.
