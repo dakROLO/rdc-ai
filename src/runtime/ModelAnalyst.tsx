@@ -133,6 +133,11 @@ export function ModelAnalyst({
   )
 
   useEffect(() => {
+    if (!profile?.fingerprint) return
+    setResults(readResults(localStorage))
+  }, [profile?.fingerprint, candidates])
+
+  useEffect(() => {
     let disposed = false
     void invoke<DeviceProfile>('crownkeep_device_profile')
       .then((value) => {
