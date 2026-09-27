@@ -20,6 +20,17 @@ function formatSize(mb?: number): string {
   return `${Math.round(mb)} MB`
 }
 
+
+function executionLabel(candidate: RuntimeModelCandidate): string {
+  const provider = candidate.executionProvider ?? ''
+  if (/cuda/i.test(provider)) return 'NVIDIA dGPU · CUDA'
+  if (/tensorrt/i.test(provider)) return 'NVIDIA dGPU · TensorRT RTX'
+  if (/webgpu/i.test(provider)) return 'GPU · WebGPU'
+  if (/openvino/i.test(provider)) return 'Intel / compatible accelerator · OpenVINO'
+  if (/cpu/i.test(provider)) return 'CPU'
+  return provider || candidate.device || 'Default'
+}
+
 export function ModelStorage({
   manager,
   candidates,
@@ -243,7 +254,7 @@ export function ModelStorage({
                     <strong>{candidate.alias}</strong>
                     <span>{candidate.id}</span>
                     <span>
-                      {candidate.executionProvider ?? candidate.device ?? 'Default'} ·{' '}
+                      {executionLabel(candidate)} ·{' '}
                       {formatSize(candidate.fileSizeMb)}
                       {candidate.loaded ? ' · Loaded' : ''}
                     </span>
