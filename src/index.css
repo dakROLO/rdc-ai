@@ -2802,3 +2802,50 @@ body {
     justify-content: flex-start;
   }
 }
+
+
+.model-mode-control {
+  display: grid;
+  gap: .55rem;
+  padding: .7rem 0;
+  border-top: 1px solid rgba(46, 230, 184, .1);
+  border-bottom: 1px solid rgba(46, 230, 184, .1);
+}
+.model-mode-copy {
+  display: grid;
+  gap: .16rem;
+}
+.model-mode-copy strong {
+  color: var(--stone);
+  font-size: .78rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.model-mode-copy span {
+  color: var(--muted);
+  font-size: .7rem;
+}
+.model-mode-segments {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .35rem;
+  padding: .25rem;
+  border: 1px solid rgba(46, 230, 184, .12);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, .12);
+}
+.model-mode-segments button {
+  min-width: 0;
+  border-radius: 9px;
+  padding: .48rem .55rem;
+  font-size: .74rem;
+  font-weight: 800;
+}
+.model-mode-segments button.active {
+  border-color: rgba(46, 230, 184, .5);
+  background: rgba(46, 230, 184, .14);
+  color: #b7f4e3;
+}
+.model-mode-segments button:disabled:not(.active) {
+  opacity: .42;
+}
