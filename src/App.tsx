@@ -707,28 +707,40 @@ export default function App() {
   useEffect(() => {
     if (!fingerprint || modelCandidates.length === 0) return
 
-    const migrationKey = 'crownkeep.fingerprintPolicy4Migrated'
+    const migrationKey = 'crownkeep.fingerprintPolicy5Migrated'
     if (localStorage.getItem(migrationKey) === fingerprint) return
 
     const results = readResults(localStorage)
-    const aliases = Object.values(CHAT_ROLE_ALIASES)
+    const roles: ChatModelRole[] = [
+      'Quick',
+      'Balanced',
+      'Deep / Experimental',
+    ]
     let changed = false
     const next = [...results]
 
-    for (const alias of aliases) {
-      if (bestObserved(next, fingerprint, alias)) continue
+    for (const role of roles) {
+      if (bestObservedForRole(next, fingerprint, role, modelCandidates)) {
+        continue
+      }
 
       const legacy = results
-        .filter(
-          (result) =>
-            result.alias.toLocaleLowerCase() === alias.toLocaleLowerCase() &&
-            result.outcome === 'accepted' &&
-            result.firstTokenMs !== undefined &&
-            modelCandidates.some(
-              (candidate) =>
-                candidate.cached && candidate.id === result.variantId,
-            ),
-        )
+        .filter((result) => {
+          if (
+            result.outcome !== 'accepted' ||
+            result.firstTokenMs === undefined
+          ) {
+            return false
+          }
+
+          const candidate = modelCandidates.find(
+            (item) => item.cached && item.id === result.variantId,
+          )
+          if (!candidate || taskOf(candidate) !== 'chat') return false
+          if (roleOf(candidate) !== role) return false
+
+          return role === 'Quick' || result.realWorldValidated === true
+        })
         .sort(
           (a, b) =>
             (a.firstTokenMs! * 2 + a.totalMs) -
