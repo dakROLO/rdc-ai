@@ -177,6 +177,25 @@ Fix:
 - Model Storage still gets live post-cleanup cache state without O(n) native cache calls;
 - benchmark/profile data remains untouched in local app storage.
 
+### Startup restore regression — execution-provider registration
+
+A second startup retest exposed a different restore failure after the measured Balanced model became the preferred Windows model.
+
+Observed behavior:
+
+- CrownKeep correctly retained the `mistral-nemo-12b-instruct` CUDA benchmark winner;
+- after a full app restart, the active Foundry runtime reported only `CPUExecutionProvider` as available;
+- auto-restore attempted to load `mistral-nemo-12b-instruct-cuda-gpu:1` immediately and failed because `CUDAExecutionProvider` had not yet been re-registered in the new runtime process;
+- the embedded OpenAI service therefore remained down and the UI showed **Local provider unavailable**.
+
+Fix:
+
+- native model activation now inspects the selected variant's required execution provider;
+- non-CPU providers are discovered and re-registered before the model is loaded;
+- provider registration emits visible progress and uses the same Foundry provider-registration API as device analysis;
+- startup also identifies a cached CPU chat fallback (preferring Phi-4 Mini) so a failed preferred-provider restore cannot leave CrownKeep unusable;
+- the measured preferred model is not discarded when fallback is used; it remains saved for a later retry after provider recovery.
+
 ## Known implementation limits
 
 - RAM filtering uses disk-size × 1.5 + 2 GB as a conservative estimate, not a guarantee of peak memory or VRAM fit. Native load failures remain benchmark failures.
