@@ -5,7 +5,6 @@ import type {
   ChatRequest,
   ChatToolCall,
   ChatToolDefinition,
-  TokenUsage,
 } from '../providers/AIProvider.ts'
 import type { ToolActivityRecord } from './automaticToolUse.ts'
 import type {
@@ -114,7 +113,6 @@ export async function* streamStructuredToolLoop({
   for (let round = 0; round < MAX_STRUCTURED_ROUNDS; round += 1) {
     const pendingCalls = new Map<number, PendingCall>()
     let text = ''
-    let usage: TokenUsage | undefined
 
     for await (const chunk of provider.streamChat(
       {
@@ -126,7 +124,6 @@ export async function* streamStructuredToolLoop({
       signal,
     )) {
       text += chunk.text
-      if (chunk.usage) usage = chunk.usage
       for (const delta of chunk.toolCallDeltas ?? []) {
         mergeCallDelta(pendingCalls, delta)
       }
