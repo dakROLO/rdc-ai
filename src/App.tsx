@@ -2335,6 +2335,32 @@ export default function App() {
             </div>
           </div>
 
+          {activeConversation && (
+            <label className="active-project-control sidebar-project-control">
+              <span>Current chat project</span>
+              <select
+                value={activeConversation.projectId ?? 'unassigned'}
+                onChange={(event) =>
+                  void changeActiveConversationProject(event.target.value)
+                }
+                disabled={isGenerating || speechBusy || isRuntimeActionRunning}
+                title="Move this conversation to a project"
+              >
+                <option value="unassigned">Unassigned</option>
+                {projects.map((project) => (
+                  <option value={project.id} key={project.id}>
+                    {project.title}
+                  </option>
+                ))}
+              </select>
+              <small>
+                {activeProject
+                  ? `Stored in ${activeProject.title}`
+                  : 'Not assigned to a project'}
+              </small>
+            </label>
+          )}
+
           <select
             className="project-filter-select"
             value={projectFilter}
@@ -2509,43 +2535,69 @@ export default function App() {
           <div className="conversation-title">
             <p className="eyebrow">Anne · Local assistant</p>
             <h2>{activeConversation?.title ?? 'Opening CrownKeep…'}</h2>
-            {activeConversation && (
-              <label className="active-project-control">
-                <span>Project</span>
-                <select
-                  value={activeConversation.projectId ?? 'unassigned'}
-                  onChange={(event) =>
-                    void changeActiveConversationProject(event.target.value)
-                  }
-                  disabled={isGenerating || speechBusy || isRuntimeActionRunning}
-                  title="Move this conversation to a project"
-                >
-                  <option value="unassigned">Unassigned</option>
-                  {projects.map((project) => (
-                    <option value={project.id} key={project.id}>
-                      {project.title}
-                    </option>
-                  ))}
-                </select>
-                <small>
-                  {activeProject
-                    ? `Stored in ${activeProject.title}`
-                    : 'Not assigned to a project'}
-                </small>
-              </label>
-            )}
           </div>
 
-          <div className="provider-area">
+        </header>
+
+        <section className="keep-status-bar" aria-label="CrownKeep runtime and privacy status">
+          <div className={`keep-status-state ${glanceState.toLowerCase()}`}>
+            <span className="status-dot" aria-hidden="true" />
+            <strong>{glanceState}</strong>
+          </div>
+          <div className="keep-status-item">
+            <span>Role</span>
+            <strong>{glanceRole ?? '—'}</strong>
+          </div>
+          <div className="keep-status-item model">
+            <span>Model</span>
+            <strong title={selectedModel?.displayName ?? 'No active model'}>
+              {selectedModel?.displayName ?? 'Not ready'}
+            </strong>
+          </div>
+          <div className="keep-status-item execution">
+            <span>Execution</span>
+            <strong>{glanceExecution}</strong>
+          </div>
+          <div className="keep-status-boundary">
+            <span>{selectedProvider.location === 'local' ? 'Inside the Keep' : 'Cloud model'}</span>
+            <strong>
+              {webAccess === 'on'
+                ? webProviderStatus.nativeAvailable && webSearchAvailable && webReadAvailable
+                  ? 'Local reasoning · keyless web'
+                  : 'Web on · native app required'
+                : 'Network tools off'}
+            </strong>
+          </div>
+          <button
+            type="button"
+            className={`web-access-toggle ${webAccess === 'on' ? 'on' : 'off'}`}
+            aria-pressed={webAccess === 'on'}
+            onClick={() => setWebAccess((current) => (current === 'on' ? 'off' : 'on'))}
+            disabled={toolBusy || isGenerating}
+            title={
+              webAccess === 'on'
+                ? 'Web tools may send only the needed search query or selected URL outside the device.'
+                : 'Network search and webpage-read tools are blocked.'
+            }
+          >
+            <span>Web Access</span>
+            <strong>{webAccess.toUpperCase()}</strong>
+          </button>
+          <div className="keep-status-settings">
             <details className="local-ai-menu">
               <summary
+                className="keep-settings-button"
                 onClick={(event) => {
                   if (runtimeSleeping) {
                     event.preventDefault()
                     void prepareNativeLocalAi(preferredNativeModelId(), { quiet: true })
                   }
                 }}
-                title={runtimeSleeping ? 'Wake local AI' : undefined}
+                title={
+                  runtimeSleeping
+                    ? 'Wake local AI'
+                    : 'Open local AI settings and diagnostics'
+                }
               >
                 <span
                   className={`status-dot ${
@@ -2558,13 +2610,7 @@ export default function App() {
                           : ''
                   }`}
                 />
-                <span className="local-ai-summary-copy">
-                  <strong>{status}</strong>
-                  <small>
-                    {selectedProvider.displayName.replace('Anne · ', '')}
-                    {selectedModel ? ` · ${selectedModel.displayName}` : ''}
-                  </small>
-                </span>
+                <strong>Inside the Keep</strong>
                 <span className="menu-chevron" aria-hidden="true">⌄</span>
               </summary>
 
@@ -3006,52 +3052,6 @@ export default function App() {
               </div>
             </details>
           </div>
-        </header>
-
-        <section className="keep-status-bar" aria-label="CrownKeep runtime and privacy status">
-          <div className={`keep-status-state ${glanceState.toLowerCase()}`}>
-            <span className="status-dot" aria-hidden="true" />
-            <strong>{glanceState}</strong>
-          </div>
-          <div className="keep-status-item">
-            <span>Role</span>
-            <strong>{glanceRole ?? '—'}</strong>
-          </div>
-          <div className="keep-status-item model">
-            <span>Model</span>
-            <strong title={selectedModel?.displayName ?? 'No active model'}>
-              {selectedModel?.displayName ?? 'Not ready'}
-            </strong>
-          </div>
-          <div className="keep-status-item execution">
-            <span>Execution</span>
-            <strong>{glanceExecution}</strong>
-          </div>
-          <div className="keep-status-boundary">
-            <span>{selectedProvider.location === 'local' ? 'Inside the Keep' : 'Cloud model'}</span>
-            <strong>
-              {webAccess === 'on'
-                ? webProviderStatus.nativeAvailable && webSearchAvailable && webReadAvailable
-                  ? 'Local reasoning · keyless web'
-                  : 'Web on · native app required'
-                : 'Network tools off'}
-            </strong>
-          </div>
-          <button
-            type="button"
-            className={`web-access-toggle ${webAccess === 'on' ? 'on' : 'off'}`}
-            aria-pressed={webAccess === 'on'}
-            onClick={() => setWebAccess((current) => (current === 'on' ? 'off' : 'on'))}
-            disabled={toolBusy || isGenerating}
-            title={
-              webAccess === 'on'
-                ? 'Web tools may send only the needed search query or selected URL outside the device.'
-                : 'Network search and webpage-read tools are blocked.'
-            }
-          >
-            <span>Web Access</span>
-            <strong>{webAccess.toUpperCase()}</strong>
-          </button>
         </section>
 
         <section
