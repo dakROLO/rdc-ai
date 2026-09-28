@@ -576,7 +576,7 @@ All automatic tool loops are bounded. The current structured and fallback paths 
 
 ## ADR-0029 — Web Access uses native direct transport with device-local credentials
 
-**Status:** Accepted and implemented; physical Web Access acceptance pending  
+**Status:** Superseded by ADR-0030 before physical acceptance  
 **Date:** 2026-09-28
 
 ### Context
@@ -633,4 +633,56 @@ The Azure Function/Web Gateway prototype, its `VITE_CROWNKEEP_WEB_GATEWAY_URL` c
 - Search-provider replacement remains an adapter concern behind `WebSearchTool` / the native web transport rather than a conversation/model concern.
 - A future centrally managed enterprise or public distribution may add an **optional** managed search boundary if credential distribution, quota, abuse protection, or organization policy requires it; that would require a new explicit decision rather than silently restoring the removed gateway.
 - Physical acceptance must prove OFF blocks all network tools, ON does not search unnecessarily, search/read activity is visible, provider identity remains local, and network/provider failures do not trigger cloud-model fallback.
+
+## ADR-0030 — Web Search is keyless DuckDuckGo retrieval
+
+**Status:** Accepted and implemented; physical Web Access acceptance pending  
+**Date:** 2026-09-28
+
+### Context
+
+CrownKeep should remain useful without requiring the user to create, fund, or manage a third-party search API account. The prior direct-native Tavily design removed the CrownKeep-hosted gateway but still required a Tavily API key stored separately on each device.
+
+DuckDuckGo provides public non-JavaScript HTML/Lite search results and states that DuckDuckGo Search does not track individual searches. This allows CrownKeep to use a normal public search surface for discovery while keeping model reasoning local.
+
+The non-JavaScript search page is a browser-facing public surface, not a formal developer API. Its HTML can change and DuckDuckGo can rate-limit or require interactive verification.
+
+### Decision
+
+Replace Tavily and all search-credential handling with a **keyless DuckDuckGo search adapter**.
+
+- Web Access remains OFF by default and enforced by `ToolRegistry`.
+- Web Search sends only the minimized public query to DuckDuckGo's non-JavaScript HTML search surface.
+- CrownKeep parses returned result titles, URLs, and snippets locally.
+- DuckDuckGo redirect URLs are unwrapped locally to the selected public destination.
+- Web Read continues to fetch selected public HTTP(S) pages directly from the native device.
+- The selected local model remains the reasoning provider.
+- No API account, API key, Windows Credential Manager entry, iOS Keychain search item, Azure Function, or CrownKeep web gateway is required.
+- The shared webview does not perform live search directly; native Windows/iPhone hosts own network execution.
+
+### Failure behavior
+
+If DuckDuckGo returns a rate limit, interactive verification, challenge, unexpected markup, or other retrieval failure:
+
+- surface the Web Search failure visibly;
+- do not attempt to bypass an interactive verification;
+- do not silently switch to Google, Bing, Brave, Tavily, or another search provider;
+- do not switch to cloud-model reasoning;
+- keep local chat available.
+
+A future additional search provider must be an explicit user/product capability and requires a new decision rather than an invisible fallback.
+
+### Privacy/data boundary
+
+For search, only the minimized query leaves the device for DuckDuckGo. For page reading, only the selected public URL is requested from that website.
+
+CrownKeep does not send whole conversations, local knowledge bases, files, attachments, projects, images, or unrelated context through Web Search/Web Read.
+
+### Consequences
+
+- Zero search credentials to provision, store, rotate, bundle, or sync.
+- Windows, iPhone, and AVD can share the same logical Web Access behavior without per-device provider setup.
+- Public-search reliability is intentionally best-effort because the DuckDuckGo HTML surface is not a formal API contract.
+- Direct URL reading remains independent of search discovery.
+- The provider-neutral `WebSearchTool` contract remains replaceable later without changing conversation/model architecture.
 
