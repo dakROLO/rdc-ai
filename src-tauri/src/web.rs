@@ -1,13 +1,9 @@
-use keyring::Entry;
 use serde::Serialize;
-use serde_json::json;
 use std::net::IpAddr;
 use std::time::Duration;
 
-const WEB_PROVIDER: &str = "tavily";
-const TAVILY_SEARCH_URL: &str = "https://api.tavily.com/search";
-const CREDENTIAL_SERVICE: &str = "com.royaldigitalclarity.crownkeep.web";
-const CREDENTIAL_ACCOUNT: &str = "tavily-api-key";
+const WEB_PROVIDER: &str = "duckduckgo";
+const DUCKDUCKGO_HTML_URL: &str = "https://html.duckduckgo.com/html/";
 const MAX_READ_BYTES: usize = 2 * 1024 * 1024;
 
 #[derive(Serialize)]
@@ -15,9 +11,8 @@ const MAX_READ_BYTES: usize = 2 * 1024 * 1024;
 pub struct NativeWebStatus {
     native_available: bool,
     provider: &'static str,
-    search_configured: bool,
+    search_available: bool,
     read_available: bool,
-    credential_store: &'static str,
     detail: String,
 }
 
@@ -43,37 +38,16 @@ pub struct WebReadResponse {
     content: String,
 }
 
-fn credential_entry() -> Result<Entry, String> {
-    Entry::new(CREDENTIAL_SERVICE, CREDENTIAL_ACCOUNT)
-        .map_err(|error| format!("Could not open Windows Credential Manager: {error}"))
-}
-
-fn load_search_credential() -> Result<Option<String>, String> {
-    let entry = credential_entry()?;
-    match entry.get_password() {
-        Ok(value) if !value.trim().is_empty() => Ok(Some(value)),
-        Ok(_) => Ok(None),
-        Err(keyring::Error::NoEntry) => Ok(None),
-        Err(error) => Err(format!(
-            "Could not read the CrownKeep web-search credential: {error}"
-        )),
-    }
-}
-
-fn status_payload() -> Result<NativeWebStatus, String> {
-    let search_configured = load_search_credential()?.is_some();
-    Ok(NativeWebStatus {
+fn status_payload() -> NativeWebStatus {
+    NativeWebStatus {
         native_available: true,
         provider: WEB_PROVIDER,
-        search_configured,
+        search_available: true,
         read_available: true,
-        credential_store: "Windows Credential Manager",
-        detail: if search_configured {
-            "Direct Web Access is ready. Search credentials stay in Windows Credential Manager; webpage reads are fetched directly from this device.".into()
-        } else {
-            "Direct webpage reading is ready. Add a Tavily API key to enable public-web search; the key will stay in Windows Credential Manager.".into()
-        },
-    })
+        detail:
+            "Keyless DuckDuckGo search and direct webpage reading are ready. Only the search query or selected public URL leaves this device."
+                .into(),
+    }
 }
 
 fn web_client(timeout_seconds: u64) -> Result<reqwest::Client, String> {
@@ -92,6 +66,38 @@ fn normalized_query(value: &str) -> String {
         .chars()
         .take(512)
         .collect()
+}
+
+fn normalized_text(value: &str, max_chars: usize) -> String {
+    value
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .chars()
+        .take(max_chars)
+        .collect()
+}
+
+fn html_fragment_text(fragment: &str, max_chars: usize) -> String {
+    match html2text::from_read(fragment.as_bytes(), 100) {
+        Ok(value) => normalized_text(&value, max_chars),
+        Err(_) => normalized_text(fragment, max_chars),
+    }
+}
+
+fn html_attr_value(tag: &str, attribute: &str) -> Option<String> {
+    let lower = tag.to_ascii_lowercase();
+    let needle = format!("{attribute}=");
+    let start = lower.find(&needle)? + needle.len();
+    let quote = tag.as_bytes().get(start).copied()? as char;
+    if quote != '"' && quote != '\'' {
+        return None;
+    }
+
+    let value_start = start + 1;
+    let rest = tag.get(value_start..)?;
+    let value_end = rest.find(quote)?;
+    Some(rest[..value_end].replace("&amp;", "&"))
 }
 
 fn safe_public_url(value: &str) -> Result<reqwest::Url, String> {
@@ -141,6 +147,127 @@ fn safe_public_url(value: &str) -> Result<reqwest::Url, String> {
     Ok(url)
 }
 
+fn duckduckgo_result_url(raw_href: &str) -> Option<String> {
+    let href = raw_href.replace("&amp;", "&");
+    let absolute = if href.starts_with("//") {
+        format!("https:{href}")
+    } else if href.starts_with('/') {
+        format!("https://duckduckgo.com{href}")
+    } else {
+        href
+    };
+
+    let parsed = reqwest::Url::parse(&absolute).ok()?;
+    let host = parsed.host_str()?.to_ascii_lowercase();
+
+    if host.ends_with("duckduckgo.com") && parsed.path().starts_with("/l/") {
+        if let Some((_, target)) = parsed.query_pairs().find(|(key, _)| key == "uddg") {
+            let target = target.into_owned();
+            if safe_public_url(&target).is_ok() {
+                return Some(target);
+            }
+        }
+    }
+
+    if safe_public_url(parsed.as_str()).is_ok() {
+        Some(parsed.to_string())
+    } else {
+        None
+    }
+}
+
+fn extract_snippet(segment: &str) -> String {
+    let lower = segment.to_ascii_lowercase();
+    let marker = ["class=\"result__snippet", "class='result__snippet"]
+        .into_iter()
+        .find_map(|needle| lower.find(needle));
+
+    let Some(marker) = marker else {
+        return String::new();
+    };
+
+    let start_tag = segment[..marker].rfind('<').unwrap_or(marker);
+    let Some(open_end_rel) = segment[start_tag..].find('>') else {
+        return String::new();
+    };
+    let content_start = start_tag + open_end_rel + 1;
+    let content_rest = &segment[content_start..];
+    let content_end = content_rest.find("</").unwrap_or(content_rest.len());
+    html_fragment_text(&content_rest[..content_end], 1_200)
+}
+
+fn parse_duckduckgo_results(body: &str, max_results: usize) -> Vec<WebSearchResult> {
+    let lower = body.to_ascii_lowercase();
+    let markers = ["class=\"result__a", "class='result__a"];
+    let mut cursor = 0usize;
+    let mut results = Vec::new();
+
+    while results.len() < max_results && cursor < body.len() {
+        let remaining = &lower[cursor..];
+        let marker_rel = markers
+            .iter()
+            .filter_map(|needle| remaining.find(needle))
+            .min();
+
+        let Some(marker_rel) = marker_rel else {
+            break;
+        };
+        let marker = cursor + marker_rel;
+        let Some(anchor_start) = lower[..marker].rfind("<a") else {
+            cursor = marker + 1;
+            continue;
+        };
+        let Some(open_end_rel) = body[anchor_start..].find('>') else {
+            cursor = marker + 1;
+            continue;
+        };
+        let open_end = anchor_start + open_end_rel;
+        let open_tag = &body[anchor_start..=open_end];
+        let Some(href) = html_attr_value(open_tag, "href") else {
+            cursor = open_end + 1;
+            continue;
+        };
+        let Some(close_rel) = lower[open_end + 1..].find("</a>") else {
+            cursor = open_end + 1;
+            continue;
+        };
+        let close_start = open_end + 1 + close_rel;
+        let close_end = close_start + 4;
+        let title = html_fragment_text(&body[open_end + 1..close_start], 400);
+
+        let next_marker = markers
+            .iter()
+            .filter_map(|needle| lower[close_end..].find(needle))
+            .min()
+            .map(|offset| close_end + offset)
+            .unwrap_or_else(|| (close_end + 6_000).min(body.len()));
+
+        let snippet = extract_snippet(&body[close_end..next_marker.min(body.len())]);
+        cursor = close_end;
+
+        if title.is_empty() {
+            continue;
+        }
+        let Some(url) = duckduckgo_result_url(&href) else {
+            continue;
+        };
+
+        if results.iter().any(|result: &WebSearchResult| result.url == url) {
+            continue;
+        }
+
+        results.push(WebSearchResult {
+            title,
+            url,
+            snippet,
+            score: None,
+            published_at: None,
+        });
+    }
+
+    results
+}
+
 fn html_title(body: &str) -> Option<String> {
     let lower = body.to_ascii_lowercase();
     let start = lower.find("<title")?;
@@ -150,41 +277,13 @@ fn html_title(body: &str) -> Option<String> {
     if raw.is_empty() {
         None
     } else {
-        Some(raw.chars().take(240).collect())
+        Some(html_fragment_text(raw, 240))
     }
 }
 
 #[tauri::command]
-pub fn crownkeep_web_status() -> Result<NativeWebStatus, String> {
+pub fn crownkeep_web_status() -> NativeWebStatus {
     status_payload()
-}
-
-#[tauri::command]
-pub fn crownkeep_web_save_search_credential(api_key: String) -> Result<NativeWebStatus, String> {
-    let normalized = api_key.trim();
-    if normalized.is_empty() {
-        return Err("Search provider API key is required.".into());
-    }
-    if normalized.len() > 2048 {
-        return Err("Search provider API key is unexpectedly long.".into());
-    }
-
-    credential_entry()?
-        .set_password(normalized)
-        .map_err(|error| format!("Could not save the web-search credential: {error}"))?;
-
-    status_payload()
-}
-
-#[tauri::command]
-pub fn crownkeep_web_clear_search_credential() -> Result<NativeWebStatus, String> {
-    let entry = credential_entry()?;
-    match entry.delete_credential() {
-        Ok(()) | Err(keyring::Error::NoEntry) => status_payload(),
-        Err(error) => Err(format!(
-            "Could not remove the CrownKeep web-search credential: {error}"
-        )),
-    }
 }
 
 #[tauri::command]
@@ -192,88 +291,50 @@ pub async fn crownkeep_web_search(
     query: String,
     max_results: Option<u8>,
 ) -> Result<WebSearchResponse, String> {
-    let api_key = load_search_credential()?.ok_or_else(|| {
-        "Web Search is not configured. Add a Tavily API key in CrownKeep Web Access settings."
-            .to_string()
-    })?;
     let query = normalized_query(&query);
     if query.is_empty() {
         return Err("Web Search requires a query.".into());
     }
 
-    let max_results = max_results.unwrap_or(5).clamp(1, 8);
+    let max_results = max_results.unwrap_or(5).clamp(1, 8) as usize;
     let response = web_client(15)?
-        .post(TAVILY_SEARCH_URL)
-        .bearer_auth(api_key)
-        .json(&json!({
-            "query": query,
-            "topic": "general",
-            "search_depth": "basic",
-            "max_results": max_results,
-            "include_answer": false,
-            "include_raw_content": false,
-            "include_images": false
-        }))
+        .get(DUCKDUCKGO_HTML_URL)
+        .query(&[("q", query.as_str())])
+        .header(
+            reqwest::header::ACCEPT,
+            "text/html,application/xhtml+xml;q=0.9,*/*;q=0.1",
+        )
         .send()
         .await
-        .map_err(|error| format!("Search provider could not be reached: {error}"))?;
+        .map_err(|error| format!("DuckDuckGo Search could not be reached: {error}"))?;
 
     let status = response.status();
     let body = response
         .text()
         .await
-        .map_err(|error| format!("Could not read the search-provider response: {error}"))?;
+        .map_err(|error| format!("Could not read DuckDuckGo Search results: {error}"))?;
 
     if !status.is_success() {
-        let detail: String = body.chars().take(300).collect();
         return Err(format!(
-            "Search provider returned HTTP {}{}",
-            status.as_u16(),
-            if detail.is_empty() {
-                String::new()
-            } else {
-                format!(": {detail}")
-            }
+            "DuckDuckGo Search returned HTTP {}.",
+            status.as_u16()
         ));
     }
 
-    let payload: serde_json::Value = serde_json::from_str(&body)
-        .map_err(|error| format!("Search provider returned invalid JSON: {error}"))?;
+    let lower = body.to_ascii_lowercase();
+    if lower.contains("bots use duckduckgo too")
+        || lower.contains("anomaly-modal")
+        || lower.contains("challenge-form")
+    {
+        return Err(
+            "DuckDuckGo asked for an interactive verification. CrownKeep will not bypass it; try again later."
+                .into(),
+        );
+    }
 
-    let results = payload
-        .get("results")
-        .and_then(|value| value.as_array())
-        .into_iter()
-        .flatten()
-        .filter_map(|item| {
-            let title = item.get("title")?.as_str()?.trim();
-            let url = item.get("url")?.as_str()?.trim();
-            if title.is_empty() || url.is_empty() {
-                return None;
-            }
-            let snippet = item
-                .get("content")
-                .and_then(|value| value.as_str())
-                .unwrap_or("")
-                .chars()
-                .take(4000)
-                .collect();
-
-            Some(WebSearchResult {
-                title: title.to_string(),
-                url: url.to_string(),
-                snippet,
-                score: item.get("score").and_then(|value| value.as_f64()),
-                published_at: item
-                    .get("published_date")
-                    .and_then(|value| value.as_str())
-                    .map(str::to_string),
-            })
-        })
-        .take(max_results as usize)
-        .collect();
-
-    Ok(WebSearchResponse { results })
+    Ok(WebSearchResponse {
+        results: parse_duckduckgo_results(&body, max_results),
+    })
 }
 
 #[tauri::command]
@@ -291,13 +352,13 @@ pub async fn crownkeep_web_read(url: String) -> Result<WebReadResponse, String> 
 
     let status = response.status();
     if !status.is_success() {
-        return Err(format!(
-            "Webpage returned HTTP {}.",
-            status.as_u16()
-        ));
+        return Err(format!("Webpage returned HTTP {}.", status.as_u16()));
     }
 
-    if response.content_length().is_some_and(|size| size > MAX_READ_BYTES as u64) {
+    if response
+        .content_length()
+        .is_some_and(|size| size > MAX_READ_BYTES as u64)
+    {
         return Err("Webpage is too large for the bounded CrownKeep Web Read tool.".into());
     }
 
@@ -340,13 +401,7 @@ pub async fn crownkeep_web_read(url: String) -> Result<WebReadResponse, String> 
         ));
     };
 
-    let content: String = rendered
-        .split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ")
-        .chars()
-        .take(18_000)
-        .collect();
+    let content = normalized_text(&rendered, 18_000);
 
     if content.is_empty() {
         return Err("Web Read returned no readable content.".into());
