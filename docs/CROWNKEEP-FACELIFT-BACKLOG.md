@@ -32,13 +32,12 @@ Implemented:
 
 1. Midnight navy, cobalt blue, electric cyan, cool silver/white tokens applied to the shared shell without changing runtime behavior.
 2. Copper retained as a rare emphasis color for external/network/cloud boundaries.
-3. `crownkeep-app-icon.png` is used by the shared UI, browser/favicon/PWA shell, Tauri desktop icon generation, CI iPhone icon preparation, and the physical iPhone build script.
+3. A clean `public/crownkeep-mark.svg` implementation of the geometric C/crown direction is used by the shared UI, browser/favicon/PWA shell, and Tauri desktop icon generation. The staged `crownkeep-app-icon.png` remains the current CI/physical iPhone icon source.
 4. `crownkeep-wordmark.png` is used in the expanded sidebar lockup.
 5. Existing compact status/composer layout is preserved; the facelift is intentionally visual rather than a navigation redesign.
 
 Deferred:
 
-- final production SVG redraw of the selected geometric C/crown mark;
 - CSS/3D crown loading motion;
 - light-theme pass;
 - onboarding/empty-state use of the crown motif and knowledge mark.
