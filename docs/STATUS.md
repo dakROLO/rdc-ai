@@ -9,6 +9,7 @@
 - **AVD acceptance pending:** run the same adaptive Windows policy; do not create an AVD-specific product path.
 - **Merge/tag/cleanup remains blocked** until Rolo15 and AVD evidence is complete. Do not delete the legacy CrownKeep cache yet.
 - **Next local product work:** stable desktop storage/installer proof, then provider-neutral automatic tools and multimodal/image work. Image understanding/OCR should prefer local device capability; image generation must use an explicit tool boundary and never silently send prompts/images to cloud.
+- **UI regression to restore:** bring back a persistent, glanceable status bar rather than requiring the Local AI panel for runtime context. It should show the active role/model, runtime/device state, local/cloud boundary, and useful working/benchmarking/sleep state without expanding diagnostics. Preserve the compact mobile layout.
 - **Deferred from the current acceptance gate:** Deep validation, RDC KnowledgeSource connection, encrypted sync, and explicit cloud escalation.
 - The historical entries below are retained as evidence; they are not current implementation work.
 
