@@ -21,17 +21,14 @@ export interface WebReadResponse {
 
 export interface NativeWebStatus {
   nativeAvailable: boolean
-  provider: 'tavily'
-  searchConfigured: boolean
+  provider: 'duckduckgo'
+  searchAvailable: boolean
   readAvailable: boolean
-  credentialStore?: string
   detail: string
 }
 
 export interface NativeWebTransport {
   status(): Promise<NativeWebStatus>
-  saveSearchCredential(apiKey: string): Promise<NativeWebStatus>
-  clearSearchCredential(): Promise<NativeWebStatus>
   search(query: string, maxResults: number): Promise<WebSearchResponse>
   read(url: string): Promise<WebReadResponse>
 }
@@ -53,8 +50,6 @@ function iosTransport(): NativeWebTransport | undefined {
 
   return {
     status: () => bridge.getStatus(),
-    saveSearchCredential: (apiKey) => bridge.saveSearchCredential(apiKey),
-    clearSearchCredential: () => bridge.clearSearchCredential(),
     search: (query, maxResults) => bridge.search(query, maxResults),
     read: (url) => bridge.read(url),
   }
@@ -65,10 +60,6 @@ function tauriTransport(): NativeWebTransport | undefined {
 
   return {
     status: () => invoke<NativeWebStatus>('crownkeep_web_status'),
-    saveSearchCredential: (apiKey) =>
-      invoke<NativeWebStatus>('crownkeep_web_save_search_credential', { apiKey }),
-    clearSearchCredential: () =>
-      invoke<NativeWebStatus>('crownkeep_web_clear_search_credential'),
     search: (query, maxResults) =>
       invoke<WebSearchResponse>('crownkeep_web_search', { query, maxResults }),
     read: (url) => invoke<WebReadResponse>('crownkeep_web_read', { url }),
@@ -81,11 +72,11 @@ function nativeTransport(): NativeWebTransport | undefined {
 
 const unavailableStatus: NativeWebStatus = {
   nativeAvailable: false,
-  provider: 'tavily',
-  searchConfigured: false,
+  provider: 'duckduckgo',
+  searchAvailable: false,
   readAvailable: false,
   detail:
-    'Direct Web Access requires the native CrownKeep app. Browser-only development does not store provider credentials.',
+    'Direct Web Access requires the native CrownKeep app. Browser-only development does not perform live web searches.',
 }
 
 export class NativeWebClient {
@@ -104,26 +95,12 @@ export class NativeWebClient {
     return transport ? transport.status() : unavailableStatus
   }
 
-  async isSearchConfigured(): Promise<boolean> {
-    return (await this.status()).searchConfigured
+  async isSearchAvailable(): Promise<boolean> {
+    return (await this.status()).searchAvailable
   }
 
-  async isReadConfigured(): Promise<boolean> {
+  async isReadAvailable(): Promise<boolean> {
     return (await this.status()).readAvailable
-  }
-
-  async saveSearchCredential(apiKey: string): Promise<NativeWebStatus> {
-    const transport = this.transport()
-    if (!transport) throw new Error(unavailableStatus.detail)
-    const normalized = apiKey.trim()
-    if (!normalized) throw new Error('Search provider API key is required.')
-    return transport.saveSearchCredential(normalized)
-  }
-
-  async clearSearchCredential(): Promise<NativeWebStatus> {
-    const transport = this.transport()
-    if (!transport) throw new Error(unavailableStatus.detail)
-    return transport.clearSearchCredential()
   }
 
   async search(query: string, maxResults = 5): Promise<WebSearchResponse> {
