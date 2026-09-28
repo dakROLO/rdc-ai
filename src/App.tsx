@@ -474,6 +474,23 @@ export default function App() {
     toolBusy,
   ])
 
+  const observedStructuredToolSupport = useMemo(() => {
+    if (!fingerprint || !loadedChatCandidate) return undefined
+    const candidateKey = loadedChatCandidate.id.split(':')[0].toLocaleLowerCase()
+    const candidateAlias = loadedChatCandidate.alias.toLocaleLowerCase()
+    const match = readResults(localStorage)
+      .filter(
+        (result) =>
+          result.fingerprint === fingerprint &&
+          result.outcome === 'accepted' &&
+          result.supportsToolCalling !== undefined &&
+          (result.variantId.split(':')[0].toLocaleLowerCase() === candidateKey ||
+            result.alias.toLocaleLowerCase() === candidateAlias),
+      )
+      .sort((a, b) => b.timestamp.localeCompare(a.timestamp))[0]
+    return match?.supportsToolCalling
+  }, [fingerprint, loadedChatCandidate, providerRefreshNonce])
+
   const measuredRoleWinners = useMemo(() => {
     const results = readResults(localStorage)
     const winnerFor = (role: ChatModelRole) =>
@@ -1408,7 +1425,8 @@ export default function App() {
     let manualToolUsed = false
     const structuredToolsProven =
       selectedProviderId === 'foundry-local' &&
-      loadedChatCandidate?.supportsToolCalling === true
+      (loadedChatCandidate?.supportsToolCalling === true ||
+        observedStructuredToolSupport === true)
     const appleNativeToolsReady =
       selectedProviderId === 'apple-foundation-models' &&
       Boolean(configuredWebGatewayEndpoint())
