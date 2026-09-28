@@ -4,6 +4,7 @@ import WebKit
 import Speech
 import AVFoundation
 import UIKit
+import Security
 
 private final class CrownKeepNativeToolLog: @unchecked Sendable {
     struct Source {
@@ -33,35 +34,230 @@ private final class CrownKeepNativeToolLog: @unchecked Sendable {
     }
 }
 
-private struct CrownKeepWebGateway: @unchecked Sendable {
-    let baseURL: URL
+private enum CrownKeepWebCredentialStore {
+    static let service = "com.royaldigitalclarity.crownkeep.web"
+    static let account = "tavily-api-key"
 
-    private func post(path: String, payload: [String: Any], timeout: TimeInterval) async throws -> [String: Any] {
-        let url = baseURL.appendingPathComponent(path)
-        var request = URLRequest(url: url)
+    static func load() throws -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        if status == errSecItemNotFound { return nil }
+        guard status == errSecSuccess else {
+            throw NSError(
+                domain: "CrownKeepWebCredential",
+                code: Int(status),
+                userInfo: [NSLocalizedDescriptionKey: "Could not read the CrownKeep web-search credential from Keychain."]
+            )
+        }
+
+        guard
+            let data = result as? Data,
+            let value = String(data: data, encoding: .utf8),
+            !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else { return nil }
+
+        return value
+    }
+
+    static func save(_ value: String) throws {
+        let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalized.isEmpty else {
+            throw NSError(
+                domain: "CrownKeepWebCredential",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "Search provider API key is required."]
+            )
+        }
+
+        let data = Data(normalized.utf8)
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account
+        ]
+        let attributes: [String: Any] = [
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        ]
+
+        let updateStatus = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+        if updateStatus == errSecItemNotFound {
+            var insert = query
+            attributes.forEach { insert[$0.key] = $0.value }
+            let addStatus = SecItemAdd(insert as CFDictionary, nil)
+            guard addStatus == errSecSuccess else {
+                throw NSError(
+                    domain: "CrownKeepWebCredential",
+                    code: Int(addStatus),
+                    userInfo: [NSLocalizedDescriptionKey: "Could not save the CrownKeep web-search credential to Keychain."]
+                )
+            }
+        } else if updateStatus != errSecSuccess {
+            throw NSError(
+                domain: "CrownKeepWebCredential",
+                code: Int(updateStatus),
+                userInfo: [NSLocalizedDescriptionKey: "Could not update the CrownKeep web-search credential in Keychain."]
+            )
+        }
+    }
+
+    static func clear() throws {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account
+        ]
+        let status = SecItemDelete(query as CFDictionary)
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            throw NSError(
+                domain: "CrownKeepWebCredential",
+                code: Int(status),
+                userInfo: [NSLocalizedDescriptionKey: "Could not remove the CrownKeep web-search credential from Keychain."]
+            )
+        }
+    }
+}
+
+private struct CrownKeepNativeWeb: @unchecked Sendable {
+    private let tavilySearchURL = URL(string: "https://api.tavily.com/search")!
+    private let maxReadBytes = 2 * 1024 * 1024
+
+    func status() throws -> [String: Any] {
+        let configured = try CrownKeepWebCredentialStore.load() != nil
+        return [
+            "nativeAvailable": true,
+            "provider": "tavily",
+            "searchConfigured": configured,
+            "readAvailable": true,
+            "credentialStore": "iOS Keychain",
+            "detail": configured
+                ? "Direct Web Access is ready. Search credentials stay in iOS Keychain; webpage reads are fetched directly from this device."
+                : "Direct webpage reading is ready. Add a Tavily API key to enable public-web search; the key will stay in iOS Keychain."
+        ]
+    }
+
+    func saveSearchCredential(_ value: String) throws -> [String: Any] {
+        try CrownKeepWebCredentialStore.save(value)
+        return try status()
+    }
+
+    func clearSearchCredential() throws -> [String: Any] {
+        try CrownKeepWebCredentialStore.clear()
+        return try status()
+    }
+
+    private func apiKey() throws -> String {
+        guard let value = try CrownKeepWebCredentialStore.load() else {
+            throw NSError(
+                domain: "CrownKeepNativeWeb",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "Web Search is not configured. Add a Tavily API key in CrownKeep Web Access settings."]
+            )
+        }
+        return value
+    }
+
+    private func validatePublicURL(_ value: String) throws -> URL {
+        guard
+            let components = URLComponents(string: value),
+            let scheme = components.scheme?.lowercased(),
+            ["http", "https"].contains(scheme),
+            let host = components.host?.lowercased(),
+            !host.isEmpty,
+            components.user == nil,
+            components.password == nil
+        else {
+            throw NSError(
+                domain: "CrownKeepNativeWeb",
+                code: 2,
+                userInfo: [NSLocalizedDescriptionKey: "Web Read requires a public http(s) URL."]
+            )
+        }
+
+        let blockedPrefixes = [
+            "127.", "10.", "192.168.", "169.254.",
+            "0.", "::1", "fc", "fd", "fe80:"
+        ]
+        let is172Private: Bool = {
+            let parts = host.split(separator: ".")
+            guard parts.count == 4, parts[0] == "172", let second = Int(parts[1]) else { return false }
+            return (16...31).contains(second)
+        }()
+
+        if host == "localhost"
+            || host.hasSuffix(".local")
+            || blockedPrefixes.contains(where: { host.hasPrefix($0) })
+            || is172Private {
+            throw NSError(
+                domain: "CrownKeepNativeWeb",
+                code: 3,
+                userInfo: [NSLocalizedDescriptionKey: "Local/private URLs are not supported by Web Read."]
+            )
+        }
+
+        guard let url = components.url else {
+            throw NSError(
+                domain: "CrownKeepNativeWeb",
+                code: 4,
+                userInfo: [NSLocalizedDescriptionKey: "Web Read requires a valid public URL."]
+            )
+        }
+        return url
+    }
+
+    func search(query: String, maxResults: Int = 5) async throws -> [(title: String, url: String, snippet: String, score: Double?, publishedAt: String?)] {
+        let normalized = query
+            .split(whereSeparator: { $0.isWhitespace })
+            .joined(separator: " ")
+            .prefix(512)
+        guard !normalized.isEmpty else {
+            throw NSError(
+                domain: "CrownKeepNativeWeb",
+                code: 5,
+                userInfo: [NSLocalizedDescriptionKey: "Web Search requires a query."]
+            )
+        }
+
+        var request = URLRequest(url: tavilySearchURL)
         request.httpMethod = "POST"
-        request.timeoutInterval = timeout
+        request.timeoutInterval = 15
+        request.setValue("Bearer \(try apiKey())", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.httpBody = try JSONSerialization.data(withJSONObject: payload)
+        request.setValue("CrownKeep-Native-Web/0.1", forHTTPHeaderField: "User-Agent")
+        request.httpBody = try JSONSerialization.data(withJSONObject: [
+            "query": String(normalized),
+            "topic": "general",
+            "search_depth": "basic",
+            "max_results": max(1, min(8, maxResults)),
+            "include_answer": false,
+            "include_raw_content": false,
+            "include_images": false
+        ])
 
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else {
             throw NSError(
-                domain: "CrownKeepWebGateway",
-                code: 1,
-                userInfo: [NSLocalizedDescriptionKey: "Web Gateway returned an invalid response."]
+                domain: "CrownKeepNativeWeb",
+                code: 6,
+                userInfo: [NSLocalizedDescriptionKey: "Search provider returned an invalid response."]
             )
         }
         guard (200..<300).contains(http.statusCode) else {
             let detail = String(data: data, encoding: .utf8) ?? ""
             throw NSError(
-                domain: "CrownKeepWebGateway",
+                domain: "CrownKeepNativeWeb",
                 code: http.statusCode,
-                userInfo: [
-                    NSLocalizedDescriptionKey:
-                        "Web Gateway request failed (\(http.statusCode))\(detail.isEmpty ? "" : ": \(detail.prefix(240))")"
-                ]
+                userInfo: [NSLocalizedDescriptionKey:
+                    "Search provider returned HTTP \(http.statusCode)\(detail.isEmpty ? "" : ": \(detail.prefix(300))")"]
             )
         }
 
@@ -69,80 +265,107 @@ private struct CrownKeepWebGateway: @unchecked Sendable {
             let object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
         else {
             throw NSError(
-                domain: "CrownKeepWebGateway",
-                code: 2,
-                userInfo: [NSLocalizedDescriptionKey: "Web Gateway returned invalid JSON."]
+                domain: "CrownKeepNativeWeb",
+                code: 7,
+                userInfo: [NSLocalizedDescriptionKey: "Search provider returned invalid JSON."]
             )
         }
 
-        return object
-    }
-
-    func search(query: String) async throws -> [(title: String, url: String, snippet: String)] {
-        let normalized = query
-            .split(whereSeparator: { $0.isWhitespace })
-            .joined(separator: " ")
-            .prefix(320)
-        guard !normalized.isEmpty else {
-            throw NSError(
-                domain: "CrownKeepWebGateway",
-                code: 3,
-                userInfo: [NSLocalizedDescriptionKey: "Web Search requires a query."]
-            )
-        }
-
-        let object = try await post(
-            path: "search",
-            payload: ["query": String(normalized), "maxResults": 5],
-            timeout: 15
-        )
         let rows = object["results"] as? [[String: Any]] ?? []
-        return rows.compactMap { row in
+        return rows.prefix(max(1, min(8, maxResults))).compactMap { row in
             guard
                 let title = row["title"] as? String,
-                let url = row["url"] as? String
+                let url = row["url"] as? String,
+                !title.isEmpty,
+                !url.isEmpty
             else { return nil }
             return (
                 title: title,
                 url: url,
-                snippet: (row["snippet"] as? String) ?? ""
+                snippet: (row["content"] as? String) ?? "",
+                score: row["score"] as? Double,
+                publishedAt: row["published_date"] as? String
             )
         }
     }
 
     func read(url value: String) async throws -> (url: String, title: String?, content: String) {
-        guard
-            let components = URLComponents(string: value),
-            let scheme = components.scheme?.lowercased(),
-            ["http", "https"].contains(scheme),
-            components.host != nil,
-            components.user == nil,
-            components.password == nil
-        else {
+        let url = try validatePublicURL(value)
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 20
+        request.setValue("text/html, text/plain, application/xhtml+xml;q=0.9, */*;q=0.1", forHTTPHeaderField: "Accept")
+        request.setValue("CrownKeep-Native-Web/0.1", forHTTPHeaderField: "User-Agent")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
             throw NSError(
-                domain: "CrownKeepWebGateway",
-                code: 4,
-                userInfo: [NSLocalizedDescriptionKey: "Web Read requires a public http(s) URL."]
+                domain: "CrownKeepNativeWeb",
+                code: 8,
+                userInfo: [NSLocalizedDescriptionKey: "Webpage returned an invalid response."]
+            )
+        }
+        guard (200..<300).contains(http.statusCode) else {
+            throw NSError(
+                domain: "CrownKeepNativeWeb",
+                code: http.statusCode,
+                userInfo: [NSLocalizedDescriptionKey: "Webpage returned HTTP \(http.statusCode)."]
+            )
+        }
+        guard data.count <= maxReadBytes else {
+            throw NSError(
+                domain: "CrownKeepNativeWeb",
+                code: 9,
+                userInfo: [NSLocalizedDescriptionKey: "Webpage is too large for the bounded CrownKeep Web Read tool."]
             )
         }
 
-        let object = try await post(
-            path: "read",
-            payload: ["url": value],
-            timeout: 20
-        )
-        guard let content = object["content"] as? String, !content.isEmpty else {
+        let mime = (http.mimeType ?? "").lowercased()
+        let raw = String(data: data, encoding: .utf8) ?? ""
+        let looksHTML = mime.contains("html")
+            || raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().hasPrefix("<!doctype html")
+            || raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().hasPrefix("<html")
+
+        let title: String?
+        let content: String
+
+        if looksHTML {
+            let attributed = try NSAttributedString(
+                data: data,
+                options: [
+                    .documentType: NSAttributedString.DocumentType.html,
+                    .characterEncoding: String.Encoding.utf8.rawValue
+                ],
+                documentAttributes: nil
+            )
+            content = attributed.string
+            title = nil
+        } else if mime.hasPrefix("text/") || mime.contains("json") || mime.isEmpty {
+            content = raw
+            title = nil
+        } else {
             throw NSError(
-                domain: "CrownKeepWebGateway",
-                code: 5,
+                domain: "CrownKeepNativeWeb",
+                code: 10,
+                userInfo: [NSLocalizedDescriptionKey: "Web Read does not support this content type: \(mime)."]
+            )
+        }
+
+        let normalized = content
+            .split(whereSeparator: { $0.isWhitespace })
+            .joined(separator: " ")
+        guard !normalized.isEmpty else {
+            throw NSError(
+                domain: "CrownKeepNativeWeb",
+                code: 11,
                 userInfo: [NSLocalizedDescriptionKey: "Web Read returned no readable content."]
             )
         }
 
         return (
-            url: (object["url"] as? String) ?? value,
-            title: object["title"] as? String,
-            content: String(content.prefix(18_000))
+            url: http.url?.absoluteString ?? url.absoluteString,
+            title: title,
+            content: String(normalized.prefix(18_000))
         )
     }
 }
