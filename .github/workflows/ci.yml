@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   web-verify:
@@ -63,27 +63,18 @@ jobs:
       - name: Check CrownKeep Tauri host
         run: cargo check --manifest-path src-tauri/Cargo.toml
 
-      - name: Commit regenerated Cargo lockfile once
+      - name: Verify committed Cargo lockfile is current
         shell: pwsh
         run: |
-          git diff --quiet -- src-tauri/Cargo.lock
-          if ($LASTEXITCODE -eq 0) {
-            Write-Host "Cargo.lock is already current."
-            exit 0
-          }
+          git diff --exit-code -- src-tauri/Cargo.lock
 
-          $generatedLock = Join-Path $env:RUNNER_TEMP "Cargo.lock"
-          Copy-Item src-tauri/Cargo.lock $generatedLock -Force
-
-          git fetch origin sprint-4a3-local-platform-convergence
-          git switch -C sprint-4a3-local-platform-convergence origin/sprint-4a3-local-platform-convergence
-          Copy-Item $generatedLock src-tauri/Cargo.lock -Force
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src-tauri/Cargo.lock
-          git commit -m "Refresh Windows Cargo lockfile for keyless web"
-          git push origin HEAD:sprint-4a3-local-platform-convergence
+      - name: Upload regenerated Cargo lockfile on mismatch
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crownkeep-cargo-lock
+          path: src-tauri/Cargo.lock
+          if-no-files-found: error
 
   ios-host-check:
     runs-on: macos-26
