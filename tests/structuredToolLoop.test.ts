@@ -86,3 +86,49 @@ test('structured loop executes ToolRegistry result and returns to the same provi
   assert.equal(output, 'Final local answer.')
   assert.deepEqual(activities, ['web-search'])
 })
+
+test('structured loop forwards ordinary local text chunks immediately when tools are enabled', async () => {
+  const registry = new ToolRegistry()
+  registry.setPolicy({ webAccess: 'on' })
+  registry.register({
+    id: 'web-search',
+    name: 'Web Search',
+    description: 'Search current public information.',
+    requiresNetwork: true,
+    access: 'read',
+    inputSchema: {
+      type: 'object',
+      properties: { query: { type: 'string' } },
+      required: ['query'],
+    },
+    isAvailable: async () => true,
+    execute: async () => ({ text: 'unused' }),
+  })
+
+  const provider: AIProvider = {
+    id: 'local-stream-proof',
+    displayName: 'Local stream proof',
+    location: 'local',
+    getAvailability: async () => ({ available: true }),
+    listModels: async () => [{ id: 'proof', displayName: 'Proof' }],
+    async *streamChat() {
+      yield { text: 'Local ' }
+      yield { text: 'answer.', done: true }
+    },
+  }
+
+  const chunks: string[] = []
+  for await (const chunk of streamStructuredToolLoop({
+    provider,
+    request: {
+      modelId: 'proof',
+      messages: [{ role: 'user', content: 'Explain a local concept.' }],
+    },
+    registry,
+  })) {
+    if (chunk.text) chunks.push(chunk.text)
+  }
+
+  assert.deepEqual(chunks, ['Local ', 'answer.'])
+})
+
