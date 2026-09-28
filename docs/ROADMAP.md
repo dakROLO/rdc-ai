@@ -294,23 +294,27 @@ Exit criteria:
 - runtime/model failures surface through CrownKeep without corrupting conversations;
 - the browser build remains capability-aware and does not pretend to own native lifecycle actions.
 
-### Sprint 4A.3 — Local Platform Convergence / Pause Point — **PLANNED**
+### Sprint 4A.3 — Local Platform Convergence / Pause Point — **IMPLEMENTED · ACCEPTANCE IN PROGRESS**
 
 **Outcome:** Converge the validated Windows, iPhone, and AVD local-first paths into one device-aware baseline before beginning cloud work.
 
 Detailed sprint contract: [Sprint 4A.3 — Local Platform Convergence](SPRINT-4A3-LOCAL-PLATFORM-CONVERGENCE.md).
 
-Focus:
+Implemented:
 
-- collapse the Foundry catalog into useful model families/roles instead of exposing a massive raw variant list;
-- use model aliases for normal selection and retain full variants only for diagnostics/advanced control;
-- benchmark a **Quick**, **Balanced**, and **Experimental/Deep** local portfolio on the primary Windows laptop;
-- add local voice dictation through a shared speech-input contract;
-- use Foundry Local Whisper on Windows and native Apple Speech on iPhone;
-- bring the physical iPhone forward onto the current shared build and revalidate Apple Foundation Models, projects, persistence, streaming, and compact mobile UX;
-- run the same adaptive Windows analysis on the physical laptop and AVD so CrownKeep chooses the best observed execution path from the capabilities and benchmark results actually present, without host-type special cases;
-- validate idle unload/wake and non-blocking startup across device-appropriate profiles;
-- update repository documentation, merge the validated convergence branch to `main`, clean stale contained phase branches, and mark a local-baseline pause point.
+- shared provider-neutral runtime, speech, tool, and knowledge-source contracts;
+- device-aware Windows model roles (**Quick**, **Balanced**, **Deep**) with observed benchmark evidence instead of hardware-name assumptions;
+- shared iPhone build using Apple Foundation Models and native Apple on-device speech;
+- shared Windows/iPhone conversation UI, streaming, persistence, and review-before-send dictation;
+- local registered-tool proofs for `/search` and `/url`;
+- no silent cloud fallback.
+
+Physical acceptance status as of 2026-09-27:
+
+- **Primary Windows laptop:** Quick startup/restore validated; Balanced Mistral Nemo benchmark, exclusive model switching, and normal chat validated; Windows dictation validated through the installed System Foundry CLI. Laptop microphone transcription quality remains a hardware/input-quality observation, not a runtime failure.
+- **Rolo15:** current convergence build installed successfully. Current-build chat, follow-up context, dictation, persistence/restart, and manual tool revalidation remain the acceptance gate.
+- **AVD:** current shared adaptive Windows policy and acceptance matrix remain pending.
+- **Merge/tag/cleanup:** blocked until Rolo15 and AVD acceptance evidence is recorded.
 
 Exit criteria:
 
@@ -323,7 +327,29 @@ Exit criteria:
 
 ---
 
-### Sprint 4A.4 — Stable desktop storage + installer proof
+### Sprint 4A.4 — System Foundry Convergence + Local Agent Foundation — **ACTIVE**
+
+**Outcome:** Make the installed System Foundry service the normal Windows authority while preserving one provider-neutral CrownKeep experience across Windows and iPhone.
+
+Delivered:
+
+- System Foundry CLI/service owns Windows catalog, cache, model lifecycle, and current inference endpoint;
+- alias-first role selection with exact variants retained as evidence;
+- exclusive model activation and startup reconciliation so CrownKeep does not intentionally leave multiple chat models loaded;
+- Windows Voice uses the System Foundry speech model path and restores the previous chat alias;
+- one-system-message local chat normalization for stricter local chat templates;
+- failed provider messages are excluded from future inference context;
+- `ToolRegistry`, `KnowledgeSource`, local `/search`, and read-only `/url` proof.
+
+Remaining acceptance:
+
+- finish Rolo15 current-build validation;
+- run the same shared Windows acceptance policy in AVD;
+- record the final local-baseline evidence before branch merge/tag/cleanup.
+
+---
+
+### Sprint 4A.5 — Stable desktop storage + installer proof — **NEXT**
 
 **Outcome:** CrownKeep behaves like an installed Windows product rather than a development web origin.
 
@@ -338,9 +364,31 @@ Deliverables:
 
 Exit criteria:
 
-- install on a second Windows machine does not require Vite, PowerShell, or a separately managed Foundry CLI;
+- install on a second Windows machine does not require Vite, PowerShell, or manual lifecycle commands;
 - local conversations survive normal application restart/update behavior;
 - uninstall/data-retention behavior is explicit.
+
+---
+
+### Sprint 4A.6 — Provider-neutral tools + multimodal proof — **PLANNED**
+
+**Outcome:** Add useful image and tool capabilities without coupling CrownKeep conversations to one model or silently moving private work off-device.
+
+Deliverables:
+
+- model-selected tool invocation behind the existing `ToolRegistry`;
+- photo/file input bridge for supported native hosts;
+- local-first image understanding/OCR path where the device supports it;
+- image-generation tool contract with a local generator when practical and an explicit user-visible cloud boundary when cloud generation is chosen;
+- tool-result context injected back into the currently selected reasoning provider;
+- per-tool network/locality metadata visible to CrownKeep.
+
+Exit criteria:
+
+- a user can attach/select an image and obtain local understanding/OCR on a supported device;
+- Anne can invoke a registered tool without changing the conversation's reasoning provider;
+- image generation never silently sends prompts/images to a cloud service;
+- unsupported local image capabilities fail clearly rather than pretending they are available.
 
 ---
 
