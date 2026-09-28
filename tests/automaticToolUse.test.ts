@@ -116,3 +116,30 @@ test('source-detail request is bounded to one search plus two webpage reads', as
     2,
   )
 })
+
+
+test('version follow-up alone does not trigger a new web search', async () => {
+  const { registry, calls } = registryWithWebProof()
+  registry.setPolicy({ webAccess: 'on' })
+
+  const result = await runAutomaticReadOnlyTools(
+    'What version did you verify earlier?',
+    registry,
+  )
+
+  assert.equal(calls.length, 0)
+  assert.equal(result.attemptedWeb, false)
+})
+
+test('Web Access OFF guidance preserves retained-evidence use', async () => {
+  const { registry, calls } = registryWithWebProof()
+
+  const result = await runAutomaticReadOnlyTools(
+    'What is the latest release today?',
+    registry,
+  )
+
+  assert.equal(calls.length, 0)
+  assert.match(result.context, /retained tool\/web evidence/i)
+  assert.match(result.context, /do not claim a new web search/i)
+})
