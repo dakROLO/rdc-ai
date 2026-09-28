@@ -4,53 +4,51 @@
 **Status:** Local Windows/Rolo15 convergence baseline physically proven as recorded below; native direct Web Access implemented and automated-validated; Windows/Rolo15/AVD Web physical acceptance still required.
 
 
-## 4A.4K–4L — provider-neutral Web Access + native direct transport — 2026-09-28
+## 4A.4K–4M — provider-neutral Web Access + keyless DuckDuckGo transport — 2026-09-28
 
 ### Implemented
 
 - Restored the persistent compact status bar showing role/model/execution state, Inside-the-Keep boundary, Ready/Working/Benchmarking/Sleeping/Error, and Web Access OFF/ON without replacing detailed Local AI diagnostics.
-- Added persisted `Web Access` state, default **OFF**. `ToolRegistry` rejects a network tool before `isAvailable()` or `execute()` while OFF, so the disabled state cannot trigger a hidden network probe.
+- Added persisted `Web Access` state, default **OFF**. `ToolRegistry` rejects a network tool before `isAvailable()` or `execute()` while OFF.
 - Provider-neutral `WebSearchTool` and `WebReadTool` preserve source metadata and explicitly report when data left the device.
-- The initial Azure Function/Web Gateway prototype was removed **before physical acceptance**. Current Web Access has no CrownKeep-hosted network middleman.
-- Windows native direct transport:
-  - the Tauri/Rust host calls the configured search provider directly;
-  - Tavily is the first search adapter;
-  - the user-supplied search credential is stored in **Windows Credential Manager**;
-  - the React/webview layer can save/remove the credential and read configuration status, but the stored secret is never returned to it;
-  - Web Read fetches the selected public HTTP(S) page directly and does not require the search credential.
-- iPhone native direct transport:
-  - the Swift host calls the configured search provider directly with `URLSession`;
-  - Tavily is the first search adapter;
-  - the user-supplied search credential is stored in **iOS Keychain** with a device-local, non-synchronizing accessibility class;
-  - the JavaScript bridge can save/remove the credential and read configuration status, but the stored secret is never returned to it;
-  - Web Read fetches the selected public HTTP(S) page directly and does not require the search credential.
-- Browser-only development does not store a live search-provider credential and reports native Web Access unavailable.
-- Automatic fallback tool use is bounded to the current prompt only: ordinary/local questions cause no network call; current/external intent may search; source-detail intent may add at most two selected webpage reads. Total read-only web operations are capped at three for one turn.
-- `FoundryLocalProvider` supports OpenAI-compatible structured function definitions/tool-call streaming. Model Analyst performs a harmless **local** function-call capability probe only after a candidate passes its normal-context benchmark. Structured tools are enabled only from current-fingerprint observed support; unknown/unsupported models stay on the bounded fallback.
-- Native iPhone exposes the same logical `web-search` / `web-read` capabilities as Apple Foundation Models `Tool` objects. Web Access OFF exposes no native network tools.
+- Removed both earlier network-middleman/credential prototypes **before physical acceptance**:
+  - Azure Function/Web Gateway + Tavily server-side key;
+  - direct Tavily + Windows Credential Manager/iOS Keychain.
+- Current Web Search is **keyless DuckDuckGo**:
+  - Windows Tauri/Rust fetches DuckDuckGo's public non-JavaScript HTML results directly;
+  - iPhone Swift/`URLSession` fetches the same public search surface directly;
+  - no account, API key, device credential store, or CrownKeep server is required;
+  - result titles, destination URLs, and snippets are parsed locally;
+  - DuckDuckGo redirect URLs are unwrapped locally.
+- Web Read remains direct native retrieval of the selected public HTTP(S) page.
+- DuckDuckGo challenge/rate-limit behavior is bounded: CrownKeep reports interactive-verification/search failures and does not bypass them or silently switch search/model providers.
+- Automatic fallback tool use remains bounded to the current prompt only: ordinary/local questions cause no network call; current/external intent may search; source-detail intent may add at most two selected webpage reads. Total read-only web operations remain capped at three for one turn.
+- `FoundryLocalProvider` retains observed structured-tool support gating; unknown/unsupported models stay on the bounded fallback.
+- Native iPhone exposes the same logical `web-search` / `web-read` capabilities as Apple Foundation Models `Tool` objects whenever Web Access is ON.
 - Web content is injected back as **untrusted reference data** and never treated as instructions.
-- Assistant messages preserve reasoning-provider metadata separately from tool activity, including `Used web search`, `Read N webpages`, failed web attempts, and source URLs/titles. Using the web does not relabel a local reasoning response as cloud AI.
+- Assistant messages preserve reasoning-provider metadata separately from tool activity and sources.
 - No RDC customer-data/knowledge connection was added.
 
-### Automated validation
+### Automated validation target
 
-Branch CI after the direct-native transport change proves:
+The branch must prove after the DuckDuckGo conversion:
 
 - TypeScript/lint/production build pass;
 - shared Playwright UI smoke tests pass;
 - policy/unit tests pass;
-- Windows Tauri/Rust host compiles with the native secure-store/direct-HTTP implementation;
-- unsigned iOS Simulator build compiles with Keychain + direct `URLSession` + Apple Foundation Models Tool integration.
+- Windows Tauri/Rust host compiles with keyless DuckDuckGo search + direct Web Read;
+- unsigned iOS Simulator build compiles with keyless DuckDuckGo search + direct Web Read + Apple Foundation Models Tool integration;
+- Cargo.lock is current after removal of the credential-store dependency.
 
-Automated tests also prove:
+Automated tests cover:
 
 - Web Access OFF blocks network tools before availability/execution;
 - Web Access ON + local/non-current prompt makes zero web calls;
 - current-information prompt triggers search without an unnecessary page read;
 - source-detail prompt is bounded to one search plus two webpage reads;
 - structured tool output returns to the same local provider in the bounded loop;
-- native Web Read can remain available without a search credential;
-- the search credential is passed to the native transport for secure storage while status returned to the shared layer contains no secret;
+- native keyless Web Search and Web Read report available;
+- keyless search normalizes/bounds the outbound query;
 - non-HTTP(S) Web Read input is rejected before native execution.
 
 CI does not replace physical device validation.
@@ -63,42 +61,35 @@ CI does not replace physical device validation.
 - Balanced / `mistral-nemo-12b-instruct` CUDA benchmark and normal conversation: passed.
 - Exclusive chat-model switching: passed.
 - System Foundry CLI local dictation: passed; laptop microphone transcription quality was mediocre but the speech path worked.
-- Deep `gpt-oss-20b-cuda-gpu:1`: **failed qualification** at ~19.15 s first token and 45 s benchmark timeout. Normal-context validation did not pass; no Deep winner was selected; Phi Quick was restored. Do not auto-retry/promote it. `foundrylocal.exe` surfaced a Windows memory-read application error during/after cleanup.
+- Deep `gpt-oss-20b-cuda-gpu:1`: **failed qualification** at ~19.15 s first token and 45 s benchmark timeout. Do not auto-retry/promote it.
 
 **Rolo15**
 
-- Current shared convergence build built/signed/installed/launched: passed.
-- Local Apple Foundation Models chat + follow-up context: passed.
+- Current convergence baseline chat/follow-up: passed.
 - Native on-device dictation: passed.
 - Restart/persistence: passed.
 
 **AVD**
 
-- New physical acceptance remains pending. Use the same adaptive Windows policy; do not create an AVD-specific architecture.
+- New physical acceptance remains pending under the shared adaptive Windows policy.
 
-### Native direct Web Access physical acceptance still pending
-
-Search credentials are configured **separately on each native device** through CrownKeep. They must not be placed in Vite variables, source code, the Mac deployment command, conversation storage, or future sync.
+### Keyless Web Access physical acceptance still pending
 
 For **each** target runtime (Windows laptop, Rolo15, then AVD separately):
 
-1. Confirm a fresh/default profile shows **Web Access OFF**.
-2. With OFF, ask a current-information question and confirm no Web Search/Web Read executes; local chat remains usable and Anne does not claim current verification.
-3. Open the Web Access/provider setup and confirm direct Web Read is available even before a search credential is saved.
-4. Save the Tavily search credential through CrownKeep and confirm the UI reports it stored in the native secure store:
-   - Windows: Windows Credential Manager;
-   - iPhone: iOS Keychain.
-5. Restart/relaunch. Confirm Web Access preference and search-configured status persist without re-entering the credential.
-6. Turn Web Access ON and ask a local/non-current question. Confirm no search/read request occurs.
-7. Ask a current-information question. Confirm Web Search runs, `Used web search` is visible, source metadata is retained, and the message still shows the actual local reasoning provider.
-8. Ask a question requiring source detail. Confirm search is followed by selected direct webpage read(s), source URLs are visible, and the reasoning provider remains unchanged.
-9. Force a provider/network failure or temporarily remove the search credential. Confirm the failed web attempt is visible and CrownKeep does not silently switch to cloud reasoning.
-10. Confirm direct Web Read can still operate for a selected public URL while the search credential is absent, when network access is available.
+1. Confirm **Web Access OFF** on first/restarted launch as expected.
+2. With OFF, ask a current-information question and confirm no Web Search/Web Read executes.
+3. Turn Web Access ON and restart/relaunch. Confirm the preference persists.
+4. Confirm the UI identifies **DuckDuckGo** and states that no account/API key is required.
+5. Ask a local/non-current question. Confirm no search/read request occurs.
+6. Ask a current-information question. Confirm Web Search runs, `Used web search` is visible, source metadata is retained, and the assistant message still shows the actual local reasoning provider.
+7. Ask for source detail. Confirm DuckDuckGo discovery is followed by selected direct webpage read(s), source URLs are visible, and the reasoning provider remains unchanged.
+8. Manually test `/url https://example.com` while Web Access is ON. Confirm direct Web Read works independently of search.
+9. Disconnect networking or otherwise force a search/network failure. Confirm the failed web attempt is visible and CrownKeep does not silently switch to cloud reasoning or another search provider.
+10. If DuckDuckGo returns an interactive verification/challenge, record it as a visible keyless-search limitation; do not attempt bypass behavior.
 11. Turn Web Access OFF again and confirm subsequent automatic/manual network tools are blocked.
 
-For Windows, also record whether Quick/Balanced have an observed structured-tool capability result. If support is not proven, verify the bounded fallback is used without changing models.
-
-For Rolo15, the Tavily credential must be entered **on the phone after installation**. Do not bundle or pass it through the wife’s Mac build/deploy command.
+For Windows, also record whether Quick/Balanced have an observed structured-tool capability result. Unsupported/unknown is acceptable if the bounded fallback works without changing models.
 
 ### Deferred after Web Access foundation
 
