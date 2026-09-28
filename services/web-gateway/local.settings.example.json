@@ -1,0 +1,9 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "TAVILY_API_KEY": "server-only-secret",
+    "CROWNKEEP_WEB_ALLOWED_ORIGIN": "*"
+  }
+}
