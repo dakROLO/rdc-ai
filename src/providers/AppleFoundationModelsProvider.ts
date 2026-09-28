@@ -9,6 +9,7 @@ import {
   getNativeAIHost,
   type NativeAIHost,
 } from '../native/NativeAIHost.ts'
+import { configuredWebGatewayEndpoint } from '../web/WebGatewayClient.ts'
 
 interface PendingChunk {
   value?: ChatChunk
@@ -67,10 +68,23 @@ export class AppleFoundationModelsProvider implements AIProvider {
       resume = undefined
     }
 
+    const webGatewayEndpoint = configuredWebGatewayEndpoint()
+    const nativeTools = (request.tools ?? [])
+      .filter((tool) => tool.id === 'web-search' || tool.id === 'web-read')
+      .map((tool) => ({
+        id: tool.id,
+        name: tool.functionName,
+        description: tool.description,
+      }))
+    const nativeWebEnabled = Boolean(webGatewayEndpoint && nativeTools.length)
+
     const handle = await this.host.streamChat(
       {
         modelId: request.modelId,
         messages: request.messages,
+        webAccess: nativeWebEnabled ? 'on' : 'off',
+        webGatewayEndpoint,
+        tools: nativeWebEnabled ? nativeTools : [],
       },
       (chunk) => {
         queue.push({
@@ -78,6 +92,7 @@ export class AppleFoundationModelsProvider implements AIProvider {
             text: chunk.text,
             done: chunk.done,
             usage: chunk.usage,
+            toolActivities: chunk.toolActivities,
           },
         })
         wake()
