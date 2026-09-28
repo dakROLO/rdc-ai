@@ -460,6 +460,45 @@ export function ModelAnalyst({
             record.detail = record.realWorldValidated
               ? `Normal-context probe passed in ${Math.round(record.contextTotalMs)} ms.`
               : `Normal-context probe was too slow: ${Math.round(record.contextFirstTokenMs ?? 0)} ms first token / ${Math.round(record.contextTotalMs)} ms total.`
+
+            if (
+              record.realWorldValidated &&
+              record.supportsToolCalling === undefined &&
+              provider.probeToolCalling
+            ) {
+              setProgress(
+                `${index}/${paths.length} · Checking local tool-call support · ${candidate.executionProvider ?? candidate.device ?? 'Default'}…`,
+              )
+              try {
+                const toolSignal = AbortSignal.any([
+                  abort.signal,
+                  AbortSignal.timeout(15_000),
+                ])
+                record.supportsToolCalling = await provider.probeToolCalling(
+                  actual.id,
+                  toolSignal,
+                )
+                traceBenchmark(
+                  'tool-capability',
+                  `variant=${candidate.id} apiModel=${actual.id} supported=${String(record.supportsToolCalling ?? 'unknown')}`,
+                  traceId,
+                )
+                record.detail +=
+                  record.supportsToolCalling === true
+                    ? ' Local structured tool calling passed.'
+                    : record.supportsToolCalling === false
+                      ? ' Local structured tool calling was not supported.'
+                      : ' Local structured tool-call support was inconclusive.'
+              } catch (toolError) {
+                traceBenchmark(
+                  'tool-capability',
+                  `variant=${candidate.id} apiModel=${actual.id} supported=unknown error=${String(toolError)}`,
+                  traceId,
+                )
+                record.detail +=
+                  ' Local structured tool-call support was inconclusive.'
+              }
+            }
           }
         } catch (e) {
           record.totalMs = performance.now() - started
@@ -624,6 +663,11 @@ export function ModelAnalyst({
               ? ` · ${observed.tokensPerSecond.toFixed(1)} tok/s`
               : ''}
             {observed.realWorldValidated ? ' · normal context passed' : ''}
+            {observed.supportsToolCalling === true
+              ? ' · structured tools passed'
+              : observed.supportsToolCalling === false
+                ? ' · structured tools unsupported'
+                : ''}
           </span>
         )}
         {legacyObserved && (
@@ -679,7 +723,7 @@ export function ModelAnalyst({
                 <br />
                 {profile && memoryFit(variant, profile)}
                 {result &&
-                  `${result.outcome === 'error' ? 'runtime/benchmark error' : result.outcome} · ${(result.totalMs / 1000).toFixed(2)} s${result.realWorldValidated ? ' · context passed' : ''}${result.contextTotalMs ? ` · context ${(result.contextTotalMs / 1000).toFixed(2)} s` : ''} · ${result.timestamp}${result.detail ? ` · ${result.detail}` : ''}`}
+                  `${result.outcome === 'error' ? 'runtime/benchmark error' : result.outcome} · ${(result.totalMs / 1000).toFixed(2)} s${result.realWorldValidated ? ' · context passed' : ''}${result.supportsToolCalling === true ? ' · tools passed' : result.supportsToolCalling === false ? ' · tools unsupported' : ''}${result.contextTotalMs ? ` · context ${(result.contextTotalMs / 1000).toFixed(2)} s` : ''} · ${result.timestamp}${result.detail ? ` · ${result.detail}` : ''}`}
               </p>
             )
           })}
