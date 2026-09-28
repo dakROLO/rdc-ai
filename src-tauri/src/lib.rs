@@ -1178,8 +1178,6 @@ pub fn run() {
             system_foundry::crownkeep_system_foundry_remove_cached_model,
             system_foundry::crownkeep_system_foundry_transcribe,
             web::crownkeep_web_status,
-            web::crownkeep_web_save_search_credential,
-            web::crownkeep_web_clear_search_credential,
             web::crownkeep_web_search,
             web::crownkeep_web_read
         ])
