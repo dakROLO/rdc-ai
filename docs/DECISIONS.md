@@ -519,7 +519,7 @@ The prior embedded SDK manager remains temporarily for native dictation and dorm
 
 ## ADR-0028 — Web Access is an explicit tool boundary, not a model/provider switch
 
-**Status:** Accepted and implemented; physical web acceptance pending  
+**Status:** Accepted for policy/tool semantics; network-transport details superseded by ADR-0029  
 **Date:** 2026-09-28
 
 ### Decision
@@ -573,3 +573,64 @@ All automatic tool loops are bounded. The current structured and fallback paths 
 - A future enterprise/public-web provider can replace Tavily behind the gateway contract.
 - AVD uses the same Windows policy; there is no AVD-specific agent architecture.
 - Image/OCR/image-generation tools should reuse this boundary rather than creating a parallel agent system.
+
+## ADR-0029 — Web Access uses native direct transport with device-local credentials
+
+**Status:** Accepted and implemented; physical Web Access acceptance pending  
+**Date:** 2026-09-28
+
+### Context
+
+ADR-0028 established the durable rule that Web Access is an explicit read-only tool boundary and does not change the selected reasoning provider. Its first transport used a CrownKeep-hosted Azure Function/Web Gateway primarily to keep a shared search-provider key out of the client.
+
+Before physical acceptance, that gateway dependency was rejected as unnecessary for CrownKeep's current local-first product. Windows and iPhone already have native hosts capable of making bounded HTTPS requests and protecting a user-supplied credential locally.
+
+### Decision
+
+Keep ADR-0028's ToolRegistry, Web Access OFF/ON, bounded automatic-tool, source-metadata, and same-local-provider rules, but replace the gateway transport with native direct execution.
+
+**Windows**
+
+- the Tauri/Rust host performs Web Search and Web Read network requests;
+- Tavily is the first Web Search adapter;
+- the user supplies the search credential once through CrownKeep;
+- the native host stores it in Windows Credential Manager;
+- the React/webview layer receives configured/not-configured status but never reads the stored credential back.
+
+**iPhone**
+
+- the Swift host performs Web Search and Web Read network requests with `URLSession`;
+- Tavily is the first Web Search adapter;
+- the user supplies the search credential once through CrownKeep;
+- the native host stores it in iOS Keychain using a device-local, non-synchronizing accessibility class;
+- the JavaScript bridge receives configured/not-configured status but never reads the stored credential back.
+
+**Web Search**
+
+- requires Web Access ON;
+- requires a configured native search credential;
+- sends only the minimized public search query plus provider authentication directly to the configured provider.
+
+**Web Read**
+
+- requires Web Access ON;
+- does not require a search-provider credential;
+- fetches only the selected public HTTP(S) URL directly from the native device;
+- returns bounded readable content as untrusted reference material.
+
+Browser-only development does not store a live provider credential and does not pretend native direct Web Access is available.
+
+### Removed architecture
+
+The Azure Function/Web Gateway prototype, its `VITE_CROWNKEEP_WEB_GATEWAY_URL` configuration, Python service files, and gateway CI check are removed. There is no hidden fallback to that path.
+
+### Consequences
+
+- CrownKeep does not operate a web-retrieval middleman for the current local-first product.
+- Search credentials remain local to each device and are not bundled, synced, or placed in Vite/environment configuration.
+- Users configure the search credential separately on Windows, iPhone, and AVD as applicable.
+- Direct Web Read remains useful even before a search credential is configured.
+- Search-provider replacement remains an adapter concern behind `WebSearchTool` / the native web transport rather than a conversation/model concern.
+- A future centrally managed enterprise or public distribution may add an **optional** managed search boundary if credential distribution, quota, abuse protection, or organization policy requires it; that would require a new explicit decision rather than silently restoring the removed gateway.
+- Physical acceptance must prove OFF blocks all network tools, ON does not search unnecessarily, search/read activity is visible, provider identity remains local, and network/provider failures do not trigger cloud-model fallback.
+
