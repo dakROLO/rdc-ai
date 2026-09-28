@@ -32,10 +32,9 @@ export interface NativeToolDefinition {
 
 export interface NativeWebStatus {
   nativeAvailable: boolean
-  provider: 'tavily'
-  searchConfigured: boolean
+  provider: 'duckduckgo'
+  searchAvailable: boolean
   readAvailable: boolean
-  credentialStore?: string
   detail: string
 }
 
@@ -49,8 +48,6 @@ export interface NativeWebSearchResult {
 
 export interface NativeWebBridge {
   getStatus(): Promise<NativeWebStatus>
-  saveSearchCredential(apiKey: string): Promise<NativeWebStatus>
-  clearSearchCredential(): Promise<NativeWebStatus>
   search(query: string, maxResults: number): Promise<{ results: NativeWebSearchResult[] }>
   read(url: string): Promise<{ url: string; title?: string; content: string }>
 }
