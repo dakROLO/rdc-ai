@@ -4,7 +4,7 @@ import type {
   ToolRegistry,
 } from './ToolRegistry.ts'
 import { toolRegistry } from './defaultTools.ts'
-import type { WebSearchResponse } from '../web/WebGatewayClient.ts'
+import type { WebSearchResponse } from '../web/NativeWebClient.ts'
 
 export interface ToolActivityRecord {
   toolId: string
