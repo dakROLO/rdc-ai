@@ -1,7 +1,80 @@
 # Sprint 4A.4 — System Foundry Convergence Validation
 
 **Branch:** `sprint-4a3-local-platform-convergence`  
-**Status:** Windows System Foundry bridge implemented; physical acceptance required.
+**Status:** Local Windows/Rolo15 convergence baseline physically proven as recorded below; Web Access package implemented; live-gateway and AVD/Web physical acceptance still required.
+
+
+## 4A.4K — provider-neutral Web Access foundation — 2026-09-28
+
+### Implemented
+
+- Restored the persistent compact status bar showing role/model/execution state, Inside-the-Keep boundary, Ready/Working/Benchmarking/Sleeping/Error, and Web Access OFF/ON without replacing detailed Local AI diagnostics.
+- Added persisted `Web Access` state, default **OFF**. `ToolRegistry` rejects a network tool before `isAvailable()` or `execute()` while OFF, so the disabled state cannot trigger a hidden network probe.
+- Replaced direct client URL fetching with provider-neutral `WebSearchTool` and `WebReadTool` contracts. Both preserve source metadata and explicitly report the device/network boundary.
+- Added a narrow CrownKeep Web Gateway contract under `services/web-gateway/`. The first server adapter uses Tavily Search/Extract and stores `TAVILY_API_KEY` only server-side; the Windows/iPhone client receives only a public gateway endpoint.
+- Automatic fallback tool use is bounded to the current prompt only: ordinary/local questions cause no network call; current/external intent may search; source-detail intent may add at most two selected webpage reads. Total read-only web operations are capped at three for one turn.
+- `FoundryLocalProvider` supports OpenAI-compatible structured function definitions/tool-call streaming. Model Analyst performs a harmless **local** function-call capability probe only after a candidate passes its normal-context benchmark. Structured tools are enabled only from current-fingerprint observed support; unknown/unsupported models stay on the bounded fallback.
+- Native iPhone exposes the same logical `web-search` / `web-read` capabilities as Apple Foundation Models `Tool` objects. Web Access OFF exposes no native network tools; where the SDK surface supports it, native tool calling is explicitly disallowed.
+- Web content is injected back as **untrusted reference data** and never treated as instructions.
+- Assistant messages preserve reasoning-provider metadata separately from tool activity, including `Used web search`, `Read N webpages`, failed web attempts, and source URLs/titles. Using the web does not relabel a local reasoning response as cloud AI.
+- No RDC customer-data/knowledge connection was added.
+
+### Automated checks added
+
+- Web Access OFF blocks network tools before availability/execution.
+- Web Access ON + local/non-current prompt makes zero web calls.
+- Current-information prompt triggers search without an unnecessary page read.
+- Source-detail prompt is bounded to one search plus two webpage reads.
+- Structured tool output returns to the same local provider in the bounded loop.
+- CI also compiles the gateway Python module in addition to the existing TypeScript/lint/UI/Windows-Rust/iOS-host checks.
+
+Branch-head CI must be green before this package is treated as automated-validated; CI does not replace physical device validation.
+
+### Existing physical evidence preserved
+
+**Primary Windows laptop**
+
+- Quick / `phi-4-mini` startup and normal chat: passed.
+- Balanced / `mistral-nemo-12b-instruct` CUDA benchmark and normal conversation: passed.
+- Exclusive chat-model switching: passed.
+- System Foundry CLI local dictation: passed; laptop microphone transcription quality was mediocre but the speech path worked.
+- Deep `gpt-oss-20b-cuda-gpu:1`: **failed qualification** at ~19.15 s first token and 45 s benchmark timeout. Normal-context validation did not pass; no Deep winner was selected; Phi Quick was restored. Do not auto-retry/promote it. `foundrylocal.exe` surfaced a Windows memory-read application error during/after cleanup.
+
+**Rolo15**
+
+- Current shared convergence build built/signed/installed/launched: passed.
+- Local Apple Foundation Models chat + follow-up context: passed.
+- Native on-device dictation: passed.
+- Restart/persistence: passed.
+
+**AVD**
+
+- New physical acceptance remains pending. Use the same adaptive Windows policy; do not create an AVD-specific architecture.
+
+### New Web Access physical acceptance still pending
+
+A deployed/configured Web Gateway is required before these can pass.
+
+For **each** target runtime (Windows laptop, Rolo15, then AVD separately):
+
+1. Confirm a fresh/default profile shows **Web Access OFF**.
+2. With OFF, ask a current-information question and confirm zero Web Gateway requests occur; local chat remains usable and Anne does not claim current verification.
+3. Turn Web Access ON and restart/relaunch. Confirm the preference persists.
+4. Ask a local/non-current question. Confirm no search/read request occurs.
+5. Ask a current-information question. Confirm Web Search runs, the message still shows the actual local reasoning provider, and `Used web search` is visible.
+6. Ask a question requiring source detail. Confirm search is followed by selected webpage read(s), source URLs are visible, and the local reasoning provider remains unchanged.
+7. Force a gateway/search failure and confirm the failed web attempt is visible rather than silently disappearing.
+8. Turn Web Access OFF again and confirm subsequent automatic/manual network tools are blocked.
+
+For Windows, also record whether Quick/Balanced have an observed structured-tool capability result. If support is not proven, verify the bounded fallback is used without changing models.
+
+### Deferred after Web Access foundation
+
+- local-first image understanding/OCR proof;
+- photo/file bridge;
+- provider-neutral image generation;
+- explicit visible cloud-image boundary where a cloud generator is chosen.
+
 
 ## 4A.4D–4F contract, roles, and cleanup readiness — 2026-09-27
 
@@ -31,14 +104,16 @@
 
 - TypeScript, unit tests, lint, and production build pass in this workspace. Native Rust and unsigned iOS builds require the physical build hosts.
 
-### Physical-test-pending
+### Physical-test status
 
-- Confirm the installed Foundry service exposes `/v1/audio/transcriptions`, returns the loaded Speech variant, and restores Quick or Balanced after a real dictation request.
-- Confirm Windows/AVD diagnostics and Rolo15 Apple Foundation Models/native speech baseline.
+- Windows installed-System-Foundry dictation is physically proven on the primary laptop and restores the chat role.
+- Rolo15 Apple Foundation Models chat/follow-up, native speech, and restart/persistence are physically proven.
+- AVD remains physically pending under the shared Windows policy.
+- The new Web Access package remains physically pending on all three target runtimes until a live gateway is configured.
 
 ### Deferred
 
-- Foundation Models automatic tool definitions/selection and image analysis. `/search` and `/url` are manual registered tool commands, not automatic model-selected tools.
+- Image analysis/OCR and image generation remain deferred until after the Web Access/tool foundation is physically validated. Automatic public-web tool selection is now implemented in 4A.4K rather than deferred.
 
 ## 4A.4C bridge hardening findings — 2026-09-27
 
@@ -64,16 +139,22 @@ Run these in both environments. Do not create environment-specific policy.
 
 1. Run `foundry status --output json`, `foundry server status --output json`, `foundry cache location`, `foundry model list --variants --output json`, and `foundry model list --loaded --variants --output json`; attach only non-sensitive results to the sprint evidence.
 2. Start CrownKeep and confirm Diagnostics shows the exact same System Foundry cache location and a separate legacy-cache note. Record runtime version, service URL, loaded model, and selected alias/actual variant.
-3. Verify Quick chat, restart, Quick restoration, rerun, and a model download/cache operation through the system Foundry environment. Dictation is intentionally not revalidated for this bridge; it remains on the prior SDK path and must not be used as evidence that System Foundry convergence is complete.
+3. Verify Quick chat, restart, Quick restoration, rerun, and a model download/cache operation through the System Foundry environment. On the primary laptop, System Foundry CLI dictation has already been physically validated; on AVD, voice remains capability-dependent and must not block text-chat acceptance when unavailable.
 4. Benchmark Balanced. Run its representative-context and normal-chat checks before it becomes selectable. Attempt Deep only after Quick and Balanced are stable.
 5. Verify that selected model, System Foundry loaded model, and `/v1/models` model agree before sending; deliberately try a missing alias and verify chat stays blocked with a diagnostic.
 6. Inventory, but do not delete, `%USERPROFILE%\.CrownKeep\cache\models`. Record system versus legacy size and the models protected for Quick/Balanced/Deep/Voice. Confirm no new files appear there after a CrownKeep non-Quick download.
 
 ## Rolo15 handoff
 
-1. Confirm Apple Foundation Models supplies Quick and no unsupported Balanced/Deep mode is shown as ready.
-2. Validate local streaming, conversation/project persistence, native dictation review-before-send, local-search proof, image-analysis proof, and restart behavior.
-3. Confirm no cloud-model fallback occurs when the local runtime is unavailable.
+The current local baseline is already physically proven: Apple Foundation Models chat/follow-up, native dictation, and restart/persistence passed on Rolo15.
+
+Remaining handoff for this work package:
+
+1. Confirm the restored compact status bar remains readable on-device and Apple Foundation Models still supplies Quick without pretending Balanced/Deep are available.
+2. Run the Web Access OFF/ON matrix from 4A.4K using the native Apple Foundation Models tool bridge.
+3. Confirm successful/failed web activity and sources are visible while the assistant message remains marked Local.
+4. Confirm no cloud-model fallback occurs when Apple local inference or the Web Gateway is unavailable.
+5. Keep image-analysis/OCR validation deferred to the next multimodal work package.
 
 ## Cleanup gate
 
