@@ -510,6 +510,14 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
           cancel: () => call("speechCancel")
         },
 
+        web: {
+          getStatus: () => call("webStatus"),
+          saveSearchCredential: (apiKey) => call("webSaveSearchCredential", { apiKey }),
+          clearSearchCredential: () => call("webClearSearchCredential"),
+          search: (query, maxResults = 5) => call("webSearch", { query, maxResults }),
+          read: (url) => call("webRead", { url })
+        },
+
         getAvailability() {
           return call("getAvailability");
         },
@@ -562,6 +570,63 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
                     default: await self.speech.cancel(); self.resolve(id: id, value: true)
                     }
                 } catch { self.reject(id: id, message: error.localizedDescription) }
+            }
+
+        case "webStatus", "webSaveSearchCredential", "webClearSearchCredential", "webSearch", "webRead":
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                do {
+                    let web = CrownKeepNativeWeb()
+                    switch method {
+                    case "webStatus":
+                        self.resolve(id: id, value: try web.status())
+
+                    case "webSaveSearchCredential":
+                        guard let apiKey = args["apiKey"] as? String else {
+                            throw NSError(
+                                domain: "CrownKeepNativeWeb",
+                                code: 12,
+                                userInfo: [NSLocalizedDescriptionKey: "Search provider API key is required."]
+                            )
+                        }
+                        self.resolve(id: id, value: try web.saveSearchCredential(apiKey))
+
+                    case "webClearSearchCredential":
+                        self.resolve(id: id, value: try web.clearSearchCredential())
+
+                    case "webSearch":
+                        let query = (args["query"] as? String) ?? ""
+                        let maxResults = (args["maxResults"] as? Int) ?? 5
+                        let results = try await web.search(query: query, maxResults: maxResults)
+                        self.resolve(
+                            id: id,
+                            value: [
+                                "results": results.map { result in
+                                    var item: [String: Any] = [
+                                        "title": result.title,
+                                        "url": result.url,
+                                        "snippet": result.snippet
+                                    ]
+                                    if let score = result.score { item["score"] = score }
+                                    if let publishedAt = result.publishedAt { item["publishedAt"] = publishedAt }
+                                    return item
+                                }
+                            ]
+                        )
+
+                    default:
+                        let url = (args["url"] as? String) ?? ""
+                        let page = try await web.read(url: url)
+                        var payload: [String: Any] = [
+                            "url": page.url,
+                            "content": page.content
+                        ]
+                        if let title = page.title { payload["title"] = title }
+                        self.resolve(id: id, value: payload)
+                    }
+                } catch {
+                    self.reject(id: id, message: error.localizedDescription)
+                }
             }
 
         case "getAvailability":
