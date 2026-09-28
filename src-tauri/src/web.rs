@@ -160,7 +160,9 @@ fn duckduckgo_result_url(raw_href: &str) -> Option<String> {
     let parsed = reqwest::Url::parse(&absolute).ok()?;
     let host = parsed.host_str()?.to_ascii_lowercase();
 
-    if host.ends_with("duckduckgo.com") && parsed.path().starts_with("/l/") {
+    if (host == "duckduckgo.com" || host.ends_with(".duckduckgo.com"))
+        && parsed.path().starts_with("/l/")
+    {
         if let Some((_, target)) = parsed.query_pairs().find(|(key, _)| key == "uddg") {
             let target = target.into_owned();
             if safe_public_url(&target).is_ok() {
