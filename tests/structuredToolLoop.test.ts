@@ -87,9 +87,10 @@ test('structured loop executes ToolRegistry result and returns to the same provi
   assert.deepEqual(activities, ['web-search'])
 })
 
-test('structured loop forwards ordinary local text chunks immediately when tools are enabled', async () => {
+test('structured loop forwards ordinary local text chunks immediately without using web for a local question', async () => {
   const registry = new ToolRegistry()
   registry.setPolicy({ webAccess: 'on' })
+  let webExecutions = 0
   registry.register({
     id: 'web-search',
     name: 'Web Search',
@@ -102,7 +103,10 @@ test('structured loop forwards ordinary local text chunks immediately when tools
       required: ['query'],
     },
     isAvailable: async () => true,
-    execute: async () => ({ text: 'unused' }),
+    execute: async () => {
+      webExecutions += 1
+      return { text: 'unused' }
+    },
   })
 
   const provider: AIProvider = {
@@ -130,5 +134,6 @@ test('structured loop forwards ordinary local text chunks immediately when tools
   }
 
   assert.deepEqual(chunks, ['Local ', 'answer.'])
+  assert.equal(webExecutions, 0)
 })
 
