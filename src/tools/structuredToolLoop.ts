@@ -53,6 +53,7 @@ function activity(
     dataLeftDevice: result.metadata?.dataLeftDevice === true,
     outcome,
     sources: result.metadata?.sources ?? [],
+    retainedContext: result.text.slice(0, 6000),
   }
 }
 
@@ -88,6 +89,7 @@ export interface StructuredToolLoopOptions {
   registry: ToolRegistry
   signal?: AbortSignal
   onToolActivity?: (activity: ToolActivityRecord) => void
+  onModelActivity?: () => void
 }
 
 /**
@@ -100,6 +102,7 @@ export async function* streamStructuredToolLoop({
   registry,
   signal,
   onToolActivity,
+  onModelActivity,
 }: StructuredToolLoopOptions): AsyncIterable<ChatChunk> {
   const toolDefinitions = structuredToolDefinitions(registry)
   if (toolDefinitions.length === 0) {
@@ -114,6 +117,8 @@ export async function* streamStructuredToolLoop({
     const pendingCalls = new Map<number, PendingCall>()
     let text = ''
 
+    const bufferedChunks: ChatChunk[] = []
+
     for await (const chunk of provider.streamChat(
       {
         ...request,
@@ -123,20 +128,16 @@ export async function* streamStructuredToolLoop({
       },
       signal,
     )) {
+      onModelActivity?.()
       text += chunk.text
+      bufferedChunks.push(chunk)
       for (const delta of chunk.toolCallDeltas ?? []) {
         mergeCallDelta(pendingCalls, delta)
       }
-
-      // Forward provider activity immediately instead of buffering an entire
-      // structured-tool round. This keeps the chat watchdog and UI aligned
-      // with the actual local model stream. Tool-call deltas are safe to
-      // surface here because the outer chat layer treats them as activity,
-      // while this loop remains the only component that executes tools.
-      yield chunk
     }
 
     if (pendingCalls.size === 0) {
+      for (const chunk of bufferedChunks) yield chunk
       return
     }
 
