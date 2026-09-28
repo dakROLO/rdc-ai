@@ -44,6 +44,7 @@ function activity(
   registry: ToolRegistry,
   toolId: string,
   result: CrownKeepToolResult,
+  outcome: 'success' | 'error' = 'success',
 ): ToolActivityRecord {
   const tool = registry.get(toolId)
   return {
@@ -51,6 +52,7 @@ function activity(
     label: tool?.name ?? toolId,
     requiresNetwork: tool?.requiresNetwork ?? false,
     dataLeftDevice: result.metadata?.dataLeftDevice === true,
+    outcome,
     sources: result.metadata?.sources ?? [],
   }
 }
@@ -171,18 +173,25 @@ export async function* streamStructuredToolLoop({
       }
 
       let result: CrownKeepToolResult
+      let toolOutcome: 'success' | 'error' = 'success'
       try {
         const args = parseArguments(pending.arguments)
         result = await registry.execute(definition.id, args)
       } catch (error) {
+        toolOutcome = 'error'
+        const failedTool = registry.get(definition.id)
         result = {
           text: `CrownKeep tool execution failed: ${error instanceof Error ? error.message : String(error)}`,
-          metadata: { dataLeftDevice: false },
+          metadata: {
+            dataLeftDevice: failedTool?.requiresNetwork === true,
+          },
         }
       }
 
       totalToolCalls += 1
-      onToolActivity?.(activity(registry, definition.id, result))
+      onToolActivity?.(
+        activity(registry, definition.id, result, toolOutcome),
+      )
       messages.push({
         role: 'tool',
         name: definition.functionName,
