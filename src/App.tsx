@@ -523,6 +523,50 @@ export default function App() {
     }
   }, [fingerprint, providerRefreshNonce, modelCandidates])
 
+  const quickRoleCandidate = useMemo(
+    () =>
+      modelCandidates.find(
+        (candidate) =>
+          candidate.cached &&
+          taskOf(candidate) === 'chat' &&
+          roleOf(candidate) === 'Quick' &&
+          candidate.alias.toLocaleLowerCase() ===
+            DEFAULT_WINDOWS_MODEL_ALIAS.toLocaleLowerCase(),
+      ) ??
+      modelCandidates.find(
+        (candidate) =>
+          candidate.cached &&
+          taskOf(candidate) === 'chat' &&
+          roleOf(candidate) === 'Quick',
+      ),
+    [modelCandidates],
+  )
+
+  function modelRoleTarget(role: ChatModelRole) {
+    const measured = measuredRoleWinners[role]
+    if (measured) {
+      return {
+        alias: measured.alias,
+        variantId: measured.variantId,
+        executionProvider: measured.executionProvider,
+        device: measured.device,
+        measured: true,
+      }
+    }
+
+    if (role === 'Quick' && quickRoleCandidate) {
+      return {
+        alias: quickRoleCandidate.alias,
+        variantId: quickRoleCandidate.id,
+        executionProvider: quickRoleCandidate.executionProvider,
+        device: quickRoleCandidate.device,
+        measured: false,
+      }
+    }
+
+    return undefined
+  }
+
   async function refreshWebProviderStatus() {
     try {
       const status = await nativeWebClient.status()
@@ -1310,13 +1354,13 @@ export default function App() {
       return
     }
 
-    const winner = measuredRoleWinners[role]
+    const winner = modelRoleTarget(role)
     if (!winner) return
     const traceId = createId('trace')
     traceTerminal(
       'role-switch',
       'begin',
-      `role=${role} alias=${winner.alias} variant=${winner.variantId} ep=${winner.executionProvider ?? '-'} device=${winner.device ?? '-'}`,
+      `role=${role} alias=${winner.alias} variant=${winner.variantId} ep=${winner.executionProvider ?? '-'} device=${winner.device ?? '-'} measured=${winner.measured}`,
       traceId,
     )
 
@@ -2282,7 +2326,7 @@ export default function App() {
   if (storageError) {
     return (
       <main className="fatal-state">
-        <img src="/crownkeep-mark.svg" alt="" />
+        <img src="/brand/crownkeep-facelift/crownkeep-app-icon.png" alt="" />
         <h1>CrownKeep could not open local storage.</h1>
         <p>{storageError}</p>
       </main>
@@ -2294,9 +2338,13 @@ export default function App() {
       <aside className="sidebar">
         <div className="brand-row">
           <div className="brand-lockup">
-            <img className="brand-mark" src="/crownkeep-mark.svg" alt="" />
-            <div>
-              <h1>CrownKeep</h1>
+            <img className="brand-mark" src="/brand/crownkeep-facelift/crownkeep-app-icon.png" alt="" />
+            <div className="brand-copy">
+              <img
+                className="brand-wordmark"
+                src="/brand/crownkeep-facelift/crownkeep-wordmark.png"
+                alt="CrownKeep"
+              />
               <p className="muted">Private by default. Powerful by choice.</p>
             </div>
           </div>
@@ -2899,7 +2947,7 @@ export default function App() {
                       </div>
                       <div className="model-mode-segments" role="group" aria-label="Model mode">
                         {(['Quick', 'Balanced', 'Deep'] as ChatModelRole[]).map((role) => {
-                          const winner = measuredRoleWinners[role]
+                          const winner = modelRoleTarget(role)
                           const active = activeChatRole === role
                           return (
                             <button
@@ -2917,7 +2965,9 @@ export default function App() {
                               title={
                                 winner
                                   ? `${winner.alias} · ${winner.executionProvider ?? winner.device ?? 'Default'}`
-                                  : `Benchmark ${CHAT_ROLE_LABELS[role]} first`
+                                  : role === 'Quick'
+                                    ? 'Cached Quick model is not available'
+                                    : `Benchmark ${CHAT_ROLE_LABELS[role]} first`
                               }
                               onClick={() => void switchModelRole(role)}
                             >
