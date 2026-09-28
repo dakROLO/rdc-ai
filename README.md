@@ -24,14 +24,14 @@ Current baseline:
 - Rolo15 current convergence build physically validated for Apple Foundation Models chat, follow-up context, native on-device dictation, and restart/persistence;
 - persistent compact status bar restored with role/model/execution, Inside-the-Keep boundary, runtime state, and Web Access state;
 - provider-neutral Web Access foundation implemented with **OFF by default**, bounded read-only Web Search/Web Read tools, and visible source/activity metadata;
-- Web Access is now **native and direct**: Windows stores the user-supplied Tavily search credential in Windows Credential Manager, iPhone stores it in iOS Keychain, and the React/webview layer never receives the stored secret back;
-- Web Search sends only the minimized query directly from the native device to the configured search provider; Web Read fetches the selected public page directly from the native device and does not require the search credential;
+- Web Access is now **native, direct, and keyless**: Windows and iPhone use DuckDuckGo's public non-JavaScript search results for discovery, with no API account, API key, CrownKeep gateway, or credential-store setup;
+- Web Search sends only the minimized query to DuckDuckGo; Web Read fetches the selected public page directly from the native device; all reasoning remains on the selected local model;
 - Windows structured tool use is enabled only when function-calling support is observed; otherwise CrownKeep uses the bounded provider-neutral fallback; iPhone uses the matching Apple Foundation Models Tool boundary;
 - the Azure Function/Web Gateway prototype has been removed; there is no CrownKeep web middleman in the current architecture;
 - AVD acceptance remains pending under the same adaptive Windows policy;
 - no silent cloud-model fallback and no live RDC customer-data connection.
 
-Next acceptance work is to configure the search credential locally on each test device, physically validate direct Web Access on the Windows laptop and Rolo15, and then run the same shared acceptance policy on AVD. Multimodal/image work follows this web/tool foundation and remains an explicit privacy boundary.
+Next acceptance work is to physically validate keyless DuckDuckGo Web Access on the Windows laptop and Rolo15, and then run the same shared acceptance policy on AVD. Multimodal/image work follows this web/tool foundation and remains an explicit privacy boundary.
 
 ## Privacy boundary
 
