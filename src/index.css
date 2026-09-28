@@ -3001,6 +3001,50 @@ body {
   font-weight: 800;
 }
 
+.web-provider-config {
+  display: grid;
+  gap: 9px;
+  border: 1px solid rgba(46, 230, 184, 0.14);
+  border-radius: 12px;
+  padding: 11px 12px;
+  background: rgba(46, 230, 184, 0.04);
+}
+
+.web-provider-config > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.web-provider-config span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+
+.web-provider-key-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.web-provider-key-row input {
+  min-width: min(320px, 100%);
+  flex: 1 1 220px;
+  border: 1px solid rgba(232, 228, 218, 0.14);
+  border-radius: 9px;
+  padding: 8px 9px;
+  background: rgba(7, 15, 17, 0.72);
+  color: var(--stone);
+}
+
+.web-provider-key-row button {
+  flex: 0 0 auto;
+}
+
+.web-provider-error {
+  color: #e98c83 !important;
+}
+
 .tool-use-badge {
   color: #e7b091 !important;
 }
