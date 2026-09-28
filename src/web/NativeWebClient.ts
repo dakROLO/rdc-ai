@@ -89,14 +89,19 @@ const unavailableStatus: NativeWebStatus = {
 }
 
 export class NativeWebClient {
-  private readonly transport?: NativeWebTransport
+  private readonly explicitTransport?: NativeWebTransport
 
-  constructor(transport: NativeWebTransport | undefined = nativeTransport()) {
-    this.transport = transport
+  constructor(transport?: NativeWebTransport) {
+    this.explicitTransport = transport
+  }
+
+  private transport(): NativeWebTransport | undefined {
+    return this.explicitTransport ?? nativeTransport()
   }
 
   async status(): Promise<NativeWebStatus> {
-    return this.transport ? this.transport.status() : unavailableStatus
+    const transport = this.transport()
+    return transport ? transport.status() : unavailableStatus
   }
 
   async isSearchConfigured(): Promise<boolean> {
@@ -108,24 +113,27 @@ export class NativeWebClient {
   }
 
   async saveSearchCredential(apiKey: string): Promise<NativeWebStatus> {
-    if (!this.transport) throw new Error(unavailableStatus.detail)
+    const transport = this.transport()
+    if (!transport) throw new Error(unavailableStatus.detail)
     const normalized = apiKey.trim()
     if (!normalized) throw new Error('Search provider API key is required.')
-    return this.transport.saveSearchCredential(normalized)
+    return transport.saveSearchCredential(normalized)
   }
 
   async clearSearchCredential(): Promise<NativeWebStatus> {
-    if (!this.transport) throw new Error(unavailableStatus.detail)
-    return this.transport.clearSearchCredential()
+    const transport = this.transport()
+    if (!transport) throw new Error(unavailableStatus.detail)
+    return transport.clearSearchCredential()
   }
 
   async search(query: string, maxResults = 5): Promise<WebSearchResponse> {
-    if (!this.transport) throw new Error(unavailableStatus.detail)
+    const transport = this.transport()
+    if (!transport) throw new Error(unavailableStatus.detail)
 
     const normalizedQuery = query.replace(/\s+/g, ' ').trim().slice(0, 512)
     if (!normalizedQuery) throw new Error('Web Search requires a query.')
 
-    const payload = await this.transport.search(
+    const payload = await transport.search(
       normalizedQuery,
       Math.max(1, Math.min(8, Math.round(maxResults))),
     )
@@ -145,10 +153,11 @@ export class NativeWebClient {
   }
 
   async read(url: string): Promise<WebReadResponse> {
-    if (!this.transport) throw new Error(unavailableStatus.detail)
+    const transport = this.transport()
+    if (!transport) throw new Error(unavailableStatus.detail)
 
     const normalizedUrl = safeHttpUrl(url)
-    const payload = await this.transport.read(normalizedUrl)
+    const payload = await transport.read(normalizedUrl)
     if (typeof payload.content !== 'string' || !payload.content.trim()) {
       throw new Error('Web Read returned no readable content.')
     }
