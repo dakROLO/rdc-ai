@@ -57,8 +57,12 @@ export class WebGatewayClient {
   private readonly fetchImpl: typeof fetch
 
   constructor(options: WebGatewayClientOptions = {}) {
+    const configuredEndpoint =
+      typeof import.meta.env === 'object'
+        ? import.meta.env.VITE_CROWNKEEP_WEB_GATEWAY_URL
+        : undefined
     this.endpoint = normalizeGatewayEndpoint(
-      options.endpoint ?? import.meta.env.VITE_CROWNKEEP_WEB_GATEWAY_URL,
+      options.endpoint ?? configuredEndpoint,
     )
     this.fetchImpl = options.fetchImpl ?? fetch
   }
