@@ -3226,3 +3226,180 @@ body {
   }
 }
 
+/* Sprint 4A.4 follow-up — single chrome bar + composer utilities */
+.workspace {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.keep-status-bar {
+  grid-template-columns:
+    minmax(150px, 1fr)
+    auto
+    auto
+    minmax(150px, 1fr)
+    minmax(110px, auto)
+    minmax(170px, auto);
+}
+
+.keep-status-title {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+  border-right: 1px solid rgba(46, 230, 184, 0.12);
+  padding-right: 10px;
+}
+
+.keep-status-title span {
+  color: var(--muted);
+  font-size: 0.58rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.keep-status-title strong {
+  overflow: hidden;
+  color: var(--stone);
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer-utility-actions {
+  min-width: 0;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.local-storage-state {
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer-utility-actions .web-access-toggle {
+  flex: 0 0 auto;
+  justify-self: auto;
+}
+
+.composer-keep-settings {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.composer-keep-settings .local-ai-menu {
+  width: auto;
+}
+
+.composer-keep-settings .local-ai-menu > summary {
+  display: flex;
+  grid-template-columns: none;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  border-radius: 999px;
+  padding: 6px 9px;
+  white-space: nowrap;
+  font-size: 0.68rem;
+}
+
+.composer-keep-settings .local-ai-menu[open] > summary {
+  border-radius: 999px;
+}
+
+.composer-keep-settings .local-ai-panel {
+  position: fixed;
+  z-index: 80;
+  left: auto;
+  right: clamp(18px, 4vw, 44px);
+  top: auto;
+  bottom: 118px;
+  width: min(460px, calc(100vw - 28px));
+  max-height: calc(100dvh - 150px);
+  overflow-y: auto;
+}
+
+@media (max-width: 900px) {
+  .keep-status-bar {
+    grid-template-columns: minmax(130px, 1fr) auto auto minmax(150px, 1fr);
+  }
+
+  .keep-status-item.model,
+  .keep-status-item.execution {
+    display: none;
+  }
+
+  .composer-utility-actions {
+    gap: 6px;
+  }
+
+  .local-storage-state {
+    max-width: 180px;
+  }
+}
+
+@media (max-width: 760px) {
+  .workspace {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .keep-status-bar {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .keep-status-item:not(.model):not(.execution) {
+    display: none;
+  }
+
+  .keep-status-boundary {
+    border-right: 0;
+    padding-right: 0;
+  }
+
+  .keep-status-title {
+    padding-right: 7px;
+  }
+
+  .keep-status-title span {
+    display: none;
+  }
+
+  .keep-status-title strong {
+    font-size: 0.68rem;
+  }
+
+  .cloud-row {
+    align-items: center;
+    gap: 6px;
+  }
+
+  .composer-utility-actions {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .local-storage-state {
+    display: none;
+  }
+
+  .composer-keep-settings .local-ai-menu > summary {
+    padding: 5px 7px;
+  }
+
+  .composer-keep-settings .local-ai-menu > summary strong {
+    font-size: 0.64rem;
+  }
+
+  .composer-keep-settings .local-ai-panel {
+    left: 10px;
+    right: 10px;
+    bottom: max(108px, calc(96px + env(safe-area-inset-bottom)));
+    width: auto;
+    max-height: calc(100dvh - 130px);
+  }
+}
+
