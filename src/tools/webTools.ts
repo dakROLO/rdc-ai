@@ -112,7 +112,7 @@ export class WebReadTool implements CrownKeepTool<{ url: string }> {
   }
 
   async isAvailable(): Promise<boolean> {
-    return this.client.isConfigured()
+    return this.client.isReadConfigured()
   }
 
   async execute(input: {
