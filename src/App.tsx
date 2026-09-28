@@ -1672,6 +1672,23 @@ export default function App() {
         contextualHistory.filter((message) => message.content.trim()),
       )
       const retainedToolContext = buildRetainedToolContext(contextualHistory)
+      const retainedActivityCount = contextualHistory.reduce(
+        (count, message) =>
+          count +
+          (message.toolActivity ?? []).filter(
+            (activity) =>
+              activity.outcome !== 'error' &&
+              (Boolean(activity.retainedContext?.trim()) ||
+                activity.sources.length > 0),
+          ).length,
+        0,
+      )
+      traceTerminal(
+        'context',
+        'assembled',
+        `historyMessages=${contextMessages.length} retainedActivities=${retainedActivityCount} retainedChars=${retainedToolContext.length} webAccess=${webAccess}`,
+        traceId,
+      )
       const systemContext = [
         ANNE_SYSTEM_PROMPT,
         toolContext,
