@@ -11,6 +11,7 @@ export interface ToolActivityRecord {
   label: string
   requiresNetwork: boolean
   dataLeftDevice: boolean
+  outcome?: 'success' | 'error'
   sources: ToolResultSource[]
 }
 
@@ -62,6 +63,7 @@ function activityFor(
     requiresNetwork: tool?.requiresNetwork ?? false,
     dataLeftDevice: result.metadata?.dataLeftDevice === true,
     sources: result.metadata?.sources ?? [],
+    outcome: 'success',
   }
 }
 
@@ -151,12 +153,29 @@ export async function runAutomaticReadOnlyTools(
       attemptedWeb: true,
     }
   } catch (error) {
+    const failedToolId = explicitUrl
+      ? 'web-read'
+      : activities.some((activity) => activity.toolId === 'web-search')
+        ? 'web-read'
+        : 'web-search'
+    const failedTool = registry.get(failedToolId)
+    const failedActivity: ToolActivityRecord = {
+      toolId: failedToolId,
+      label: failedTool?.name ?? failedToolId,
+      requiresNetwork: failedTool?.requiresNetwork ?? true,
+      // Once execution of a configured network tool begins, conservatively
+      // report that the network boundary may have been crossed even if no
+      // response came back.
+      dataLeftDevice: failedTool?.requiresNetwork ?? true,
+      outcome: 'error',
+      sources: [],
+    }
     return {
       context: [
         ...contexts,
         `Web tool attempt could not complete: ${error instanceof Error ? error.message : String(error)}. Do not claim web verification succeeded.`,
       ].join('\n\n'),
-      activities,
+      activities: [...activities, failedActivity],
       attemptedWeb: true,
       error: error instanceof Error ? error.message : String(error),
     }
