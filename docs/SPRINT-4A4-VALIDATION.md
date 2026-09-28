@@ -140,7 +140,7 @@ For Rolo15, the Tavily credential must be entered **on the phone after installat
 - Windows installed-System-Foundry dictation is physically proven on the primary laptop and restores the chat role.
 - Rolo15 Apple Foundation Models chat/follow-up, native speech, and restart/persistence are physically proven.
 - AVD remains physically pending under the shared Windows policy.
-- The new Web Access package remains physically pending on all three target runtimes until a live gateway is configured.
+- The native direct Web Access package remains physically pending on all three target runtimes until its per-device credential/network behavior is validated.
 
 ### Deferred
 
@@ -184,7 +184,7 @@ Remaining handoff for this work package:
 1. Confirm the restored compact status bar remains readable on-device and Apple Foundation Models still supplies Quick without pretending Balanced/Deep are available.
 2. Run the Web Access OFF/ON matrix from 4A.4K using the native Apple Foundation Models tool bridge.
 3. Confirm successful/failed web activity and sources are visible while the assistant message remains marked Local.
-4. Confirm no cloud-model fallback occurs when Apple local inference or the Web Gateway is unavailable.
+4. Confirm no cloud-model fallback occurs when Apple local inference, the direct network path, or the configured search provider is unavailable.
 5. Keep image-analysis/OCR validation deferred to the next multimodal work package.
 
 ## Cleanup gate
