@@ -82,5 +82,13 @@ export interface AIProvider {
 
   getAvailability(): Promise<ProviderAvailability>
   listModels(): Promise<AIModel[]>
+  /**
+   * Optional local capability probe. Implementations must not infer support from
+   * a model name; return true/false only from an observed provider response.
+   */
+  probeToolCalling?(
+    modelId: string,
+    signal?: AbortSignal,
+  ): Promise<boolean | undefined>
   streamChat(request: ChatRequest, signal?: AbortSignal): AsyncIterable<ChatChunk>
 }
