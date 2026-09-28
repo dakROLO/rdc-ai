@@ -1554,9 +1554,6 @@ export default function App() {
         if (automatic.error) {
           traceTerminal('tool', 'error', `error=${automatic.error}`, traceId)
         }
-      } else if (webAccess === 'off') {
-        toolContext =
-          'Web Access is OFF. Network tools are not available. Do not claim current web verification.'
       }
     } catch (error) {
       traceTerminal('tool', 'error', `error=${String(error)}`, traceId)
