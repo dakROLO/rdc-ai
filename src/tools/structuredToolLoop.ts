@@ -20,7 +20,9 @@ function functionName(toolId: string): string {
   return `crownkeep_${toolId.replace(/[^a-zA-Z0-9_]/g, '_')}`.slice(0, 64)
 }
 
-function definitions(registry: ToolRegistry): ChatToolDefinition[] {
+export function structuredToolDefinitions(
+  registry: ToolRegistry,
+): ChatToolDefinition[] {
   const policy = registry.getPolicy()
   return registry
     .definitions()
@@ -98,7 +100,7 @@ export async function* streamStructuredToolLoop({
   signal,
   onToolActivity,
 }: StructuredToolLoopOptions): AsyncIterable<ChatChunk> {
-  const toolDefinitions = definitions(registry)
+  const toolDefinitions = structuredToolDefinitions(registry)
   if (toolDefinitions.length === 0) {
     yield* provider.streamChat(request, signal)
     return
