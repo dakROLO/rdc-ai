@@ -4,6 +4,20 @@
 
 ## Current — Sprint 4A.4 local convergence + Web Access foundation
 
+## Windows convergence cutoff — 2026-09-28
+
+The Windows checkpoint is approved to land on `main` and the next physical workstream moves to iPhone.
+
+- **Quick:** `phi-4-mini` remains the safe/default role. Quick switching no longer requires a surviving benchmark-winner record; a cached Quick chat candidate is enough to return from Balanced.
+- **Balanced:** `mistral-nemo-12b-instruct-cuda-gpu` is physically usable on the primary laptop. Role-aware chat watchdogs now allow 45 s to first token / 180 s total for Balanced instead of applying Quick's 20 s threshold.
+- **Deep:** remains unqualified after the recorded `gpt-oss-20b-cuda-gpu` failure. Do not auto-promote or auto-retry Deep.
+- **Web Access:** native direct keyless DuckDuckGo search/read is physically functional on Windows. Web Access ON is permission, not a mandate: CrownKeep still decides whether a prompt needs a network tool. Natural-language web-intent detection and cross-model weighting of retained web evidence remain tuning items after iOS validation.
+- **Retained web evidence:** successful tool results are persisted locally in bounded form and reinjected as explicitly untrusted conversation evidence. Physical behavior still varies by small local model, so do not treat perfect follow-up grounding as fully accepted yet.
+- **Observed transient runtime issue:** one Balanced request returned an immediate Foundry/OpenAI stream `TypeError: network error`; a following lightweight request and later normal Balanced chats succeeded. Monitor/retry after iOS rather than blocking this checkpoint.
+- **Benchmark evidence protection:** normal chat timeouts/errors no longer overwrite accepted benchmark qualification records.
+- **Facelift v1:** the shared shell now uses the midnight-navy / cobalt / electric-cyan CrownKeep treatment and the staged CrownKeep app-icon/wordmark assets. The same app icon is wired into desktop, PWA, CI iPhone, and physical iPhone build paths.
+- **Next:** physical iPhone Web Access + retained-context validation, then return to shared Windows/iOS bug tuning. AVD remains deferred under the same adaptive Windows policy.
+
 - **Primary Windows laptop physically validated for the local baseline:** Quick / `phi-4-mini` startup and normal chat work; Balanced / `mistral-nemo-12b-instruct` CUDA benchmark and normal conversation work; exclusive chat-model switching is physically proven; Windows local dictation works through the installed System Foundry CLI and restores the prior chat role. Laptop microphone transcription quality was mediocre, but the local speech path itself completed successfully.
 - **Rolo15 physically validated for the current convergence baseline:** the shared build was built, signed, installed, and launched on the physical iPhone. Chat, follow-up context, native on-device dictation, and restart/persistence were physically tested successfully. iPhone reasoning remains Apple Foundation Models local-first and speech remains native/on-device.
 - **AVD physical acceptance remains separate and pending:** use the same adaptive Windows runtime/model policy. Do not create an AVD-specific CrownKeep architecture.
@@ -14,8 +28,8 @@
 - **Web Access now uses native direct keyless network tools instead of a CrownKeep gateway or search API:** Windows and iPhone use DuckDuckGo's public non-JavaScript HTML search surface for discovery with no API account/key. Web Search sends only the minimized query to DuckDuckGo. Web Read fetches the selected public HTTP(S) page directly from the device. If DuckDuckGo returns an interactive verification/rate-limit/challenge, CrownKeep reports a visible Web Search failure and does not bypass it or silently switch search/model providers. The earlier Azure Function/Web Gateway and Tavily credential-store prototypes were removed before physical acceptance.
 - **Privacy boundary remains explicit:** Web Access ON may send only the needed public search query or selected URL. CrownKeep does not send entire conversation history, projects, local knowledge, attachments, files, or images through these web tools. No web-search credential exists in source, build configuration, device storage, or sync. No RDC customer-data connection was introduced.
 - **Keyless DuckDuckGo package is automated-validated:** CI run #778 on commit `43468ce` passed shared lint/UI/policy/build checks, the unsigned native iPhone host compile, the Windows Tauri/Rust host compile, and committed `Cargo.lock` consistency. Live DuckDuckGo retrieval remains a physical acceptance item; automated compile success does not claim that the public search surface has been physically proven on the laptop or Rolo15.
-- **Merge/tag/branch deletion/legacy-cache cleanup remain blocked** until the required physical validation is recorded and explicit approval is given.
-- **Next capability after the web/tool foundation:** local-first image understanding/OCR where supported, followed by provider-neutral image generation. Any cloud image generation remains an explicit visible boundary; prompts/images must never be silently uploaded.
+- **Merge approval is now explicit for this Windows checkpoint.** Squash the convergence branch to `main` after final CI. Branch deletion and legacy-cache cleanup remain separate actions; do not delete cache data as part of the merge.
+- **Next physical workstream:** iPhone validation of the shared Web Access / retained-context behavior. Multimodal/image work follows the cross-platform checkpoint; any cloud image generation remains an explicit visible boundary.
 - The historical entries below are retained as evidence; they are not current implementation work.
 
 ## Sprint 4A.4 start — 2026-09-27
