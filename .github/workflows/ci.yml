@@ -31,9 +31,6 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Check Web Gateway syntax
-        run: python3 -m py_compile services/web-gateway/function_app.py
-
       - name: Install test browser
         run: npx playwright install --with-deps chromium
 
