@@ -23,6 +23,14 @@ interface StreamDelta {
   choices?: Array<{
     delta?: {
       content?: string | null
+      tool_calls?: Array<{
+        index: number
+        id?: string
+        function?: {
+          name?: string
+          arguments?: string
+        }
+      }>
     }
   }>
   usage?: {
@@ -73,6 +81,43 @@ function inferRuntimeDevice(modelId: string): AIModel['runtimeDevice'] {
   if (/(^|[-_:])gpu($|[-_:])/.test(normalized)) return 'GPU'
   if (/(^|[-_:])cpu($|[-_:])/.test(normalized)) return 'CPU'
   return undefined
+}
+
+function openAIMessage(message: ChatRequest['messages'][number]) {
+  const value: Record<string, unknown> = {
+    role: message.role,
+    content:
+      message.toolCalls && message.toolCalls.length > 0
+        ? null
+        : message.content,
+  }
+
+  if (message.name) value.name = message.name
+  if (message.toolCallId) value.tool_call_id = message.toolCallId
+  if (message.toolCalls?.length) {
+    value.tool_calls = message.toolCalls.map((call) => ({
+      id: call.id,
+      type: 'function',
+      function: {
+        name: call.name,
+        arguments: call.arguments,
+      },
+    }))
+  }
+
+  return value
+}
+
+function openAITools(request: ChatRequest) {
+  if (!request.tools?.length) return undefined
+  return request.tools.map((tool) => ({
+    type: 'function',
+    function: {
+      name: tool.functionName,
+      description: tool.description,
+      parameters: tool.inputSchema,
+    },
+  }))
 }
 
 function parseModelNames(payload: unknown): string[] {
@@ -274,7 +319,17 @@ export class FoundryLocalProvider implements AIProvider {
         try {
           response = await fetch(`${endpoint}/v1/chat/completions`, {
             method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
-            body: JSON.stringify({ model: request.modelId, messages: request.messages, stream: true, ...(request.maxTokens ? { max_tokens: request.maxTokens } : {}) }), signal,
+            body: JSON.stringify({
+              model: request.modelId,
+              messages: request.messages.map(openAIMessage),
+              stream: true,
+              ...(request.maxTokens ? { max_tokens: request.maxTokens } : {}),
+              ...(request.tools?.length ? { tools: openAITools(request) } : {}),
+              ...(request.tools?.length
+                ? { tool_choice: request.toolChoice ?? 'auto' }
+                : {}),
+            }),
+            signal,
           })
           if (response.ok || attempt === 1 || signal?.aborted) break
           this.activeEndpoint = undefined; this.apiMode = undefined
@@ -380,7 +435,14 @@ export class FoundryLocalProvider implements AIProvider {
           }
 
           const parsed = JSON.parse(data) as StreamDelta
-          const text = parsed.choices?.[0]?.delta?.content ?? ''
+          const delta = parsed.choices?.[0]?.delta
+          const text = delta?.content ?? ''
+          const toolCallDeltas = delta?.tool_calls?.map((call) => ({
+            index: call.index,
+            id: call.id,
+            name: call.function?.name,
+            arguments: call.function?.arguments,
+          }))
           const usage = parsed.usage
             ? {
                 promptTokens: parsed.usage.prompt_tokens,
@@ -399,8 +461,8 @@ export class FoundryLocalProvider implements AIProvider {
           }
 
           outputChars += text.length
-          if (text || usage) {
-            yield { text, usage }
+          if (text || usage || toolCallDeltas?.length) {
+            yield { text, usage, toolCallDeltas }
           }
         }
 
