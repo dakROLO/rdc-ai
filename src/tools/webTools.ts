@@ -1,9 +1,9 @@
 import type { CrownKeepTool } from './ToolRegistry.ts'
 import {
-  WebGatewayClient,
+  NativeWebClient,
   type WebReadResponse,
   type WebSearchResponse,
-} from '../web/WebGatewayClient.ts'
+} from '../web/NativeWebClient.ts'
 
 const searchSchema = {
   type: 'object',
@@ -43,19 +43,19 @@ export class WebSearchTool
   readonly id = 'web-search'
   readonly name = 'Web Search'
   readonly description =
-    'Search the public web through CrownKeep Web Gateway. Sends only the supplied search query.'
+    'Search the public web directly from the native CrownKeep app. Sends only the supplied search query.'
   readonly requiresNetwork = true
   readonly access = 'read' as const
   readonly inputSchema = searchSchema
 
-  private readonly client: WebGatewayClient
+  private readonly client: NativeWebClient
 
-  constructor(client: WebGatewayClient) {
+  constructor(client: NativeWebClient) {
     this.client = client
   }
 
   async isAvailable(): Promise<boolean> {
-    return this.client.isConfigured()
+    return this.client.isSearchConfigured()
   }
 
   async execute(input: {
@@ -90,7 +90,7 @@ export class WebSearchTool
         dataLeftDevice: true,
         sources,
         detail:
-          'Sent only the supplied search query to the configured CrownKeep Web Gateway.',
+          'Sent only the supplied search query directly from this device to the configured search provider.',
       },
     }
   }
@@ -100,14 +100,14 @@ export class WebReadTool implements CrownKeepTool<{ url: string }> {
   readonly id = 'web-read'
   readonly name = 'Web Read'
   readonly description =
-    'Read one selected public webpage through CrownKeep Web Gateway. Sends only the selected URL.'
+    'Read one selected public webpage directly from the native CrownKeep app. Sends only the selected URL.'
   readonly requiresNetwork = true
   readonly access = 'read' as const
   readonly inputSchema = readSchema
 
-  private readonly client: WebGatewayClient
+  private readonly client: NativeWebClient
 
-  constructor(client: WebGatewayClient) {
+  constructor(client: NativeWebClient) {
     this.client = client
   }
 
@@ -134,13 +134,13 @@ export class WebReadTool implements CrownKeepTool<{ url: string }> {
         dataLeftDevice: true,
         sources: [{ url: response.url, title: response.title }],
         detail:
-          'Sent only the selected webpage URL to the configured CrownKeep Web Gateway.',
+          'Fetched only the selected public webpage directly from this device.',
       },
     }
   }
 }
 
-export function createWebTools(client = new WebGatewayClient()) {
+export function createWebTools(client = new NativeWebClient()) {
   return {
     search: new WebSearchTool(client),
     read: new WebReadTool(client),
