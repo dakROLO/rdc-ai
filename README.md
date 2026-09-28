@@ -14,23 +14,19 @@ The visual above is shared with the CrownKeep app. Detailed sprint definitions a
 
 ## Current status
 
-**Phase 2 — Windows Local AI / Sprint 2.1 Foundry Local connectivity is complete.
+**Phase 4A — Local Platform Convergence / Sprint 4A.4 acceptance is active.**
 
-Current build:
+Current baseline:
 
-- CrownKeep brand and Anne assistant identity;
-- local-only IndexedDB conversation storage;
-- create/open/rename/delete conversations;
-- messages survive browser refresh;
-- provider registry and provider/model selection;
-- development provider switching without changing conversations;
-- Enter-to-send and Shift+Enter newline behavior;
-- mock local streaming providers;
-- first real Microsoft Foundry Local REST provider;
-- deterministic message ordering across IndexedDB reloads;
-- responsive Windows/mobile browser UI;
-- future cloud controls intentionally disabled;
-- no RDC customer data connection.
+- shared provider-neutral CrownKeep conversation experience on Windows and iPhone;
+- Windows System Foundry authority with Quick/Balanced/Deep role policy and observed benchmark evidence;
+- physical Windows Quick, Balanced Mistral Nemo, exclusive model switching, and local dictation validated;
+- native iPhone Apple Foundation Models + on-device speech build installed on Rolo15, with current-build acceptance revalidation still open;
+- AVD acceptance still pending under the same adaptive Windows policy;
+- registered local `/search` and read-only network `/url` tool proofs;
+- no silent cloud-model fallback and no live RDC customer-data connection.
+
+Next local product steps are stable installer/storage behavior followed by provider-neutral automatic tools and multimodal/image capabilities. Image generation remains a future explicit tool boundary rather than an implicit cloud capability.
 
 ## Privacy boundary
 
