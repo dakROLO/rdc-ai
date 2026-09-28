@@ -2,6 +2,7 @@ import type { NativeSpeechBridge } from '../speech/SpeechInputProvider.ts'
 import type {
   ChatMessageInput,
   TokenUsage,
+  ToolExecutionActivity,
 } from '../providers/AIProvider.ts'
 
 export type NativeModelUnavailableReason =
@@ -23,15 +24,25 @@ export interface NativeModelDescriptor {
   contextWindow?: number
 }
 
+export interface NativeToolDefinition {
+  id: string
+  name: string
+  description: string
+}
+
 export interface NativeChatRequest {
   modelId: string
   messages: ChatMessageInput[]
+  webAccess?: 'off' | 'on'
+  webGatewayEndpoint?: string
+  tools?: NativeToolDefinition[]
 }
 
 export interface NativeChatChunk {
   text: string
   done?: boolean
   usage?: TokenUsage
+  toolActivities?: ToolExecutionActivity[]
 }
 
 export interface NativeAIHost {
