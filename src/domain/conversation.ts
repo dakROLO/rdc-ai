@@ -12,6 +12,7 @@ export interface MessageToolActivity {
   label: string
   requiresNetwork: boolean
   dataLeftDevice: boolean
+  outcome?: 'success' | 'error'
   sources: MessageToolSource[]
 }
 
