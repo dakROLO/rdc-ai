@@ -2326,7 +2326,7 @@ export default function App() {
   if (storageError) {
     return (
       <main className="fatal-state">
-        <img src="/brand/crownkeep-facelift/crownkeep-app-icon.png" alt="" />
+        <img src="/crownkeep-mark.svg" alt="" />
         <h1>CrownKeep could not open local storage.</h1>
         <p>{storageError}</p>
       </main>
@@ -2338,7 +2338,7 @@ export default function App() {
       <aside className="sidebar">
         <div className="brand-row">
           <div className="brand-lockup">
-            <img className="brand-mark" src="/brand/crownkeep-facelift/crownkeep-app-icon.png" alt="" />
+            <img className="brand-mark" src="/crownkeep-mark.svg" alt="" />
             <div className="brand-copy">
               <img
                 className="brand-wordmark"
