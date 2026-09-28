@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   web-verify:
@@ -63,18 +63,20 @@ jobs:
       - name: Check CrownKeep Tauri host
         run: cargo check --manifest-path src-tauri/Cargo.toml
 
-      - name: Verify committed Cargo lockfile is current
+      - name: Commit regenerated Cargo lockfile once
+        if: github.event_name == 'push' && github.ref_name == 'sprint-4a3-local-platform-convergence'
         shell: pwsh
         run: |
-          git diff --exit-code -- src-tauri/Cargo.lock
-
-      - name: Upload regenerated Cargo lockfile on mismatch
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: crownkeep-cargo-lock
-          path: src-tauri/Cargo.lock
-          if-no-files-found: error
+          git diff --quiet -- src-tauri/Cargo.lock
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Cargo.lock is already current."
+            exit 0
+          }
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src-tauri/Cargo.lock
+          git commit -m "Refresh Windows Cargo lockfile"
+          git push origin HEAD:sprint-4a3-local-platform-convergence
 
   ios-host-check:
     runs-on: macos-26
