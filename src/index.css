@@ -3005,6 +3005,10 @@ body {
   color: #e7b091 !important;
 }
 
+.tool-use-badge.error {
+  color: #e98c83 !important;
+}
+
 .tool-sources {
   margin-top: 10px;
   border-top: 1px solid rgba(46, 230, 184, 0.10);
