@@ -21,12 +21,15 @@ Current baseline:
 - shared provider-neutral CrownKeep conversation experience on Windows and iPhone;
 - Windows System Foundry authority with Quick/Balanced/Deep role policy and observed benchmark evidence;
 - physical Windows Quick, Balanced Mistral Nemo, exclusive model switching, and local dictation validated;
-- native iPhone Apple Foundation Models + on-device speech build installed on Rolo15, with current-build acceptance revalidation still open;
-- AVD acceptance still pending under the same adaptive Windows policy;
-- registered local `/search` and read-only network `/url` tool proofs;
+- Rolo15 current convergence build physically validated for Apple Foundation Models chat, follow-up context, native on-device dictation, and restart/persistence;
+- persistent compact status bar restored with role/model/execution, Inside-the-Keep boundary, runtime state, and Web Access state;
+- provider-neutral Web Access foundation implemented with **OFF by default**, bounded read-only Web Search/Web Read tools, source/activity metadata, and no search-provider secret in the client;
+- Windows structured tool use is enabled only when function-calling support is observed; otherwise CrownKeep uses the bounded provider-neutral fallback; iPhone uses the matching Apple Foundation Models Tool boundary;
+- the narrow CrownKeep Web Gateway implementation exists, but live gateway deployment/configuration and physical Web OFF/ON acceptance are still pending;
+- AVD acceptance remains pending under the same adaptive Windows policy;
 - no silent cloud-model fallback and no live RDC customer-data connection.
 
-Next local product steps are stable installer/storage behavior followed by provider-neutral automatic tools and multimodal/image capabilities. Image generation remains a future explicit tool boundary rather than an implicit cloud capability.
+Next acceptance work is to keep CI green, deploy/configure the test Web Gateway, physically validate Web Access on the Windows laptop and Rolo15, and then run the same shared acceptance policy on AVD. Multimodal/image work follows this web/tool foundation and remains an explicit privacy boundary.
 
 ## Privacy boundary
 
