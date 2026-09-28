@@ -2716,9 +2716,13 @@ export default function App() {
                     <strong>Web Access · {webAccess.toUpperCase()}</strong>
                     <span>
                       {webAccess === 'on'
-                        ? webGatewayConfigured
-                          ? 'Read-only web tools may send only the minimum search query or selected URL. Anne still reasons with the current local model.'
-                          : 'Web Access is enabled, but no CrownKeep Web Gateway is configured in this build. Local chat remains available.'
+                        ? webProviderStatus.nativeAvailable
+                          ? webSearchConfigured
+                            ? `Search goes directly from this device to Tavily; webpage reads are fetched directly. The API key stays in ${webProviderStatus.credentialStore ?? 'the native credential store'}.`
+                            : webReadConfigured
+                              ? 'Direct webpage reading is ready. Add a Tavily API key below to enable public-web search. Anne still reasons with the current local model.'
+                              : webProviderStatus.detail
+                          : 'Web Access requires the native CrownKeep app. Browser-only development does not store provider credentials.'
                         : 'Network search and webpage reading are blocked. Local chat remains available.'}
                     </span>
                   </div>
@@ -2733,6 +2737,57 @@ export default function App() {
                     {webAccess === 'on' ? 'Turn OFF' : 'Turn ON'}
                   </button>
                 </div>
+
+                {webProviderStatus.nativeAvailable && (
+                  <div className="web-provider-config">
+                    <div>
+                      <strong>Search provider · Tavily</strong>
+                      <span>
+                        {webSearchConfigured
+                          ? `Credential stored securely in ${webProviderStatus.credentialStore ?? 'this device'} and never returned to the webview.`
+                          : `No search credential stored. Direct Web Read does not need an API key.`}
+                      </span>
+                    </div>
+                    <div className="web-provider-key-row">
+                      <input
+                        type="password"
+                        value={webCredentialDraft}
+                        onChange={(event) => setWebCredentialDraft(event.target.value)}
+                        placeholder={webSearchConfigured ? 'Replace Tavily API key' : 'Paste Tavily API key'}
+                        autoComplete="off"
+                        aria-label="Tavily API key"
+                        disabled={webCredentialBusy || isGenerating}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void saveWebSearchCredential()}
+                        disabled={
+                          webCredentialBusy ||
+                          isGenerating ||
+                          !webCredentialDraft.trim()
+                        }
+                      >
+                        {webCredentialBusy
+                          ? 'Saving…'
+                          : webSearchConfigured
+                            ? 'Replace key'
+                            : 'Save key'}
+                      </button>
+                      {webSearchConfigured && (
+                        <button
+                          type="button"
+                          onClick={() => void clearWebSearchCredential()}
+                          disabled={webCredentialBusy || isGenerating}
+                        >
+                          Remove key
+                        </button>
+                      )}
+                    </div>
+                    {webCredentialError && (
+                      <span className="web-provider-error">{webCredentialError}</span>
+                    )}
+                  </div>
+                )}
 
                 {selectedProviderId === 'foundry-local' && (
                   <section className="runtime-setup-card" aria-label="Local AI setup">
@@ -3048,9 +3103,13 @@ export default function App() {
             <span>{selectedProvider.location === 'local' ? 'Inside the Keep' : 'Cloud model'}</span>
             <strong>
               {webAccess === 'on'
-                ? webGatewayConfigured
-                  ? 'Local reasoning · web allowed'
-                  : 'Web on · gateway not configured'
+                ? webProviderStatus.nativeAvailable
+                  ? webSearchConfigured
+                    ? 'Local reasoning · direct web'
+                    : webReadConfigured
+                      ? 'Direct read · search key needed'
+                      : 'Web on · unavailable'
+                  : 'Web on · native app required'
                 : 'Network tools off'}
             </strong>
           </div>
