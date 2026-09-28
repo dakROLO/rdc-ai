@@ -30,11 +30,35 @@ export interface NativeToolDefinition {
   description: string
 }
 
+export interface NativeWebStatus {
+  nativeAvailable: boolean
+  provider: 'tavily'
+  searchConfigured: boolean
+  readAvailable: boolean
+  credentialStore?: string
+  detail: string
+}
+
+export interface NativeWebSearchResult {
+  title: string
+  url: string
+  snippet: string
+  score?: number
+  publishedAt?: string
+}
+
+export interface NativeWebBridge {
+  getStatus(): Promise<NativeWebStatus>
+  saveSearchCredential(apiKey: string): Promise<NativeWebStatus>
+  clearSearchCredential(): Promise<NativeWebStatus>
+  search(query: string, maxResults: number): Promise<{ results: NativeWebSearchResult[] }>
+  read(url: string): Promise<{ url: string; title?: string; content: string }>
+}
+
 export interface NativeChatRequest {
   modelId: string
   messages: ChatMessageInput[]
   webAccess?: 'off' | 'on'
-  webGatewayEndpoint?: string
   tools?: NativeToolDefinition[]
 }
 
@@ -47,6 +71,7 @@ export interface NativeChatChunk {
 
 export interface NativeAIHost {
   readonly speech?: NativeSpeechBridge
+  readonly web?: NativeWebBridge
   readonly platform: 'ios'
   readonly provider: 'apple-foundation-models'
 
