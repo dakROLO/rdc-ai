@@ -374,14 +374,11 @@ export default function App() {
   })
   const [webProviderStatus, setWebProviderStatus] = useState<NativeWebStatus>({
     nativeAvailable: false,
-    provider: 'tavily',
-    searchConfigured: false,
+    provider: 'duckduckgo',
+    searchAvailable: false,
     readAvailable: false,
     detail: 'Checking native Web Access…',
   })
-  const [webCredentialDraft, setWebCredentialDraft] = useState('')
-  const [webCredentialBusy, setWebCredentialBusy] = useState(false)
-  const [webCredentialError, setWebCredentialError] = useState<string | null>(null)
   const [fingerprint, setFingerprint] = useState<string>()
   const [isLoading, setIsLoading] = useState(true)
   const [storageError, setStorageError] = useState<string | null>(null)
@@ -443,8 +440,8 @@ export default function App() {
   const activeChatRole = loadedChatCandidate
     ? (roleOf(loadedChatCandidate) as ChatModelRole)
     : undefined
-  const webSearchConfigured = webProviderStatus.searchConfigured
-  const webReadConfigured = webProviderStatus.readAvailable
+  const webSearchAvailable = webProviderStatus.searchAvailable
+  const webReadAvailable = webProviderStatus.readAvailable
   const glanceRole =
     activeChatRole ??
     (selectedProviderId === 'apple-foundation-models' ? 'Quick' : undefined)
@@ -521,44 +518,14 @@ export default function App() {
     try {
       const status = await nativeWebClient.status()
       setWebProviderStatus(status)
-      setWebCredentialError(null)
-    } catch (error) {
+    } catch {
       setWebProviderStatus({
         nativeAvailable: false,
-        provider: 'tavily',
-        searchConfigured: false,
+        provider: 'duckduckgo',
+        searchAvailable: false,
         readAvailable: false,
         detail: 'Native Web Access status could not be read.',
       })
-      setWebCredentialError(String(error))
-    }
-  }
-
-  async function saveWebSearchCredential() {
-    setWebCredentialBusy(true)
-    setWebCredentialError(null)
-    try {
-      const status = await nativeWebClient.saveSearchCredential(webCredentialDraft)
-      setWebProviderStatus(status)
-      setWebCredentialDraft('')
-    } catch (error) {
-      setWebCredentialError(String(error))
-    } finally {
-      setWebCredentialBusy(false)
-    }
-  }
-
-  async function clearWebSearchCredential() {
-    setWebCredentialBusy(true)
-    setWebCredentialError(null)
-    try {
-      const status = await nativeWebClient.clearSearchCredential()
-      setWebProviderStatus(status)
-      setWebCredentialDraft('')
-    } catch (error) {
-      setWebCredentialError(String(error))
-    } finally {
-      setWebCredentialBusy(false)
     }
   }
 
@@ -1491,7 +1458,7 @@ export default function App() {
     const appleNativeToolsReady =
       selectedProviderId === 'apple-foundation-models' &&
       webProviderStatus.nativeAvailable &&
-      webReadConfigured
+      webReadAvailable
     setToolBusy(true)
     try {
       const manualTool = await runToolCommand(text)
@@ -2717,12 +2684,8 @@ export default function App() {
                     <span>
                       {webAccess === 'on'
                         ? webProviderStatus.nativeAvailable
-                          ? webSearchConfigured
-                            ? `Search goes directly from this device to Tavily; webpage reads are fetched directly. The API key stays in ${webProviderStatus.credentialStore ?? 'the native credential store'}.`
-                            : webReadConfigured
-                              ? 'Direct webpage reading is ready. Add a Tavily API key below to enable public-web search. Anne still reasons with the current local model.'
-                              : webProviderStatus.detail
-                          : 'Web Access requires the native CrownKeep app. Browser-only development does not store provider credentials.'
+                          ? 'Keyless DuckDuckGo search and direct webpage reading are available. Only the search query or selected public URL leaves the device; Anne still reasons with the current local model.'
+                          : 'Web Access requires the native CrownKeep app. Browser-only development does not perform live web searches.'
                         : 'Network search and webpage reading are blocked. Local chat remains available.'}
                     </span>
                   </div>
@@ -2741,51 +2704,11 @@ export default function App() {
                 {webProviderStatus.nativeAvailable && (
                   <div className="web-provider-config">
                     <div>
-                      <strong>Search provider · Tavily</strong>
+                      <strong>Search provider · DuckDuckGo</strong>
                       <span>
-                        {webSearchConfigured
-                          ? `Credential stored securely in ${webProviderStatus.credentialStore ?? 'this device'} and never returned to the webview.`
-                          : `No search credential stored. Direct Web Read does not need an API key.`}
+                        No account or API key. Search uses DuckDuckGo's public non-JavaScript results; selected webpages are read directly by CrownKeep.
                       </span>
                     </div>
-                    <div className="web-provider-key-row">
-                      <input
-                        type="password"
-                        value={webCredentialDraft}
-                        onChange={(event) => setWebCredentialDraft(event.target.value)}
-                        placeholder={webSearchConfigured ? 'Replace Tavily API key' : 'Paste Tavily API key'}
-                        autoComplete="off"
-                        aria-label="Tavily API key"
-                        disabled={webCredentialBusy || isGenerating}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => void saveWebSearchCredential()}
-                        disabled={
-                          webCredentialBusy ||
-                          isGenerating ||
-                          !webCredentialDraft.trim()
-                        }
-                      >
-                        {webCredentialBusy
-                          ? 'Saving…'
-                          : webSearchConfigured
-                            ? 'Replace key'
-                            : 'Save key'}
-                      </button>
-                      {webSearchConfigured && (
-                        <button
-                          type="button"
-                          onClick={() => void clearWebSearchCredential()}
-                          disabled={webCredentialBusy || isGenerating}
-                        >
-                          Remove key
-                        </button>
-                      )}
-                    </div>
-                    {webCredentialError && (
-                      <span className="web-provider-error">{webCredentialError}</span>
-                    )}
                   </div>
                 )}
 
@@ -3103,12 +3026,8 @@ export default function App() {
             <span>{selectedProvider.location === 'local' ? 'Inside the Keep' : 'Cloud model'}</span>
             <strong>
               {webAccess === 'on'
-                ? webProviderStatus.nativeAvailable
-                  ? webSearchConfigured
-                    ? 'Local reasoning · direct web'
-                    : webReadConfigured
-                      ? 'Direct read · search key needed'
-                      : 'Web on · unavailable'
+                ? webProviderStatus.nativeAvailable && webSearchAvailable && webReadAvailable
+                  ? 'Local reasoning · keyless web'
                   : 'Web on · native app required'
                 : 'Network tools off'}
             </strong>
