@@ -433,6 +433,7 @@ export default function App() {
   const activeChatRole = loadedChatCandidate
     ? (roleOf(loadedChatCandidate) as ChatModelRole)
     : undefined
+  const webGatewayConfigured = Boolean(configuredWebGatewayEndpoint())
   const glanceRole =
     activeChatRole ??
     (selectedProviderId === 'apple-foundation-models' ? 'Quick' : undefined)
@@ -1429,7 +1430,7 @@ export default function App() {
         observedStructuredToolSupport === true)
     const appleNativeToolsReady =
       selectedProviderId === 'apple-foundation-models' &&
-      Boolean(configuredWebGatewayEndpoint())
+      webGatewayConfigured
     setToolBusy(true)
     try {
       const manualTool = await runToolCommand(text)
@@ -2654,7 +2655,9 @@ export default function App() {
                     <strong>Web Access · {webAccess.toUpperCase()}</strong>
                     <span>
                       {webAccess === 'on'
-                        ? 'Read-only web tools may send only the minimum search query or selected URL. Anne still reasons with the current local model.'
+                        ? webGatewayConfigured
+                          ? 'Read-only web tools may send only the minimum search query or selected URL. Anne still reasons with the current local model.'
+                          : 'Web Access is enabled, but no CrownKeep Web Gateway is configured in this build. Local chat remains available.'
                         : 'Network search and webpage reading are blocked. Local chat remains available.'}
                     </span>
                   </div>
@@ -2984,7 +2987,9 @@ export default function App() {
             <span>{selectedProvider.location === 'local' ? 'Inside the Keep' : 'Cloud model'}</span>
             <strong>
               {webAccess === 'on'
-                ? 'Local reasoning · web allowed'
+                ? webGatewayConfigured
+                  ? 'Local reasoning · web allowed'
+                  : 'Web on · gateway not configured'
                 : 'Network tools off'}
             </strong>
           </div>
@@ -3031,17 +3036,50 @@ export default function App() {
                       </span>
                     )}
                     {message.role === 'assistant' &&
-                      message.toolActivity?.some((activity) => activity.toolId === 'web-search') && (
+                      message.toolActivity?.some(
+                        (activity) =>
+                          activity.toolId === 'web-search' &&
+                          activity.outcome === 'error',
+                      ) && (
+                        <span className="tool-use-badge error">↗ Web search failed</span>
+                      )}
+                    {message.role === 'assistant' &&
+                      message.toolActivity?.some(
+                        (activity) =>
+                          activity.toolId === 'web-search' &&
+                          activity.outcome !== 'error',
+                      ) && (
                         <span className="tool-use-badge">↗ Used web search</span>
                       )}
                     {message.role === 'assistant' &&
-                      (message.toolActivity?.filter((activity) => activity.toolId === 'web-read').length ?? 0) > 0 && (
+                      (message.toolActivity?.filter(
+                        (activity) =>
+                          activity.toolId === 'web-read' &&
+                          activity.outcome !== 'error',
+                      ).length ?? 0) > 0 && (
                         <span className="tool-use-badge">
-                          ↗ Read {message.toolActivity?.filter((activity) => activity.toolId === 'web-read').length}{' '}
-                          {(message.toolActivity?.filter((activity) => activity.toolId === 'web-read').length ?? 0) === 1
+                          ↗ Read{' '}
+                          {message.toolActivity?.filter(
+                            (activity) =>
+                              activity.toolId === 'web-read' &&
+                              activity.outcome !== 'error',
+                          ).length}{' '}
+                          {(message.toolActivity?.filter(
+                            (activity) =>
+                              activity.toolId === 'web-read' &&
+                              activity.outcome !== 'error',
+                          ).length ?? 0) === 1
                             ? 'webpage'
                             : 'webpages'}
                         </span>
+                      )}
+                    {message.role === 'assistant' &&
+                      message.toolActivity?.some(
+                        (activity) =>
+                          activity.toolId === 'web-read' &&
+                          activity.outcome === 'error',
+                      ) && (
+                        <span className="tool-use-badge error">↗ Web read failed</span>
                       )}
                     {message.role === 'user' && (
                       <button
