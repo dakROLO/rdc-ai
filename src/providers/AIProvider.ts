@@ -28,6 +28,7 @@ export interface ToolExecutionActivity {
   dataLeftDevice: boolean
   outcome?: 'success' | 'error'
   sources: Array<{ url: string; title?: string }>
+  retainedContext?: string
 }
 
 export interface ChatToolCallDelta {
