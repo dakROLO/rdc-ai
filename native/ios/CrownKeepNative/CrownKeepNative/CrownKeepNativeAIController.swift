@@ -5,6 +5,210 @@ import Speech
 import AVFoundation
 import UIKit
 
+private final class CrownKeepNativeToolLog: @unchecked Sendable {
+    struct Source {
+        let url: String
+        let title: String?
+    }
+
+    struct Entry {
+        let toolId: String
+        let label: String
+        let sources: [Source]
+    }
+
+    private let lock = NSLock()
+    private var entries: [Entry] = []
+
+    func record(_ entry: Entry) {
+        lock.lock()
+        entries.append(entry)
+        lock.unlock()
+    }
+
+    func snapshot() -> [Entry] {
+        lock.lock()
+        defer { lock.unlock() }
+        return entries
+    }
+}
+
+private struct CrownKeepWebGateway: @unchecked Sendable {
+    let baseURL: URL
+
+    private func post(path: String, payload: [String: Any], timeout: TimeInterval) async throws -> [String: Any] {
+        let url = baseURL.appendingPathComponent(path)
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.timeoutInterval = timeout
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.httpBody = try JSONSerialization.data(withJSONObject: payload)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw NSError(
+                domain: "CrownKeepWebGateway",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "Web Gateway returned an invalid response."]
+            )
+        }
+        guard (200..<300).contains(http.statusCode) else {
+            let detail = String(data: data, encoding: .utf8) ?? ""
+            throw NSError(
+                domain: "CrownKeepWebGateway",
+                code: http.statusCode,
+                userInfo: [
+                    NSLocalizedDescriptionKey:
+                        "Web Gateway request failed (\(http.statusCode))\(detail.isEmpty ? "" : ": \(detail.prefix(240))")"
+                ]
+            )
+        }
+
+        guard
+            let object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else {
+            throw NSError(
+                domain: "CrownKeepWebGateway",
+                code: 2,
+                userInfo: [NSLocalizedDescriptionKey: "Web Gateway returned invalid JSON."]
+            )
+        }
+
+        return object
+    }
+
+    func search(query: String) async throws -> [(title: String, url: String, snippet: String)] {
+        let normalized = query
+            .split(whereSeparator: { $0.isWhitespace })
+            .joined(separator: " ")
+            .prefix(320)
+        guard !normalized.isEmpty else {
+            throw NSError(
+                domain: "CrownKeepWebGateway",
+                code: 3,
+                userInfo: [NSLocalizedDescriptionKey: "Web Search requires a query."]
+            )
+        }
+
+        let object = try await post(
+            path: "search",
+            payload: ["query": String(normalized), "maxResults": 5],
+            timeout: 15
+        )
+        let rows = object["results"] as? [[String: Any]] ?? []
+        return rows.compactMap { row in
+            guard
+                let title = row["title"] as? String,
+                let url = row["url"] as? String
+            else { return nil }
+            return (
+                title: title,
+                url: url,
+                snippet: (row["snippet"] as? String) ?? ""
+            )
+        }
+    }
+
+    func read(url value: String) async throws -> (url: String, title: String?, content: String) {
+        guard
+            let components = URLComponents(string: value),
+            let scheme = components.scheme?.lowercased(),
+            ["http", "https"].contains(scheme),
+            components.host != nil,
+            components.user == nil,
+            components.password == nil
+        else {
+            throw NSError(
+                domain: "CrownKeepWebGateway",
+                code: 4,
+                userInfo: [NSLocalizedDescriptionKey: "Web Read requires a public http(s) URL."]
+            )
+        }
+
+        let object = try await post(
+            path: "read",
+            payload: ["url": value],
+            timeout: 20
+        )
+        guard let content = object["content"] as? String, !content.isEmpty else {
+            throw NSError(
+                domain: "CrownKeepWebGateway",
+                code: 5,
+                userInfo: [NSLocalizedDescriptionKey: "Web Read returned no readable content."]
+            )
+        }
+
+        return (
+            url: (object["url"] as? String) ?? value,
+            title: object["title"] as? String,
+            content: String(content.prefix(18_000))
+        )
+    }
+}
+
+private struct CrownKeepWebSearchTool: Tool {
+    let name = "crownkeep_web_search"
+    let description =
+        "Search the public web for current or external information. Send only a minimal search query; never include conversation history, local files, or unrelated private context."
+
+    let gateway: CrownKeepWebGateway
+    let log: CrownKeepNativeToolLog
+
+    @Generable
+    struct Arguments {
+        @Guide(description: "Minimal public-web search query")
+        var query: String
+    }
+
+    func call(arguments: Arguments) async throws -> String {
+        let results = try await gateway.search(query: arguments.query)
+        log.record(
+            .init(
+                toolId: "web-search",
+                label: "Web Search",
+                sources: results.map { .init(url: $0.url, title: $0.title) }
+            )
+        )
+
+        if results.isEmpty { return "No web results found." }
+        return results.enumerated().map { index, result in
+            "[\(index + 1)] \(result.title)\n\(result.url)\n\(result.snippet)"
+        }.joined(separator: "\n\n")
+    }
+}
+
+private struct CrownKeepWebReadTool: Tool {
+    let name = "crownkeep_web_read"
+    let description =
+        "Read one selected public webpage when search snippets are not enough. Send only the selected URL."
+
+    let gateway: CrownKeepWebGateway
+    let log: CrownKeepNativeToolLog
+
+    @Generable
+    struct Arguments {
+        @Guide(description: "Single public http(s) webpage URL")
+        var url: String
+    }
+
+    func call(arguments: Arguments) async throws -> String {
+        let page = try await gateway.read(url: arguments.url)
+        log.record(
+            .init(
+                toolId: "web-read",
+                label: "Web Read",
+                sources: [.init(url: page.url, title: page.title)]
+            )
+        )
+        return [
+            "Source: \(page.title ?? page.url)",
+            page.url,
+            page.content
+        ].joined(separator: "\n")
+    }
+}
+
 @MainActor
 final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
     static let messageHandlerName = "crownKeepAI"
@@ -216,6 +420,23 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
             return
         }
 
+        let webAccess = (request["webAccess"] as? String) == "on"
+        let gatewayURL = (request["webGatewayEndpoint"] as? String).flatMap(URL.init(string:))
+        let toolRecords = request["tools"] as? [[String: Any]] ?? []
+        let allowedToolIds = Set(toolRecords.compactMap { $0["id"] as? String })
+        let toolLog = CrownKeepNativeToolLog()
+        var nativeTools: [any Tool] = []
+
+        if webAccess, let gatewayURL {
+            let gateway = CrownKeepWebGateway(baseURL: gatewayURL)
+            if allowedToolIds.contains("web-search") {
+                nativeTools.append(CrownKeepWebSearchTool(gateway: gateway, log: toolLog))
+            }
+            if allowedToolIds.contains("web-read") {
+                nativeTools.append(CrownKeepWebReadTool(gateway: gateway, log: toolLog))
+            }
+        }
+
         let instructions = messages
             .filter { ($0["role"] as? String) == "system" }
             .compactMap { $0["content"] as? String }
@@ -317,12 +538,21 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
             do {
                 let session = LanguageModelSession(
                     model: self.model,
-                    instructions: instructions.isEmpty
+                    tools: nativeTools
+                ) {
+                    instructions.isEmpty
                         ? "You are Anne, the private local assistant inside CrownKeep."
                         : instructions
-                )
+                }
 
                 var generationOptions = GenerationOptions()
+                #if CROWNKEEP_IOS27_SDK
+                if #available(iOS 27.0, *) {
+                    generationOptions.toolCallingMode =
+                        webAccess && !nativeTools.isEmpty ? .allowed : .disallowed
+                }
+                #endif
+
                 if isCreativeRequest {
                     generationOptions.temperature = 0.9
                     generationOptions.sampling = .random(
@@ -363,6 +593,29 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
                 }
 
                 guard !Task.isCancelled else { return }
+
+                let nativeToolActivity = toolLog.snapshot()
+                if !nativeToolActivity.isEmpty {
+                    self.streamChunk(
+                        streamId: streamId,
+                        chunk: [
+                            "text": "",
+                            "toolActivities": nativeToolActivity.map { entry in
+                                [
+                                    "toolId": entry.toolId,
+                                    "label": entry.label,
+                                    "requiresNetwork": true,
+                                    "dataLeftDevice": true,
+                                    "sources": entry.sources.map { source in
+                                        var value: [String: Any] = ["url": source.url]
+                                        if let title = source.title { value["title"] = title }
+                                        return value
+                                    }
+                                ] as [String: Any]
+                            }
+                        ]
+                    )
+                }
 
                 #if CROWNKEEP_IOS27_SDK
                 if #available(iOS 27.0, *) {
