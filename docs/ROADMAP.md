@@ -314,7 +314,7 @@ Physical acceptance status as of 2026-09-28:
 - **Primary Windows laptop:** Quick startup/restore and normal chat validated; Balanced Mistral Nemo CUDA benchmark, exclusive model switching, and normal chat validated; Windows dictation validated through the installed System Foundry CLI. Laptop microphone transcription quality remains a hardware/input-quality observation, not a runtime failure.
 - **Rolo15:** current convergence build physically built/signed/installed/launched; chat, follow-up context, native dictation, and restart/persistence validated successfully.
 - **AVD:** current shared adaptive Windows policy and acceptance matrix remain pending.
-- **Web Access package:** native direct implementation is on the shared branch; per-device search-credential setup and OFF/ON physical validation remain pending on Windows laptop, Rolo15, and AVD. No CrownKeep Web Gateway is required.
+- **Web Access package:** native direct **keyless DuckDuckGo** implementation is on the shared branch; OFF/ON physical validation remains pending on Windows laptop, Rolo15, and AVD. No CrownKeep Web Gateway, search API account, or API key is required.
 - **Merge/tag/cleanup:** blocked until remaining physical acceptance is recorded and explicit approval is given.
 
 Exit criteria:
@@ -344,16 +344,16 @@ Delivered:
 - restored persistent/glanceable role/model/execution/privacy status bar;
 - persisted **Web Access OFF/ON**, default OFF, enforced at the ToolRegistry boundary;
 - provider-neutral `WebSearchTool` + `WebReadTool` contracts with source/boundary metadata;
-- native direct Web Access: Windows uses Windows Credential Manager plus native HTTPS; iPhone uses iOS Keychain plus `URLSession`; the stored search credential is never returned to the React/webview layer;
-- direct Web Read requires no search credential and fetches only the selected public HTTP(S) page from the native device;
-- the earlier Azure Function/Web Gateway prototype was removed before physical acceptance;
+- native direct keyless Web Access: Windows uses native HTTPS and iPhone uses `URLSession`; DuckDuckGo's public non-JavaScript HTML search surface supplies discovery results without an API key;
+- direct Web Read fetches only the selected public HTTP(S) page from the native device;
+- DuckDuckGo interactive-verification/rate-limit failures are surfaced visibly; CrownKeep does not bypass them or silently fall back to another search/model provider;
+- the earlier Azure Function/Web Gateway and Tavily credential-store prototypes were removed before physical acceptance;
 - bounded automatic web use: structured local-model function calls when support is measured, safe read-only fallback otherwise;
 - Apple Foundation Models native `Tool` bridge for the same logical web capabilities;
 - visible successful/failed network-tool activity while the assistant message remains marked with its actual local reasoning provider.
 
 Remaining acceptance:
 
-- configure the Tavily search credential locally on each target device through CrownKeep's native secure-store path; do not put it in build/Vite configuration;
 - prove **Web Access OFF** causes zero search/page-read calls;
 - prove **Web Access ON** does not search for a local-only question, does search for a current-information question, and can search then read selected webpages;
 - physically validate the new web/status-bar package on the primary Windows laptop and Rolo15;
