@@ -26,6 +26,7 @@ export interface ToolExecutionActivity {
   label: string
   requiresNetwork: boolean
   dataLeftDevice: boolean
+  outcome?: 'success' | 'error'
   sources: Array<{ url: string; title?: string }>
 }
 
