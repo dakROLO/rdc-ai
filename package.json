@@ -12,7 +12,7 @@
     "desktop:dev": "npm run desktop:prepare && tauri dev",
     "desktop:build": "npm run desktop:prepare && tauri build",
     "tauri": "tauri",
-    "desktop:prepare": "tauri icon public/crownkeep-mark.svg",
+    "desktop:prepare": "tauri icon public/brand/crownkeep-facelift/crownkeep-app-icon.png",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "test:ui": "playwright test"
   },
