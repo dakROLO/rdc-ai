@@ -130,10 +130,16 @@ export async function* streamStructuredToolLoop({
       for (const delta of chunk.toolCallDeltas ?? []) {
         mergeCallDelta(pendingCalls, delta)
       }
+
+      // Forward provider activity immediately instead of buffering an entire
+      // structured-tool round. This keeps the chat watchdog and UI aligned
+      // with the actual local model stream. Tool-call deltas are safe to
+      // surface here because the outer chat layer treats them as activity,
+      // while this loop remains the only component that executes tools.
+      yield chunk
     }
 
     if (pendingCalls.size === 0) {
-      yield { text, usage, done: true }
       return
     }
 
