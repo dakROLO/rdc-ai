@@ -48,7 +48,11 @@ export class WebSearchTool
   readonly access = 'read' as const
   readonly inputSchema = searchSchema
 
-  constructor(private readonly client: WebGatewayClient) {}
+  private readonly client: WebGatewayClient
+
+  constructor(client: WebGatewayClient) {
+    this.client = client
+  }
 
   async isAvailable(): Promise<boolean> {
     return this.client.isConfigured()
