@@ -8,9 +8,9 @@
   "theme_color": "#030916",
   "icons": [
     {
-      "src": "/brand/crownkeep-facelift/crownkeep-app-icon.png",
-      "sizes": "1024x1024",
-      "type": "image/png",
+      "src": "/crownkeep-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
       "purpose": "any"
     }
   ]
