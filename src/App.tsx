@@ -2637,83 +2637,6 @@ export default function App() {
             </strong>
           </div>
         </section>
-                )}
-
-                {selectedProviderId === 'foundry-local' && models.length === 0 && providerAvailability?.available && (
-                  <p className="runtime-warning">
-                    Foundry Local is reachable, but CrownKeep cannot see a model ready for chat.
-                  </p>
-                )}
-
-                <details className="diagnostics-disclosure">
-                  <summary>Diagnostics</summary>
-                  <div className="diagnostics-panel">
-                    <div className="diagnostics-heading-row">
-                      <strong>Local AI diagnostics</strong>
-                      <button
-                        type="button"
-                        className="diagnostics-close-button"
-                        onClick={(event) =>
-                          event.currentTarget.closest('details')?.removeAttribute('open')
-                        }
-                      >
-                        Close
-                      </button>
-                    </div>
-                    <div className="diagnostics-grid">
-                      <div><span>Last result</span><strong>{lastRun?.outcome ?? 'No run yet'}</strong></div>
-                      <div><span>First token</span><strong>{formatDuration(lastRun?.firstTokenMs)}</strong></div>
-                      <div><span>Total time</span><strong>{formatDuration(lastRun?.totalMs)}</strong></div>
-                      <div><span>Output rate</span><strong>{formatTokenRate(lastRun)}</strong></div>
-                      <div><span>Prompt tokens</span><strong>{lastRun?.promptTokens ?? '—'}</strong></div>
-                      <div><span>Completion tokens</span><strong>{lastRun?.completionTokens ?? '—'}</strong></div>
-                      <div><span>Runtime</span><strong>{runtimeSnapshot?.authority ?? 'Local runtime'}</strong></div>
-                      <div><span>Runtime version</span><strong>{runtimeSnapshot?.runtimeVersion ?? '—'}</strong></div>
-                    </div>
-                    <p className={`performance-guidance ${
-                      performanceGuidance?.includes('slow') ||
-                      performanceGuidance?.includes('low') ||
-                      performanceGuidance?.includes('failed')
-                        ? 'warning'
-                        : ''
-                    }`}>
-                      {performanceGuidance ??
-                        'Run a local response to capture first-token time, total time, and token usage.'}
-                    </p>
-                    {runtimeCheckError && (
-                      <p className="runtime-setup-note warning">Provider detail · {runtimeCheckError}</p>
-                    )}
-                    {lastRun && (
-                      <p className="diagnostic-footnote">
-                        {lastRun.modelId}
-                        {lastRun.runtimeDevice ? ` · ${lastRun.runtimeDevice}` : ''}
-                        {lastRun.totalTokens ? ` · ${lastRun.totalTokens} total tokens` : ''}
-                      </p>
-                    )}
-                    {runtimeSnapshot?.cacheLocation && (
-                      <p className="diagnostic-footnote">System Foundry cache · {runtimeSnapshot.cacheLocation}</p>
-                    )}
-                    {runtimeSnapshot?.legacyCacheLocation && (
-                      <p className="diagnostic-footnote">Legacy CrownKeep cache (not used; cleanup pending validation) · {runtimeSnapshot.legacyCacheLocation}</p>
-                    )}
-                    {runtimeSnapshot?.legacyCache && (
-                      <>
-                        <p className="diagnostic-footnote">
-                          Legacy cache inventory · {runtimeSnapshot.legacyCache.exists ? `${runtimeSnapshot.legacyCache.entryCount || 'not yet scanned'} package folder(s)${runtimeSnapshot.legacyCache.approximateSizeBytes ? ` · ${(runtimeSnapshot.legacyCache.approximateSizeBytes / 1024 / 1024).toFixed(1)} MB` : ''}` : 'not present'} · {runtimeSnapshot.legacyCache.status} · cleanup {runtimeSnapshot.legacyCache.cleanup}
-                        </p>
-                        {runtimeSnapshot.legacyCache.exists && localRuntimeManager.inspectLegacyCache && (
-                          <button type="button" className="runtime-native-button secondary" onClick={() => void localRuntimeManager.inspectLegacyCache!().then((legacyCache) => setRuntimeSnapshot((current) => current ? { ...current, legacyCache } : current))}>
-                            Inspect legacy cache details
-                          </button>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </details>
-              </div>
-            </details>
-          </div>
-        </section>
 
         <section
           className="conversation"
@@ -3309,7 +3232,84 @@ export default function App() {
                           ? 'CrownKeep manages the Foundry Local runtime and model lifecycle on this device.'
                           : 'Native Windows host connected.'}
                     </p>
-          
+                  </section>
+                )}
+
+                {selectedProviderId === 'foundry-local' && models.length === 0 && providerAvailability?.available && (
+                  <p className="runtime-warning">
+                    Foundry Local is reachable, but CrownKeep cannot see a model ready for chat.
+                  </p>
+                )}
+
+                <details className="diagnostics-disclosure">
+                  <summary>Diagnostics</summary>
+                  <div className="diagnostics-panel">
+                    <div className="diagnostics-heading-row">
+                      <strong>Local AI diagnostics</strong>
+                      <button
+                        type="button"
+                        className="diagnostics-close-button"
+                        onClick={(event) =>
+                          event.currentTarget.closest('details')?.removeAttribute('open')
+                        }
+                      >
+                        Close
+                      </button>
+                    </div>
+                    <div className="diagnostics-grid">
+                      <div><span>Last result</span><strong>{lastRun?.outcome ?? 'No run yet'}</strong></div>
+                      <div><span>First token</span><strong>{formatDuration(lastRun?.firstTokenMs)}</strong></div>
+                      <div><span>Total time</span><strong>{formatDuration(lastRun?.totalMs)}</strong></div>
+                      <div><span>Output rate</span><strong>{formatTokenRate(lastRun)}</strong></div>
+                      <div><span>Prompt tokens</span><strong>{lastRun?.promptTokens ?? '—'}</strong></div>
+                      <div><span>Completion tokens</span><strong>{lastRun?.completionTokens ?? '—'}</strong></div>
+                      <div><span>Runtime</span><strong>{runtimeSnapshot?.authority ?? 'Local runtime'}</strong></div>
+                      <div><span>Runtime version</span><strong>{runtimeSnapshot?.runtimeVersion ?? '—'}</strong></div>
+                    </div>
+                    <p className={`performance-guidance ${
+                      performanceGuidance?.includes('slow') ||
+                      performanceGuidance?.includes('low') ||
+                      performanceGuidance?.includes('failed')
+                        ? 'warning'
+                        : ''
+                    }`}>
+                      {performanceGuidance ??
+                        'Run a local response to capture first-token time, total time, and token usage.'}
+                    </p>
+                    {runtimeCheckError && (
+                      <p className="runtime-setup-note warning">Provider detail · {runtimeCheckError}</p>
+                    )}
+                    {lastRun && (
+                      <p className="diagnostic-footnote">
+                        {lastRun.modelId}
+                        {lastRun.runtimeDevice ? ` · ${lastRun.runtimeDevice}` : ''}
+                        {lastRun.totalTokens ? ` · ${lastRun.totalTokens} total tokens` : ''}
+                      </p>
+                    )}
+                    {runtimeSnapshot?.cacheLocation && (
+                      <p className="diagnostic-footnote">System Foundry cache · {runtimeSnapshot.cacheLocation}</p>
+                    )}
+                    {runtimeSnapshot?.legacyCacheLocation && (
+                      <p className="diagnostic-footnote">Legacy CrownKeep cache (not used; cleanup pending validation) · {runtimeSnapshot.legacyCacheLocation}</p>
+                    )}
+                    {runtimeSnapshot?.legacyCache && (
+                      <>
+                        <p className="diagnostic-footnote">
+                          Legacy cache inventory · {runtimeSnapshot.legacyCache.exists ? `${runtimeSnapshot.legacyCache.entryCount || 'not yet scanned'} package folder(s)${runtimeSnapshot.legacyCache.approximateSizeBytes ? ` · ${(runtimeSnapshot.legacyCache.approximateSizeBytes / 1024 / 1024).toFixed(1)} MB` : ''}` : 'not present'} · {runtimeSnapshot.legacyCache.status} · cleanup {runtimeSnapshot.legacyCache.cleanup}
+                        </p>
+                        {runtimeSnapshot.legacyCache.exists && localRuntimeManager.inspectLegacyCache && (
+                          <button type="button" className="runtime-native-button secondary" onClick={() => void localRuntimeManager.inspectLegacyCache!().then((legacyCache) => setRuntimeSnapshot((current) => current ? { ...current, legacyCache } : current))}>
+                            Inspect legacy cache details
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </details>
+              </div>
+            </details>
+          </div>
+
             </div>
           </div>
 
