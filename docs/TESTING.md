@@ -23,62 +23,120 @@ npm test
 npm run build
 ```
 
-CI additionally checks Web Gateway Python syntax, shared Playwright UI smoke tests, the Windows Tauri/Rust host, and the unsigned iOS Simulator build.
+CI additionally runs shared Playwright UI smoke tests, the Windows Tauri/Rust host check, and the unsigned iOS Simulator build.
 
-### Web Access configuration boundary
+### Web Access architecture under test
 
-Web Access defaults to **OFF**. The client must never contain a search-provider secret.
+Web Access defaults to **OFF** and is enforced by `ToolRegistry`.
 
-For a configured test build, set the public CrownKeep gateway endpoint only:
+There is no CrownKeep Web Gateway and no `VITE_CROWNKEEP_WEB_GATEWAY_URL`.
 
-```text
-VITE_CROWNKEEP_WEB_GATEWAY_URL=<CrownKeep Web Gateway URL>
-```
+Current native behavior:
 
-The gateway owns any provider credential such as `TAVILY_API_KEY` server-side. Web tools may send only the minimum public search query or the one selected public URL. Do not send whole conversations, projects, local knowledge, files, attachments, or images through this boundary.
+- **Windows:** direct native HTTPS; Tavily search credential stored in Windows Credential Manager.
+- **iPhone:** direct native HTTPS with `URLSession`; Tavily search credential stored in iOS Keychain.
+- **Web Search:** sends only the minimized public query to Tavily and requires the device-local search credential.
+- **Web Read:** fetches only the selected public HTTP(S) URL directly from the native device and does not require the search credential.
+- **Shared React/webview:** may save/remove the credential and read configured/not-configured status; it must never receive the stored credential back.
+- **Browser-only development:** does not store a live provider credential and is not physical Web Access acceptance.
 
-### Windows laptop — Web Access acceptance
+Never put the Tavily key in source code, `.env`, a `VITE_*` value, conversation/project data, the wife’s Mac deploy command, or future sync.
 
-1. Launch the current branch with the local reasoning provider ready.
-2. Confirm the compact status bar shows role/model/execution, **Inside the Keep**, runtime state, and **Web OFF**.
-3. With Web Access **OFF**, ask a current-information question that would normally need search.
-4. Confirm no Web Search/Web Read succeeds and no hidden network fallback occurs.
-5. Turn Web Access **ON**.
-6. Ask a local-only question. Confirm CrownKeep answers locally without unnecessary web activity.
-7. Ask a current-information question. Confirm bounded Web Search is visible on the assistant message and the reasoning provider remains the selected local provider.
-8. Ask for more detail from a returned source. Confirm CrownKeep can search and then read selected public pages within the bounded read-only tool loop.
-9. Confirm source URLs/titles remain visible with the assistant message.
-10. Turn Web Access **OFF** again and repeat a current-information question. Confirm network-tool use is blocked before tool availability/execution.
-11. If the gateway is missing or unavailable, confirm CrownKeep reports the failure explicitly and does not switch to cloud reasoning.
+### Windows laptop — native direct Web Access acceptance
 
-### Rolo15 — current build + Web Access acceptance
-
-Use the established device/build path. Unlock the Mac login keychain first; do not chmod the script.
-
-From Windows PowerShell:
+Update and launch the native app:
 
 ```powershell
-ssh -t mac-dev 'cd ~/Projects/rdc-ai && security unlock-keychain ~/Library/Keychains/login.keychain-db && git pull --ff-only && CROWNKEEP_DEVICE_ID=00008150-001829503E38401C bash scripts/ios-device-build.sh'
+Set-Location C:\path\to\rdc-ai
+git fetch origin
+git switch sprint-4a3-local-platform-convergence
+git pull --ff-only
+npm ci
+npm run desktop:dev
 ```
 
-Then on Rolo15:
+Then:
+
+1. Confirm the compact status bar shows role/model/execution, **Inside the Keep**, runtime state, and **Web OFF**.
+2. Confirm normal Quick local chat still works.
+3. With Web Access **OFF**, ask: `What is the latest stable Node.js release right now? Verify it using current web information.`
+4. Confirm no Web Search/Web Read executes and Anne does not claim current verification.
+5. Open Local AI / Web Access setup. Before adding a search key, confirm the UI reports direct webpage reading available and search credential not configured.
+6. Paste the Tavily API key into CrownKeep and select **Save key**.
+7. Confirm the UI reports the search credential is stored in **Windows Credential Manager**. The UI must not display the stored key after save.
+8. Close and relaunch CrownKeep. Confirm search remains configured without re-entering the key.
+9. Turn **Web ON**.
+10. Ask a local-only question such as `Explain the difference between Quick and Balanced in CrownKeep.` Confirm no unnecessary search occurs.
+11. Ask: `What is the latest stable Node.js release right now? Verify it using current sources.`
+12. Confirm visible **Web Search** activity, source URLs/titles, and the assistant message remains attributed to the actual local reasoning provider.
+13. Ask: `Search for the latest stable Node.js release, read the two most relevant sources, and summarize the version and release date.`
+14. Confirm bounded Web Search + direct Web Read activity and source metadata.
+15. Record whether Quick and Balanced show structured-tool capability as passed, unsupported, or unknown. Unsupported is not a failure; the bounded fallback must continue without switching models.
+16. Remove the Tavily key through CrownKeep or temporarily disconnect networking and repeat a current-information request. Confirm the failed web attempt is visible and no cloud-model fallback occurs.
+17. With the search key removed but networking restored, manually test a selected public URL with the diagnostic `/url https://example.com` path while Web Access is ON. Confirm direct Web Read does not require the Tavily key.
+18. Turn Web Access **OFF** and confirm subsequent automatic/manual network tools are blocked again.
+
+Do **not** retry the failed Deep candidate during this acceptance run.
+
+### Rolo15 — wife’s Mac build/deploy lessons learned
+
+Use the established physical-device path:
+
+- Mac repo: `~/Projects/rdc-ai`
+- Apple team: `QJ9HLPX482`
+- Rolo15 device ID: `00008150-001829503E38401C`
+- unlock the Mac login keychain before the build;
+- run the script with `bash`; **do not chmod it**;
+- keep Rolo15 awake/unlocked and on the same network during wireless install/launch;
+- the script already retries wireless installation and launch.
+
+Preflight from Windows PowerShell:
+
+```powershell
+ssh mac-dev 'cd ~/Projects/rdc-ai && echo "=== GIT ===" && git branch --show-current && git status --short && git log -1 --oneline && echo "=== XCODE ===" && xcodebuild -version && echo "SDK: $(xcrun --sdk iphoneos --show-sdk-version)" && echo "=== DEVICES ===" && xcrun devicectl list devices'
+```
+
+If `git status --short` prints unexpected files, do not reset them blindly.
+
+Build/sign/install/launch from Windows PowerShell:
+
+```powershell
+ssh -t mac-dev 'cd ~/Projects/rdc-ai && security unlock-keychain ~/Library/Keychains/login.keychain-db && git fetch origin && git switch sprint-4a3-local-platform-convergence && git pull --ff-only && CROWNKEEP_TEAM_ID=QJ9HLPX482 CROWNKEEP_DEVICE_ID=00008150-001829503E38401C bash scripts/ios-device-build.sh'
+```
+
+The Tavily key is **not** part of this command. Enter it on Rolo15 inside CrownKeep after installation so it is stored in that phone’s Keychain.
+
+Then:
 
 1. Confirm the current build launches and existing local conversation persistence remains intact.
 2. Confirm Apple Foundation Models remains the local reasoning provider and native Apple speech remains on-device.
-3. Repeat the Web OFF → local-only ON → current-information ON → source-read → OFF sequence above.
-4. Confirm network activity is shown as tool activity rather than relabeling Anne's response as cloud reasoning.
-5. Confirm a missing/unavailable gateway fails visibly without hidden network or cloud-model fallback.
+3. Confirm the compact status bar remains readable and only Quick is represented on iPhone.
+4. With Web OFF, ask a current-information question and confirm no network tool executes.
+5. Open Web Access setup and confirm direct Web Read is available before a search key is saved.
+6. Save the Tavily key on Rolo15 and confirm the UI reports **iOS Keychain**.
+7. Relaunch CrownKeep and confirm search remains configured.
+8. Turn Web ON and ask a local-only question; confirm no unnecessary search.
+9. Ask a current-information question; confirm Web Search activity + sources while Apple Foundation Models remains the reasoning provider.
+10. Ask for source detail; confirm direct page read(s) occur and sources remain visible.
+11. Temporarily disable networking or remove the search key and confirm failure is visible with no cloud-model fallback.
+12. Turn networking back on; with the search key absent, verify direct Web Read can still read a selected public URL while Web Access is ON.
+13. Turn Web OFF again and confirm network tools are blocked.
+14. Recheck chat, follow-up context, dictation, and restart/persistence as a short regression.
 
 ### AVD acceptance
 
-Run the same Windows status-bar, Quick/Balanced role, dictation, Web OFF/ON, and gateway-failure checks on AVD. Do not create an AVD-specific model policy or architecture. Select roles from observed benchmark evidence on that host.
+Run the same Windows native-direct Web Access matrix on AVD. Configure its search credential locally in that Windows environment; do not copy a credential from the laptop’s store.
+
+Use the same adaptive Windows model policy. Do not create AVD-specific CrownKeep architecture. Voice remains capability-dependent and must not block text-chat/Web Access acceptance if the AVD lacks the required microphone path.
 
 ### Acceptance guardrails
 
 - No silent cloud-model fallback.
+- No CrownKeep Web Gateway.
 - No RDC customer-data connection.
 - Web Access OFF means network tools are blocked at `ToolRegistry`.
 - Web Access ON does not authorize sending conversation history or local content.
+- Search credentials remain device-local and are never returned to the shared webview after storage.
 - Do not merge, tag, delete the convergence branch, or remove legacy cache data until remaining physical evidence is recorded and explicit approval is given.
 
 ---
