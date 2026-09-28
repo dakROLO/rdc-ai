@@ -15,6 +15,7 @@ import {
   useState,
 } from 'react'
 import { ANNE_SYSTEM_PROMPT } from './assistant/anne.ts'
+import { normalizeInferenceHistory } from './assistant/contextHistory.ts'
 import type { Conversation, Message } from './domain/conversation.ts'
 import type { Project } from './domain/project.ts'
 import type {
@@ -1481,8 +1482,10 @@ export default function App() {
     })
 
     try {
-      const contextMessages = [...messages, userMessage].filter(
-        (message) => !message.excludedFromContext && message.content.trim(),
+      const contextMessages = normalizeInferenceHistory(
+        [...messages, userMessage].filter(
+          (message) => !message.excludedFromContext && message.content.trim(),
+        ),
       )
       const requestMessages = [
         { role: 'system' as const, content: ANNE_SYSTEM_PROMPT },
@@ -1536,7 +1539,11 @@ export default function App() {
         setMessages((current) =>
           current.map((message) =>
             message.id === assistantMessage.id
-              ? { ...message, content: assistantContent }
+              ? {
+                  ...message,
+                  content: assistantContent,
+                  excludedFromContext: runOutcome === 'error' ? true : message.excludedFromContext,
+                }
               : message,
           ),
         )
@@ -1661,7 +1668,9 @@ export default function App() {
           traceId,
         )
         runOutcome = 'error'
+        const detail = error instanceof Error ? error.message : String(error)
         assistantContent = 'Anne hit a local provider error. Open Local AI diagnostics for details.'
+        setRuntimeCheckError(`Local provider error: ${detail}`)
         console.error(error)
       } else {
         runOutcome = 'stopped'
@@ -1728,7 +1737,11 @@ export default function App() {
         setSetupRecord(record)
       }
 
-      await repository.saveMessage({ ...assistantMessage, content: assistantContent })
+      await repository.saveMessage({
+        ...assistantMessage,
+        content: assistantContent,
+        excludedFromContext: runOutcome === 'error' ? true : undefined,
+      })
       await refreshConversations()
       abortController.current = null
       setIsGenerating(false)
@@ -2718,6 +2731,9 @@ export default function App() {
                       {performanceGuidance ??
                         'Run a local response to capture first-token time, total time, and token usage.'}
                     </p>
+                    {runtimeCheckError && (
+                      <p className="runtime-setup-note warning">Provider detail · {runtimeCheckError}</p>
+                    )}
                     {lastRun && (
                       <p className="diagnostic-footnote">
                         {lastRun.modelId}
