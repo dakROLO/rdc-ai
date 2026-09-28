@@ -29,3 +29,6 @@ src-tauri/gen/
 # Local browser test output
 test-results/
 playwright-report/
+
+# CrownKeep Web Gateway local secrets
+services/web-gateway/local.settings.json
