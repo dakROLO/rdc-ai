@@ -517,6 +517,55 @@ export default function App() {
     }
   }, [fingerprint, providerRefreshNonce, modelCandidates])
 
+  async function refreshWebProviderStatus() {
+    try {
+      const status = await nativeWebClient.status()
+      setWebProviderStatus(status)
+      setWebCredentialError(null)
+    } catch (error) {
+      setWebProviderStatus({
+        nativeAvailable: false,
+        provider: 'tavily',
+        searchConfigured: false,
+        readAvailable: false,
+        detail: 'Native Web Access status could not be read.',
+      })
+      setWebCredentialError(String(error))
+    }
+  }
+
+  async function saveWebSearchCredential() {
+    setWebCredentialBusy(true)
+    setWebCredentialError(null)
+    try {
+      const status = await nativeWebClient.saveSearchCredential(webCredentialDraft)
+      setWebProviderStatus(status)
+      setWebCredentialDraft('')
+    } catch (error) {
+      setWebCredentialError(String(error))
+    } finally {
+      setWebCredentialBusy(false)
+    }
+  }
+
+  async function clearWebSearchCredential() {
+    setWebCredentialBusy(true)
+    setWebCredentialError(null)
+    try {
+      const status = await nativeWebClient.clearSearchCredential()
+      setWebProviderStatus(status)
+      setWebCredentialDraft('')
+    } catch (error) {
+      setWebCredentialError(String(error))
+    } finally {
+      setWebCredentialBusy(false)
+    }
+  }
+
+  useEffect(() => {
+    void refreshWebProviderStatus()
+  }, [])
+
   useEffect(() => {
     toolRegistry.setPolicy({ webAccess })
     saveWebAccessMode(localStorage, webAccess)
