@@ -4,6 +4,8 @@
 **Starting point:** `phase-4a-windows-product-host` @ `72b8056e455e181ed7c2a69f1c3956a15f57c0f3`  
 **Date:** 2026-09-26
 
+> **Continuation note — 2026-09-28:** This file preserves the original 4A.3 convergence contract. Work continued on the same branch through Sprint 4A.4. The Windows laptop and Rolo15 local baselines described by this sprint are now physically proven; AVD remains pending. The later 4A.4 Web Access package deliberately advances beyond 4A.3's original "no actual agent execution" scope by evolving the existing ToolRegistry rather than rewriting the architecture. See `docs/SPRINT-4A4-VALIDATION.md`, `docs/STATUS.md`, and `docs/DECISIONS.md` for the current authoritative state. No merge/tag/branch cleanup is authorized yet.
+
 ## Why this sprint exists
 
 CrownKeep has now proven the major local-first pieces independently:
