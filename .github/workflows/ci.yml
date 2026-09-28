@@ -86,7 +86,7 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: npm run build
       - name: Prepare branded iPhone icon
-        run: sips -z 1024 1024 public/icons/crownkeep-512.png --out native/ios/CrownKeepNative/CrownKeepNative/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png
+        run: sips -z 1024 1024 public/brand/crownkeep-facelift/crownkeep-app-icon.png --out native/ios/CrownKeepNative/CrownKeepNative/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png
       - name: Compile native iPhone host without signing
         run: >-
           xcodebuild -project native/ios/CrownKeepNative/CrownKeepNative.xcodeproj
