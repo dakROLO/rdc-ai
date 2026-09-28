@@ -40,9 +40,21 @@ if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
   exit 4
 fi
 
-if [[ ! -d "$ROOT/node_modules" ]]; then
-  echo "Installing CrownKeep web dependencies…"
-  npm install
+DEPENDENCIES_OK=1
+if [[ ! -d "$ROOT/node_modules" || ! -d "$ROOT/node_modules/@tauri-apps/api" ]]; then
+  DEPENDENCIES_OK=0
+elif ! npm ls --depth=0 >/dev/null 2>&1; then
+  DEPENDENCIES_OK=0
+fi
+
+if [[ "$DEPENDENCIES_OK" -ne 1 ]]; then
+  if [[ -f "$ROOT/package-lock.json" ]]; then
+    echo "Refreshing CrownKeep web dependencies from package-lock.json…"
+    npm ci
+  else
+    echo "Refreshing CrownKeep web dependencies…"
+    npm install
+  fi
 fi
 
 echo "Building CrownKeep React UI…"
