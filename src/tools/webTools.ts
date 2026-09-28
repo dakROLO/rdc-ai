@@ -105,7 +105,11 @@ export class WebReadTool implements CrownKeepTool<{ url: string }> {
   readonly access = 'read' as const
   readonly inputSchema = readSchema
 
-  constructor(private readonly client: WebGatewayClient) {}
+  private readonly client: WebGatewayClient
+
+  constructor(client: WebGatewayClient) {
+    this.client = client
+  }
 
   async isAvailable(): Promise<boolean> {
     return this.client.isConfigured()
