@@ -43,14 +43,14 @@ import type {
 } from './runtime/LocalRuntimeManager.ts'
 import { IndexedDbConversationRepository } from './storage/IndexedDbConversationRepository.ts'
 import { createId } from './utils/id.ts'
-import { runToolCommand, toolRegistry } from './tools/defaultTools.ts'
+import { nativeWebClient, runToolCommand, toolRegistry } from './tools/defaultTools.ts'
 import { runAutomaticReadOnlyTools } from './tools/automaticToolUse.ts'
 import {
   streamStructuredToolLoop,
   structuredToolDefinitions,
 } from './tools/structuredToolLoop.ts'
 import { readWebAccessMode, saveWebAccessMode } from './web/WebAccess.ts'
-import { configuredWebGatewayEndpoint } from './web/WebGatewayClient.ts'
+import type { NativeWebStatus } from './web/NativeWebClient.ts'
 
 const primaryProvider = new MockProvider()
 const developmentAlternateProvider = new MockProvider({
@@ -372,6 +372,16 @@ export default function App() {
     toolRegistry.setPolicy({ webAccess: mode })
     return mode
   })
+  const [webProviderStatus, setWebProviderStatus] = useState<NativeWebStatus>({
+    nativeAvailable: false,
+    provider: 'tavily',
+    searchConfigured: false,
+    readAvailable: false,
+    detail: 'Checking native Web Access…',
+  })
+  const [webCredentialDraft, setWebCredentialDraft] = useState('')
+  const [webCredentialBusy, setWebCredentialBusy] = useState(false)
+  const [webCredentialError, setWebCredentialError] = useState<string | null>(null)
   const [fingerprint, setFingerprint] = useState<string>()
   const [isLoading, setIsLoading] = useState(true)
   const [storageError, setStorageError] = useState<string | null>(null)
@@ -433,7 +443,8 @@ export default function App() {
   const activeChatRole = loadedChatCandidate
     ? (roleOf(loadedChatCandidate) as ChatModelRole)
     : undefined
-  const webGatewayConfigured = Boolean(configuredWebGatewayEndpoint())
+  const webSearchConfigured = webProviderStatus.searchConfigured
+  const webReadConfigured = webProviderStatus.readAvailable
   const glanceRole =
     activeChatRole ??
     (selectedProviderId === 'apple-foundation-models' ? 'Quick' : undefined)
@@ -1430,7 +1441,8 @@ export default function App() {
         observedStructuredToolSupport === true)
     const appleNativeToolsReady =
       selectedProviderId === 'apple-foundation-models' &&
-      webGatewayConfigured
+      webProviderStatus.nativeAvailable &&
+      webReadConfigured
     setToolBusy(true)
     try {
       const manualTool = await runToolCommand(text)
