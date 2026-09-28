@@ -175,7 +175,7 @@ private struct CrownKeepNativeWeb: @unchecked Sendable {
               let host = components.host?.lowercased()
         else { return nil }
 
-        if host.hasSuffix("duckduckgo.com"),
+        if (host == "duckduckgo.com" || host.hasSuffix(".duckduckgo.com")),
            components.path.hasPrefix("/l/"),
            let target = components.queryItems?.first(where: { $0.name == "uddg" })?.value,
            (try? validatePublicURL(target)) != nil {
@@ -187,8 +187,10 @@ private struct CrownKeepNativeWeb: @unchecked Sendable {
     }
 
     private func extractSnippet(_ segment: String) -> String {
-        let lower = segment.lowercased()
-        guard let marker = lower.range(of: "result__snippet")?.lowerBound else {
+        guard let marker = segment.range(
+            of: "result__snippet",
+            options: [.caseInsensitive]
+        )?.lowerBound else {
             return ""
         }
 
@@ -227,7 +229,10 @@ private struct CrownKeepNativeWeb: @unchecked Sendable {
                   let href = attributeValue(anchor, name: "href"),
                   let url = duckDuckGoResultURL(href),
                   let openEnd = anchor.firstIndex(of: ">"),
-                  let closeStart = anchor.lowercased().range(of: "</a>")?.lowerBound
+                  let closeStart = anchor.range(
+                    of: "</a>",
+                    options: [.caseInsensitive]
+                  )?.lowerBound
             else { continue }
 
             let titleStart = anchor.index(after: openEnd)
