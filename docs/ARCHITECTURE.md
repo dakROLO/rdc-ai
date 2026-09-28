@@ -18,7 +18,7 @@ flowchart LR
     end
 
     subgraph WebBoundary["Optional native read-only network tool boundary"]
-        NW["Native Web Adapter\n+ Secure Credential Store"]
+        NW["Native Web Adapter\nDuckDuckGo Search + Direct Read"]
         WEB["Public Web / Search Provider"]
     end
 
@@ -60,7 +60,6 @@ Owns:
 - local/cloud message metadata;
 - sync encryption/decryption;
 - cloud escalation confirmation;
-- native secure storage for user-supplied Web Search credentials;
 - offline usability.
 
 Must not contain:
