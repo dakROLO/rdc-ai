@@ -398,11 +398,11 @@ Selected local Anne provider
           v
       Native Web Adapter
           |
-          +-- Web Search --> configured search provider
-          |                  (minimal query only)
+          +-- Web Search --> DuckDuckGo HTML search
+          |                  (minimal query only; no key)
           |
           +-- Web Read ----> selected public HTTP(S) page
-                             (selected URL only; no search key required)
+                             (selected URL only)
           |
           v
       untrusted tool result + source metadata
@@ -414,133 +414,116 @@ Selected local Anne provider
       final answer
 ```
 
-There is **no CrownKeep Web Gateway in the current architecture**. The earlier Azure Function prototype was removed before physical acceptance because it added an unnecessary CrownKeep-hosted network dependency for the local-first product.
+There is **no CrownKeep Web Gateway, search API account, or API key** in the current architecture. The earlier Azure Function/Web Gateway and Tavily credential-store prototypes were removed before physical acceptance.
 
 ### ToolRegistry policy
 
 `ToolRegistry` is the authoritative execution boundary.
 
-Each tool declares:
-
-- stable ID/name/description;
-- read or write access;
-- whether network access is required;
-- structured input schema when available;
-- result metadata including whether data left the device and source URLs/titles.
-
-Current policy defaults:
+Current defaults:
 
 - `webAccess = off`;
-- write tools are denied unless a future explicit approval flow enables them;
+- write tools remain denied unless a future explicit approval flow enables them;
 - a network tool is rejected **before** `isAvailable()` or `execute()` when Web Access is OFF;
 - tool execution never changes the selected `AIProvider`.
 
-The Web Access preference is stored locally as `crownkeep.webAccess.v1`. Turning it ON authorizes only the registered network tools; it does not authorize cloud-model fallback or bulk context upload.
+Turning Web Access ON authorizes only the registered network tools. It does not authorize cloud-model fallback, bulk context upload, or alternate search-provider fallback.
 
 ### Native Web Search / Web Read transport
 
 The shared application exposes two provider-neutral read-only tools:
 
-- `web-search`: sends one minimized search query and receives titles, URLs, snippets, and optional result metadata;
+- `web-search`: sends one minimized search query and receives parsed titles, URLs, and snippets;
 - `web-read`: sends one selected public HTTP(S) URL and receives bounded readable content.
-
-The logical tool contract is shared, but network execution belongs to the native host:
 
 **Windows**
 
 - the Tauri/Rust host performs HTTPS requests;
-- the first search adapter is Tavily;
-- the user-supplied Tavily credential is stored through the native credential-store library in **Windows Credential Manager**;
-- the React/webview layer may request save/remove and receive configuration status, but it does not receive the stored credential back;
-- Web Read fetches the selected public page directly and does not require the search credential.
+- Web Search requests DuckDuckGo's public non-JavaScript HTML search surface;
+- returned HTML is parsed locally into result titles, destination URLs, and snippets;
+- DuckDuckGo redirect links are unwrapped locally;
+- Web Read fetches the selected public page directly.
 
 **iPhone**
 
 - the Swift host performs HTTPS requests with `URLSession`;
-- the first search adapter is Tavily;
-- the user-supplied Tavily credential is stored as a generic-password item in **iOS Keychain**, device-local and non-synchronizing;
-- the JavaScript bridge may request save/remove and receive configuration status, but it does not receive the stored credential back;
-- Web Read fetches the selected public page directly and does not require the search credential.
+- Web Search uses the same DuckDuckGo non-JavaScript HTML search surface;
+- result parsing and redirect unwrapping happen locally;
+- Web Read fetches the selected public page directly;
+- Apple Foundation Models remains the local reasoning provider.
 
 **Browser-only development**
 
-- does not persist or expose a live search-provider credential;
+- does not perform live native web search;
 - reports native Web Access unavailable;
 - shared policy/tool behavior remains testable through injected test transports.
 
-Search-provider credentials are not Vite variables, are not bundled into the application, and are not part of CrownKeep conversation/project storage or future sync.
+### DuckDuckGo is discovery, not reasoning
+
+DuckDuckGo is used only to locate public pages. CrownKeep does not delegate answer generation or reasoning to DuckDuckGo.
+
+Only the minimized query is sent to DuckDuckGo. Search results return to CrownKeep, selected pages are read directly, and the same local Anne provider produces the answer.
+
+DuckDuckGo HTML/Lite search is a public browser-facing surface rather than a formal developer API. Therefore:
+
+- parser changes, rate limits, or interactive verification may cause search failure;
+- CrownKeep reports that failure visibly;
+- CrownKeep does not bypass interactive verification;
+- CrownKeep does not silently switch to Google, Bing, Brave, Tavily, another search service, or cloud AI.
 
 ### Automatic tool use by runtime
 
 **Windows / System Foundry**
 
-- `FoundryLocalProvider` supports OpenAI-compatible structured function definitions and streamed `tool_calls`.
-- Model Analyst measures function-call capability with a harmless local-only probe after a model has already passed the normal-context benchmark.
-- Structured tool calling is enabled only when current-device benchmark evidence records support.
-- Unknown/unsupported models use the provider-neutral bounded fallback instead of silently changing models/providers.
-- The structured loop permits read-only registered tools, is capped at three tool calls/rounds, returns tool results to the same local provider, and then forces a final answer without tools at the limit.
+- structured local-model tool calling is used only when current-device evidence proves support;
+- otherwise CrownKeep uses the bounded provider-neutral read-only fallback;
+- all tool results return to the same selected local provider;
+- the current loop is capped at three read-only web operations for one turn.
 
 **Native iPhone / Apple Foundation Models**
 
-- `AppleFoundationModelsProvider` passes the same logical registered web-tool definitions through `NativeAIHost`.
-- The Swift host implements Foundation Models `Tool` objects for Web Search and Web Read.
-- Web Search is offered only when Web Access is ON and the device has a configured native search credential.
-- Web Read can be offered while Web Access is ON even when no search credential is stored.
-- Web Access OFF exposes no network tools; where the SDK surface is available, tool calling is explicitly disallowed.
-- Tool results and source/activity metadata return through the existing native stream while reasoning remains Apple on-device.
+- the same logical Web Search/Web Read definitions are exposed as Foundation Models `Tool` objects;
+- Web Access ON exposes both tools with no credential prerequisite;
+- Web Access OFF exposes no network tools;
+- reasoning remains Apple on-device.
 
 **Models without structured tool calling**
 
-- CrownKeep uses a small provider-neutral fallback that examines only the current prompt.
-- It does nothing for ordinary/local questions.
-- Clear current/external intent may trigger one search when configured.
-- Source/page-detail intent may add at most two selected page reads.
-- The fallback never sends conversation history, local knowledge, attachments, or unrelated project context.
+- the fallback examines only the current prompt;
+- ordinary/local questions make no web request;
+- current/external intent may trigger one search;
+- source-detail intent may add at most two selected page reads;
+- conversation history, local knowledge, attachments, and unrelated project context are not sent to search.
 
 ### Network and trust boundary
 
 For current Web Access tools, only these values may leave the device:
 
-- the minimized public search query sent to the configured search provider; or
+- the minimized public search query sent to DuckDuckGo; or
 - the single selected public URL requested by Web Read.
 
-The Tavily credential is sent only as authentication to Tavily by the native host. It is not model context.
+CrownKeep does **not** send entire conversation history, projects, local knowledge, attachments, files, images, or unrelated context through these tools.
 
-CrownKeep does **not** send entire conversation history, projects, local knowledge, attachments, files, images, or unrelated context through these web tools.
+Retrieved web content is treated as untrusted reference data, not instructions.
 
-Web content is treated as untrusted reference data, not instructions. Both the Windows and iPhone paths label retrieved content accordingly before returning it to the reasoning model.
+### Status and visibility
 
-Assistant messages persist tool activity separately from provider metadata. The UI can therefore show:
-
-- `◆ Local` for the reasoning provider;
-- `Used web search`;
-- `Read N webpages`;
-- failed web search/read attempts;
-- source URLs/titles.
-
-This distinction is intentional: a response may be locally reasoned while using a visible network retrieval tool.
-
-### Status bar and configuration
-
-The persistent shared status bar supplements, rather than replaces, Local AI diagnostics. It shows at a glance:
+The persistent status bar continues to show:
 
 - Quick / Balanced / Deep role where applicable;
-- actual model;
-- execution device/provider;
+- actual model and execution device/provider;
 - Ready / Working / Benchmarking / Sleeping / Error;
-- Inside the Keep versus network/cloud boundary;
+- Inside the Keep versus network boundary;
 - Web Access OFF/ON;
-- whether direct web is ready or a search credential still needs to be configured.
+- `Local reasoning · keyless web` when the native keyless web tools are available.
 
-The Local AI surface exposes the device-local search-provider setup. The credential entry is a write-only setup action from the webview's perspective: after save, UI receives status such as configured/not configured and the native credential-store name, not the stored secret.
-
-The mobile layout collapses lower-value model/execution detail while retaining state, role, privacy boundary, and Web Access.
+Assistant messages retain web-tool activity and source URLs separately from provider metadata, so a locally reasoned response can visibly show that public-web retrieval occurred.
 
 ### Image/multimodal continuation
 
 The next capability layer should reuse this same ToolRegistry/policy/result-metadata foundation:
 
 - image understanding/OCR should remain local-first where a supported device capability exists;
-- image generation is a provider-neutral tool;
+- image generation remains a provider-neutral tool;
 - any cloud image generation must expose an explicit visible boundary;
 - images/prompts must not be silently uploaded.
