@@ -2,11 +2,14 @@
 
 **Updated:** 2026-09-27
 
-## Current — Sprint 4A.4 pre-physical-acceptance freeze
+## Current — Sprint 4A.4 local convergence acceptance
 
-- **Completed baseline:** 4A.4A–4A.4J contracts, System Foundry lifecycle/alias convergence, bounded role policy, cheap legacy-cache status, Voice alias restoration, and manual registered tool proofs.
-- **Pending physical acceptance:** primary Windows laptop, AVD, then Rolo15. No model/cache deletion, migration, benchmarking, merge, or role redesign is authorized during this freeze.
-- **Deferred:** native Foundation Models automatic tool calling, image analysis, Deep validation, RDC KnowledgeSource, and explicit cloud escalation.
+- **Primary Windows laptop physically validated:** Quick startup/restore works; Balanced Mistral Nemo benchmark/promotion works; exclusive chat-model switching leaves one loaded Chat model; normal Balanced chat works with normalized single-system-message context; Windows dictation succeeds through the installed System Foundry CLI and restores the prior chat role. Laptop microphone transcription quality was mediocre, but the local speech path completed successfully.
+- **Rolo15 current build deployed:** the convergence branch built, signed, installed, and launched successfully on the physical iPhone. Current-build chat/follow-up, native dictation, persistence/restart, and manual tool revalidation remain to be recorded before acceptance is complete.
+- **AVD acceptance pending:** run the same adaptive Windows policy; do not create an AVD-specific product path.
+- **Merge/tag/cleanup remains blocked** until Rolo15 and AVD evidence is complete. Do not delete the legacy CrownKeep cache yet.
+- **Next local product work:** stable desktop storage/installer proof, then provider-neutral automatic tools and multimodal/image work. Image understanding/OCR should prefer local device capability; image generation must use an explicit tool boundary and never silently send prompts/images to cloud.
+- **Deferred from the current acceptance gate:** Deep validation, RDC KnowledgeSource connection, encrypted sync, and explicit cloud escalation.
 - The historical entries below are retained as evidence; they are not current implementation work.
 
 ## Sprint 4A.4 start — 2026-09-27
