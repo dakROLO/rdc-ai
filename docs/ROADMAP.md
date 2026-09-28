@@ -309,12 +309,13 @@ Implemented:
 - local registered-tool proofs for `/search` and `/url`;
 - no silent cloud fallback.
 
-Physical acceptance status as of 2026-09-27:
+Physical acceptance status as of 2026-09-28:
 
-- **Primary Windows laptop:** Quick startup/restore validated; Balanced Mistral Nemo benchmark, exclusive model switching, and normal chat validated; Windows dictation validated through the installed System Foundry CLI. Laptop microphone transcription quality remains a hardware/input-quality observation, not a runtime failure.
-- **Rolo15:** current convergence build installed successfully. Current-build chat, follow-up context, dictation, persistence/restart, and manual tool revalidation remain the acceptance gate.
+- **Primary Windows laptop:** Quick startup/restore and normal chat validated; Balanced Mistral Nemo CUDA benchmark, exclusive model switching, and normal chat validated; Windows dictation validated through the installed System Foundry CLI. Laptop microphone transcription quality remains a hardware/input-quality observation, not a runtime failure.
+- **Rolo15:** current convergence build physically built/signed/installed/launched; chat, follow-up context, native dictation, and restart/persistence validated successfully.
 - **AVD:** current shared adaptive Windows policy and acceptance matrix remain pending.
-- **Merge/tag/cleanup:** blocked until Rolo15 and AVD acceptance evidence is recorded.
+- **Web Access package:** implementation is on the shared branch; live gateway deployment/configuration and OFF/ON physical validation remain pending on Windows laptop, Rolo15, and AVD.
+- **Merge/tag/cleanup:** blocked until remaining physical acceptance is recorded and explicit approval is given.
 
 Exit criteria:
 
@@ -339,13 +340,23 @@ Delivered:
 - Windows Voice uses the System Foundry speech model path and restores the previous chat alias;
 - one-system-message local chat normalization for stricter local chat templates;
 - failed provider messages are excluded from future inference context;
-- `ToolRegistry`, `KnowledgeSource`, local `/search`, and read-only `/url` proof.
+- `ToolRegistry` and `KnowledgeSource` foundations plus local `/search` diagnostics;
+- restored persistent/glanceable role/model/execution/privacy status bar;
+- persisted **Web Access OFF/ON**, default OFF, enforced at the ToolRegistry boundary;
+- provider-neutral `WebSearchTool` + `WebReadTool` contracts with source/boundary metadata;
+- narrow provider-neutral CrownKeep Web Gateway contract; first server adapter uses Tavily without embedding its key in Windows/iPhone clients;
+- bounded automatic web use: structured local-model function calls when support is measured, safe read-only fallback otherwise;
+- Apple Foundation Models native `Tool` bridge for the same logical web capabilities;
+- visible successful/failed network-tool activity while the assistant message remains marked with its actual local reasoning provider.
 
 Remaining acceptance:
 
-- finish Rolo15 current-build validation;
-- run the same shared Windows acceptance policy in AVD;
-- record the final local-baseline evidence before branch merge/tag/cleanup.
+- deploy/configure a live CrownKeep Web Gateway for test builds;
+- prove **Web Access OFF** causes zero search/page-read calls;
+- prove **Web Access ON** does not search for a local-only question, does search for a current-information question, and can search then read selected webpages;
+- physically validate the new web/status-bar package on the primary Windows laptop and Rolo15;
+- run the same shared Windows baseline + Web Access acceptance policy in AVD;
+- record final evidence before branch merge/tag/cleanup; do not merge/tag/delete branches or remove legacy cache before explicit approval.
 
 ---
 
@@ -370,23 +381,24 @@ Exit criteria:
 
 ---
 
-### Sprint 4A.6 — Provider-neutral tools + multimodal proof — **PLANNED**
+### Sprint 4A.6 — Multimodal + image-tool proof — **PLANNED**
 
-**Outcome:** Add useful image and tool capabilities without coupling CrownKeep conversations to one model or silently moving private work off-device.
+**Outcome:** Extend the now-established provider-neutral tool boundary to useful image capabilities without silently moving private work off-device.
+
+The automatic/tool-registry foundation and public-web tools moved forward into Sprint 4A.4. This sprint should build on that foundation rather than creating a second agent system.
 
 Deliverables:
 
-- model-selected tool invocation behind the existing `ToolRegistry`;
 - photo/file input bridge for supported native hosts;
 - local-first image understanding/OCR path where the device supports it;
 - image-generation tool contract with a local generator when practical and an explicit user-visible cloud boundary when cloud generation is chosen;
-- tool-result context injected back into the currently selected reasoning provider;
-- per-tool network/locality metadata visible to CrownKeep.
+- tool-result context returned to the currently selected reasoning provider;
+- explicit per-tool local/network/cloud metadata and user-visible upload boundary.
 
 Exit criteria:
 
 - a user can attach/select an image and obtain local understanding/OCR on a supported device;
-- Anne can invoke a registered tool without changing the conversation's reasoning provider;
+- image understanding remains local when a supported local capability is selected;
 - image generation never silently sends prompts/images to a cloud service;
 - unsupported local image capabilities fail clearly rather than pretending they are available.
 
