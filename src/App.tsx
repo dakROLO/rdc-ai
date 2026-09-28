@@ -45,8 +45,12 @@ import { IndexedDbConversationRepository } from './storage/IndexedDbConversation
 import { createId } from './utils/id.ts'
 import { runToolCommand, toolRegistry } from './tools/defaultTools.ts'
 import { runAutomaticReadOnlyTools } from './tools/automaticToolUse.ts'
-import { streamStructuredToolLoop } from './tools/structuredToolLoop.ts'
+import {
+  streamStructuredToolLoop,
+  structuredToolDefinitions,
+} from './tools/structuredToolLoop.ts'
 import { readWebAccessMode, saveWebAccessMode } from './web/WebAccess.ts'
+import { configuredWebGatewayEndpoint } from './web/WebGatewayClient.ts'
 
 const primaryProvider = new MockProvider()
 const developmentAlternateProvider = new MockProvider({
@@ -1405,6 +1409,9 @@ export default function App() {
     const structuredToolsProven =
       selectedProviderId === 'foundry-local' &&
       loadedChatCandidate?.supportsToolCalling === true
+    const appleNativeToolsReady =
+      selectedProviderId === 'apple-foundation-models' &&
+      Boolean(configuredWebGatewayEndpoint())
     setToolBusy(true)
     try {
       const manualTool = await runToolCommand(text)
@@ -1424,7 +1431,7 @@ export default function App() {
           `tool=${manualTool.tool.id} network=${manualTool.tool.requiresNetwork}`,
           traceId,
         )
-      } else if (!structuredToolsProven) {
+      } else if (!structuredToolsProven && !appleNativeToolsReady) {
         const automatic = await runAutomaticReadOnlyTools(text)
         toolContext = automatic.context
         toolActivity = automatic.activities
@@ -1606,6 +1613,13 @@ export default function App() {
         modelId: requestModelId,
         messages: requestMessages,
         traceId,
+        ...(appleNativeToolsReady && webAccess === 'on'
+          ? {
+              tools: structuredToolDefinitions(toolRegistry).filter(
+                (tool) => tool.id === 'web-search' || tool.id === 'web-read',
+              ),
+            }
+          : {}),
       }
       const responseStream =
         structuredToolsProven && !manualToolUsed
@@ -1648,6 +1662,17 @@ export default function App() {
           )
         }
         if (chunk.usage) latestUsage = chunk.usage
+        if (chunk.toolActivities?.length) {
+          toolActivity = [...toolActivity, ...chunk.toolActivities]
+          for (const activity of chunk.toolActivities) {
+            traceTerminal(
+              'tool',
+              'complete',
+              `tool=${activity.toolId} network=${activity.requiresNetwork} sources=${activity.sources.length} native=true`,
+              traceId,
+            )
+          }
+        }
 
         assistantContent += chunk.text
         const now = performance.now()
@@ -1671,6 +1696,7 @@ export default function App() {
               ? {
                   ...message,
                   content: assistantContent,
+                  toolActivity: toolActivity.length ? toolActivity : undefined,
                   excludedFromContext: runOutcome === 'error' ? true : message.excludedFromContext,
                 }
               : message,
