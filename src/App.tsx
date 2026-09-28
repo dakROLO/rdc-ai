@@ -1487,13 +1487,16 @@ export default function App() {
           (message) => !message.excludedFromContext && message.content.trim(),
         ),
       )
+      const systemContext = [
+        ANNE_SYSTEM_PROMPT,
+        toolContext,
+        buildTemporalContext(conversation, contextMessages, text),
+      ]
+        .filter(Boolean)
+        .join('\n\n')
+
       const requestMessages = [
-        { role: 'system' as const, content: ANNE_SYSTEM_PROMPT },
-        ...(toolContext ? [{ role: 'system' as const, content: toolContext }] : []),
-        {
-          role: 'system' as const,
-          content: buildTemporalContext(conversation, contextMessages, text),
-        },
+        { role: 'system' as const, content: systemContext },
         ...contextMessages.map((message) => ({
           role: message.role,
           content: cleanTemporalArtifact(message.content),
