@@ -17,9 +17,9 @@ flowchart LR
         TR["ToolRegistry + Web Access Policy"]
     end
 
-    subgraph WebBoundary["Optional read-only network tool boundary"]
-        WG["CrownKeep Web Gateway"]
-        WEB["Public Web"]
+    subgraph WebBoundary["Optional native read-only network tool boundary"]
+        NW["Native Web Adapter\n+ Secure Credential Store"]
+        WEB["Public Web / Search Provider"]
     end
 
     subgraph Azure["RDC Azure Tenant"]
@@ -36,8 +36,8 @@ flowchart LR
     PR --> AF
     UI --> CP
     UI --> TR
-    TR -->|Web Access ON only| WG
-    WG --> WEB
+    TR -->|Web Access ON only| NW
+    NW --> WEB
 
     AU --> API
     SY --> API
@@ -60,6 +60,7 @@ Owns:
 - local/cloud message metadata;
 - sync encryption/decryption;
 - cloud escalation confirmation;
+- native secure storage for user-supplied Web Search credentials;
 - offline usability.
 
 Must not contain:
