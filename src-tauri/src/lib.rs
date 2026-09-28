@@ -1174,7 +1174,8 @@ pub fn run() {
             system_foundry::crownkeep_system_foundry_activate_model,
             system_foundry::crownkeep_system_foundry_load_model,
             system_foundry::crownkeep_system_foundry_unload_model,
-            system_foundry::crownkeep_system_foundry_remove_cached_model
+            system_foundry::crownkeep_system_foundry_remove_cached_model,
+            system_foundry::crownkeep_system_foundry_transcribe
         ])
         .run(tauri::generate_context!())
         .expect("error while running CrownKeep");
