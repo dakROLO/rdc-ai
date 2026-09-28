@@ -26,6 +26,14 @@ function normalizeGatewayEndpoint(value?: string): string | undefined {
   return trimmed || undefined
 }
 
+export function configuredWebGatewayEndpoint(): string | undefined {
+  const configured =
+    typeof import.meta.env === 'object'
+      ? import.meta.env.VITE_CROWNKEEP_WEB_GATEWAY_URL
+      : undefined
+  return normalizeGatewayEndpoint(configured)
+}
+
 function safeHttpUrl(value: string): string {
   const parsed = new URL(value)
   if (!['http:', 'https:'].includes(parsed.protocol)) {
@@ -57,12 +65,8 @@ export class WebGatewayClient {
   private readonly fetchImpl: typeof fetch
 
   constructor(options: WebGatewayClientOptions = {}) {
-    const configuredEndpoint =
-      typeof import.meta.env === 'object'
-        ? import.meta.env.VITE_CROWNKEEP_WEB_GATEWAY_URL
-        : undefined
     this.endpoint = normalizeGatewayEndpoint(
-      options.endpoint ?? configuredEndpoint,
+      options.endpoint ?? configuredWebGatewayEndpoint(),
     )
     this.fetchImpl = options.fetchImpl ?? fetch
   }
