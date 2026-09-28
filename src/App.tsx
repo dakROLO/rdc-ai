@@ -2603,15 +2603,11 @@ export default function App() {
       </aside>
 
       <main className="workspace">
-        <header className="topbar">
-          <div className="conversation-title">
-            <p className="eyebrow">Anne · Local assistant</p>
-            <h2>{activeConversation?.title ?? 'Opening CrownKeep…'}</h2>
-          </div>
-
-        </header>
-
         <section className="keep-status-bar" aria-label="CrownKeep runtime and privacy status">
+          <div className="keep-status-title" title={activeConversation?.title ?? 'Opening CrownKeep…'}>
+            <span>Chat</span>
+            <strong>{activeConversation?.title ?? 'Opening CrownKeep…'}</strong>
+          </div>
           <div className={`keep-status-state ${glanceState.toLowerCase()}`}>
             <span className="status-dot" aria-hidden="true" />
             <strong>{glanceState}</strong>
@@ -2640,22 +2636,288 @@ export default function App() {
                 : 'Network tools off'}
             </strong>
           </div>
-          <button
-            type="button"
-            className={`web-access-toggle ${webAccess === 'on' ? 'on' : 'off'}`}
-            aria-pressed={webAccess === 'on'}
-            onClick={() => setWebAccess((current) => (current === 'on' ? 'off' : 'on'))}
-            disabled={toolBusy || isGenerating}
-            title={
-              webAccess === 'on'
-                ? 'Web tools may send only the needed search query or selected URL outside the device.'
-                : 'Network search and webpage-read tools are blocked.'
-            }
-          >
-            <span>Web Access</span>
-            <strong>{webAccess.toUpperCase()}</strong>
-          </button>
-          <div className="keep-status-settings">
+        </section>
+                )}
+
+                {selectedProviderId === 'foundry-local' && models.length === 0 && providerAvailability?.available && (
+                  <p className="runtime-warning">
+                    Foundry Local is reachable, but CrownKeep cannot see a model ready for chat.
+                  </p>
+                )}
+
+                <details className="diagnostics-disclosure">
+                  <summary>Diagnostics</summary>
+                  <div className="diagnostics-panel">
+                    <div className="diagnostics-heading-row">
+                      <strong>Local AI diagnostics</strong>
+                      <button
+                        type="button"
+                        className="diagnostics-close-button"
+                        onClick={(event) =>
+                          event.currentTarget.closest('details')?.removeAttribute('open')
+                        }
+                      >
+                        Close
+                      </button>
+                    </div>
+                    <div className="diagnostics-grid">
+                      <div><span>Last result</span><strong>{lastRun?.outcome ?? 'No run yet'}</strong></div>
+                      <div><span>First token</span><strong>{formatDuration(lastRun?.firstTokenMs)}</strong></div>
+                      <div><span>Total time</span><strong>{formatDuration(lastRun?.totalMs)}</strong></div>
+                      <div><span>Output rate</span><strong>{formatTokenRate(lastRun)}</strong></div>
+                      <div><span>Prompt tokens</span><strong>{lastRun?.promptTokens ?? '—'}</strong></div>
+                      <div><span>Completion tokens</span><strong>{lastRun?.completionTokens ?? '—'}</strong></div>
+                      <div><span>Runtime</span><strong>{runtimeSnapshot?.authority ?? 'Local runtime'}</strong></div>
+                      <div><span>Runtime version</span><strong>{runtimeSnapshot?.runtimeVersion ?? '—'}</strong></div>
+                    </div>
+                    <p className={`performance-guidance ${
+                      performanceGuidance?.includes('slow') ||
+                      performanceGuidance?.includes('low') ||
+                      performanceGuidance?.includes('failed')
+                        ? 'warning'
+                        : ''
+                    }`}>
+                      {performanceGuidance ??
+                        'Run a local response to capture first-token time, total time, and token usage.'}
+                    </p>
+                    {runtimeCheckError && (
+                      <p className="runtime-setup-note warning">Provider detail · {runtimeCheckError}</p>
+                    )}
+                    {lastRun && (
+                      <p className="diagnostic-footnote">
+                        {lastRun.modelId}
+                        {lastRun.runtimeDevice ? ` · ${lastRun.runtimeDevice}` : ''}
+                        {lastRun.totalTokens ? ` · ${lastRun.totalTokens} total tokens` : ''}
+                      </p>
+                    )}
+                    {runtimeSnapshot?.cacheLocation && (
+                      <p className="diagnostic-footnote">System Foundry cache · {runtimeSnapshot.cacheLocation}</p>
+                    )}
+                    {runtimeSnapshot?.legacyCacheLocation && (
+                      <p className="diagnostic-footnote">Legacy CrownKeep cache (not used; cleanup pending validation) · {runtimeSnapshot.legacyCacheLocation}</p>
+                    )}
+                    {runtimeSnapshot?.legacyCache && (
+                      <>
+                        <p className="diagnostic-footnote">
+                          Legacy cache inventory · {runtimeSnapshot.legacyCache.exists ? `${runtimeSnapshot.legacyCache.entryCount || 'not yet scanned'} package folder(s)${runtimeSnapshot.legacyCache.approximateSizeBytes ? ` · ${(runtimeSnapshot.legacyCache.approximateSizeBytes / 1024 / 1024).toFixed(1)} MB` : ''}` : 'not present'} · {runtimeSnapshot.legacyCache.status} · cleanup {runtimeSnapshot.legacyCache.cleanup}
+                        </p>
+                        {runtimeSnapshot.legacyCache.exists && localRuntimeManager.inspectLegacyCache && (
+                          <button type="button" className="runtime-native-button secondary" onClick={() => void localRuntimeManager.inspectLegacyCache!().then((legacyCache) => setRuntimeSnapshot((current) => current ? { ...current, legacyCache } : current))}>
+                            Inspect legacy cache details
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </details>
+              </div>
+            </details>
+          </div>
+        </section>
+
+        <section
+          className="conversation"
+          aria-live="polite"
+          ref={conversationScrollRef}
+          onScroll={updateScrollState}
+        >
+          {isLoading ? (
+            <p className="loading-copy">Opening your local Keep…</p>
+          ) : (
+            messages.map((message) => (
+              <article
+                className={`message ${message.role} ${message.excludedFromContext ? 'context-excluded' : ''}`}
+                key={message.id}
+              >
+                <div className="message-meta">
+                  <strong>{message.role === 'user' ? 'You' : 'Anne'}</strong>
+                  <div className="message-meta-actions">
+                    <time dateTime={message.createdAt} title={new Date(message.createdAt).toString()}>
+                      {formatMessageTime(message.createdAt)}
+                    </time>
+                    {message.role === 'assistant' && message.providerId && (
+                      <span title={`${message.providerId} · ${message.modelId ?? 'unknown'}`}>
+                        ◆ {message.inferenceLocation === 'cloud' ? 'Cloud' : 'Local'}
+                      </span>
+                    )}
+                    {message.role === 'assistant' &&
+                      message.toolActivity?.some(
+                        (activity) =>
+                          activity.toolId === 'web-search' &&
+                          activity.outcome === 'error',
+                      ) && (
+                        <span className="tool-use-badge error">↗ Web search failed</span>
+                      )}
+                    {message.role === 'assistant' &&
+                      message.toolActivity?.some(
+                        (activity) =>
+                          activity.toolId === 'web-search' &&
+                          activity.outcome !== 'error',
+                      ) && (
+                        <span className="tool-use-badge">↗ Used web search</span>
+                      )}
+                    {message.role === 'assistant' &&
+                      (message.toolActivity?.filter(
+                        (activity) =>
+                          activity.toolId === 'web-read' &&
+                          activity.outcome !== 'error',
+                      ).length ?? 0) > 0 && (
+                        <span className="tool-use-badge">
+                          ↗ Read{' '}
+                          {message.toolActivity?.filter(
+                            (activity) =>
+                              activity.toolId === 'web-read' &&
+                              activity.outcome !== 'error',
+                          ).length}{' '}
+                          {(message.toolActivity?.filter(
+                            (activity) =>
+                              activity.toolId === 'web-read' &&
+                              activity.outcome !== 'error',
+                          ).length ?? 0) === 1
+                            ? 'webpage'
+                            : 'webpages'}
+                        </span>
+                      )}
+                    {message.role === 'assistant' &&
+                      message.toolActivity?.some(
+                        (activity) =>
+                          activity.toolId === 'web-read' &&
+                          activity.outcome === 'error',
+                      ) && (
+                        <span className="tool-use-badge error">↗ Web read failed</span>
+                      )}
+                    {message.role === 'user' && (
+                      <button
+                        className="message-rerun-button"
+                        type="button"
+                        onClick={() => rerunMessage(message)}
+                        disabled={
+                          isGenerating ||
+                          speechBusy ||
+                          isRuntimeActionRunning ||
+                          isRuntimeCheckRunning ||
+                          providerAvailability?.available === false ||
+                          !message.content.trim()
+                        }
+                        title="Send this earlier prompt again using the current model and current conversation context"
+                      >
+                        ↻ Rerun
+                      </button>
+                    )}
+                    <button
+                      className="message-context-button"
+                      type="button"
+                      onClick={() => void toggleMessageContext(message)}
+                      disabled={isGenerating || speechBusy || !message.content.trim()}
+                      title={
+                        message.excludedFromContext
+                          ? 'Include this message in future Anne context'
+                          : 'Keep this message in history but omit it from future Anne context'
+                      }
+                    >
+                      {message.excludedFromContext ? '↺ Include' : '⊘ Context'}
+                    </button>
+                  </div>
+                </div>
+                <div className="message-content">
+                  {message.content ? (
+                    parseMessageContent(message.content).map((segment, index) => {
+                      if (segment.type === 'code') {
+                        const codeKey = `${message.id}:${index}`
+                        return (
+                          <section className="code-block" key={codeKey}>
+                            <div className="code-block-header">
+                              <span>{segment.language ?? 'code'}</span>
+                              <button
+                                type="button"
+                                onClick={() => void copyCode(segment.content, codeKey)}
+                              >
+                                {copiedCodeKey === codeKey ? 'Copied' : 'Copy'}
+                              </button>
+                            </div>
+                            <pre><code>{segment.content}</code></pre>
+                          </section>
+                        )
+                      }
+
+                      return segment.content ? (
+                        <p key={`${message.id}:text:${index}`}>{segment.content}</p>
+                      ) : null
+                    })
+                  ) : (
+                    <p>…</p>
+                  )}
+                </div>
+                {message.toolActivity?.some((activity) => activity.sources.length > 0) && (
+                  <details className="tool-sources">
+                    <summary>Web sources</summary>
+                    <div>
+                      {message.toolActivity
+                        .flatMap((activity) => activity.sources)
+                        .filter(
+                          (source, index, sources) =>
+                            sources.findIndex((candidate) => candidate.url === source.url) === index,
+                        )
+                        .map((source) => (
+                          <a
+                            href={source.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            key={source.url}
+                          >
+                            {source.title || source.url}
+                          </a>
+                        ))}
+                    </div>
+                  </details>
+                )}
+                {message.excludedFromContext && (
+                  <small className="context-state">Excluded from future inference context</small>
+                )}
+              </article>
+            ))
+          )}
+          {!isNearBottom && (
+            <button
+              className={`scroll-latest-button ${responseFinishedAway ? 'finished' : ''}`}
+              type="button"
+              onClick={() => scrollToBottom()}
+            >
+              {responseFinishedAway ? '↓ Anne finished' : '↓ Latest'}
+            </button>
+          )}
+        </section>
+
+        <section className="composer-wrap">
+          <div className="cloud-row">
+            <button
+              className="secondary-button cloud-button"
+              type="button"
+              disabled
+              title="Scheduled for a later phase"
+            >
+              Open to Cloud
+            </button>
+            <div className="composer-utility-actions">
+              <span className="local-storage-state">
+                {activeConversation?.syncState === 'local-only' ? 'Stored on this device' : status}
+              </span>
+              <button
+                type="button"
+                className={`web-access-toggle ${webAccess === 'on' ? 'on' : 'off'}`}
+                aria-pressed={webAccess === 'on'}
+                onClick={() => setWebAccess((current) => (current === 'on' ? 'off' : 'on'))}
+                disabled={toolBusy || isGenerating}
+                title={
+                  webAccess === 'on'
+                    ? 'Web tools may send only the needed search query or selected URL outside the device.'
+                    : 'Network search and webpage-read tools are blocked.'
+                }
+              >
+                <span>Web Access</span>
+                <strong>{webAccess.toUpperCase()}</strong>
+              </button>
+          <div className="composer-keep-settings">
             <details className="local-ai-menu">
               <summary
                 className="keep-settings-button"
@@ -3047,269 +3309,8 @@ export default function App() {
                           ? 'CrownKeep manages the Foundry Local runtime and model lifecycle on this device.'
                           : 'Native Windows host connected.'}
                     </p>
-                  </section>
-                )}
-
-                {selectedProviderId === 'foundry-local' && models.length === 0 && providerAvailability?.available && (
-                  <p className="runtime-warning">
-                    Foundry Local is reachable, but CrownKeep cannot see a model ready for chat.
-                  </p>
-                )}
-
-                <details className="diagnostics-disclosure">
-                  <summary>Diagnostics</summary>
-                  <div className="diagnostics-panel">
-                    <div className="diagnostics-heading-row">
-                      <strong>Local AI diagnostics</strong>
-                      <button
-                        type="button"
-                        className="diagnostics-close-button"
-                        onClick={(event) =>
-                          event.currentTarget.closest('details')?.removeAttribute('open')
-                        }
-                      >
-                        Close
-                      </button>
-                    </div>
-                    <div className="diagnostics-grid">
-                      <div><span>Last result</span><strong>{lastRun?.outcome ?? 'No run yet'}</strong></div>
-                      <div><span>First token</span><strong>{formatDuration(lastRun?.firstTokenMs)}</strong></div>
-                      <div><span>Total time</span><strong>{formatDuration(lastRun?.totalMs)}</strong></div>
-                      <div><span>Output rate</span><strong>{formatTokenRate(lastRun)}</strong></div>
-                      <div><span>Prompt tokens</span><strong>{lastRun?.promptTokens ?? '—'}</strong></div>
-                      <div><span>Completion tokens</span><strong>{lastRun?.completionTokens ?? '—'}</strong></div>
-                      <div><span>Runtime</span><strong>{runtimeSnapshot?.authority ?? 'Local runtime'}</strong></div>
-                      <div><span>Runtime version</span><strong>{runtimeSnapshot?.runtimeVersion ?? '—'}</strong></div>
-                    </div>
-                    <p className={`performance-guidance ${
-                      performanceGuidance?.includes('slow') ||
-                      performanceGuidance?.includes('low') ||
-                      performanceGuidance?.includes('failed')
-                        ? 'warning'
-                        : ''
-                    }`}>
-                      {performanceGuidance ??
-                        'Run a local response to capture first-token time, total time, and token usage.'}
-                    </p>
-                    {runtimeCheckError && (
-                      <p className="runtime-setup-note warning">Provider detail · {runtimeCheckError}</p>
-                    )}
-                    {lastRun && (
-                      <p className="diagnostic-footnote">
-                        {lastRun.modelId}
-                        {lastRun.runtimeDevice ? ` · ${lastRun.runtimeDevice}` : ''}
-                        {lastRun.totalTokens ? ` · ${lastRun.totalTokens} total tokens` : ''}
-                      </p>
-                    )}
-                    {runtimeSnapshot?.cacheLocation && (
-                      <p className="diagnostic-footnote">System Foundry cache · {runtimeSnapshot.cacheLocation}</p>
-                    )}
-                    {runtimeSnapshot?.legacyCacheLocation && (
-                      <p className="diagnostic-footnote">Legacy CrownKeep cache (not used; cleanup pending validation) · {runtimeSnapshot.legacyCacheLocation}</p>
-                    )}
-                    {runtimeSnapshot?.legacyCache && (
-                      <>
-                        <p className="diagnostic-footnote">
-                          Legacy cache inventory · {runtimeSnapshot.legacyCache.exists ? `${runtimeSnapshot.legacyCache.entryCount || 'not yet scanned'} package folder(s)${runtimeSnapshot.legacyCache.approximateSizeBytes ? ` · ${(runtimeSnapshot.legacyCache.approximateSizeBytes / 1024 / 1024).toFixed(1)} MB` : ''}` : 'not present'} · {runtimeSnapshot.legacyCache.status} · cleanup {runtimeSnapshot.legacyCache.cleanup}
-                        </p>
-                        {runtimeSnapshot.legacyCache.exists && localRuntimeManager.inspectLegacyCache && (
-                          <button type="button" className="runtime-native-button secondary" onClick={() => void localRuntimeManager.inspectLegacyCache!().then((legacyCache) => setRuntimeSnapshot((current) => current ? { ...current, legacyCache } : current))}>
-                            Inspect legacy cache details
-                          </button>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </details>
-              </div>
-            </details>
-          </div>
-        </section>
-
-        <section
-          className="conversation"
-          aria-live="polite"
-          ref={conversationScrollRef}
-          onScroll={updateScrollState}
-        >
-          {isLoading ? (
-            <p className="loading-copy">Opening your local Keep…</p>
-          ) : (
-            messages.map((message) => (
-              <article
-                className={`message ${message.role} ${message.excludedFromContext ? 'context-excluded' : ''}`}
-                key={message.id}
-              >
-                <div className="message-meta">
-                  <strong>{message.role === 'user' ? 'You' : 'Anne'}</strong>
-                  <div className="message-meta-actions">
-                    <time dateTime={message.createdAt} title={new Date(message.createdAt).toString()}>
-                      {formatMessageTime(message.createdAt)}
-                    </time>
-                    {message.role === 'assistant' && message.providerId && (
-                      <span title={`${message.providerId} · ${message.modelId ?? 'unknown'}`}>
-                        ◆ {message.inferenceLocation === 'cloud' ? 'Cloud' : 'Local'}
-                      </span>
-                    )}
-                    {message.role === 'assistant' &&
-                      message.toolActivity?.some(
-                        (activity) =>
-                          activity.toolId === 'web-search' &&
-                          activity.outcome === 'error',
-                      ) && (
-                        <span className="tool-use-badge error">↗ Web search failed</span>
-                      )}
-                    {message.role === 'assistant' &&
-                      message.toolActivity?.some(
-                        (activity) =>
-                          activity.toolId === 'web-search' &&
-                          activity.outcome !== 'error',
-                      ) && (
-                        <span className="tool-use-badge">↗ Used web search</span>
-                      )}
-                    {message.role === 'assistant' &&
-                      (message.toolActivity?.filter(
-                        (activity) =>
-                          activity.toolId === 'web-read' &&
-                          activity.outcome !== 'error',
-                      ).length ?? 0) > 0 && (
-                        <span className="tool-use-badge">
-                          ↗ Read{' '}
-                          {message.toolActivity?.filter(
-                            (activity) =>
-                              activity.toolId === 'web-read' &&
-                              activity.outcome !== 'error',
-                          ).length}{' '}
-                          {(message.toolActivity?.filter(
-                            (activity) =>
-                              activity.toolId === 'web-read' &&
-                              activity.outcome !== 'error',
-                          ).length ?? 0) === 1
-                            ? 'webpage'
-                            : 'webpages'}
-                        </span>
-                      )}
-                    {message.role === 'assistant' &&
-                      message.toolActivity?.some(
-                        (activity) =>
-                          activity.toolId === 'web-read' &&
-                          activity.outcome === 'error',
-                      ) && (
-                        <span className="tool-use-badge error">↗ Web read failed</span>
-                      )}
-                    {message.role === 'user' && (
-                      <button
-                        className="message-rerun-button"
-                        type="button"
-                        onClick={() => rerunMessage(message)}
-                        disabled={
-                          isGenerating ||
-                          speechBusy ||
-                          isRuntimeActionRunning ||
-                          isRuntimeCheckRunning ||
-                          providerAvailability?.available === false ||
-                          !message.content.trim()
-                        }
-                        title="Send this earlier prompt again using the current model and current conversation context"
-                      >
-                        ↻ Rerun
-                      </button>
-                    )}
-                    <button
-                      className="message-context-button"
-                      type="button"
-                      onClick={() => void toggleMessageContext(message)}
-                      disabled={isGenerating || speechBusy || !message.content.trim()}
-                      title={
-                        message.excludedFromContext
-                          ? 'Include this message in future Anne context'
-                          : 'Keep this message in history but omit it from future Anne context'
-                      }
-                    >
-                      {message.excludedFromContext ? '↺ Include' : '⊘ Context'}
-                    </button>
-                  </div>
-                </div>
-                <div className="message-content">
-                  {message.content ? (
-                    parseMessageContent(message.content).map((segment, index) => {
-                      if (segment.type === 'code') {
-                        const codeKey = `${message.id}:${index}`
-                        return (
-                          <section className="code-block" key={codeKey}>
-                            <div className="code-block-header">
-                              <span>{segment.language ?? 'code'}</span>
-                              <button
-                                type="button"
-                                onClick={() => void copyCode(segment.content, codeKey)}
-                              >
-                                {copiedCodeKey === codeKey ? 'Copied' : 'Copy'}
-                              </button>
-                            </div>
-                            <pre><code>{segment.content}</code></pre>
-                          </section>
-                        )
-                      }
-
-                      return segment.content ? (
-                        <p key={`${message.id}:text:${index}`}>{segment.content}</p>
-                      ) : null
-                    })
-                  ) : (
-                    <p>…</p>
-                  )}
-                </div>
-                {message.toolActivity?.some((activity) => activity.sources.length > 0) && (
-                  <details className="tool-sources">
-                    <summary>Web sources</summary>
-                    <div>
-                      {message.toolActivity
-                        .flatMap((activity) => activity.sources)
-                        .filter(
-                          (source, index, sources) =>
-                            sources.findIndex((candidate) => candidate.url === source.url) === index,
-                        )
-                        .map((source) => (
-                          <a
-                            href={source.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            key={source.url}
-                          >
-                            {source.title || source.url}
-                          </a>
-                        ))}
-                    </div>
-                  </details>
-                )}
-                {message.excludedFromContext && (
-                  <small className="context-state">Excluded from future inference context</small>
-                )}
-              </article>
-            ))
-          )}
-          {!isNearBottom && (
-            <button
-              className={`scroll-latest-button ${responseFinishedAway ? 'finished' : ''}`}
-              type="button"
-              onClick={() => scrollToBottom()}
-            >
-              {responseFinishedAway ? '↓ Anne finished' : '↓ Latest'}
-            </button>
-          )}
-        </section>
-
-        <section className="composer-wrap">
-          <div className="cloud-row">
-            <button
-              className="secondary-button cloud-button"
-              type="button"
-              disabled
-              title="Scheduled for a later phase"
-            >
-              Open to Cloud
-            </button>
-            <span>{activeConversation?.syncState === 'local-only' ? 'Stored on this device' : status}</span>
+          
+            </div>
           </div>
 
           <form className="composer" ref={composerFormRef} onSubmit={sendMessage}>
