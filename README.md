@@ -14,7 +14,7 @@ The visual above is shared with the CrownKeep app. Detailed sprint definitions a
 
 ## Current status
 
-**Phase 4A — Local Platform Convergence / Sprint 4A.4 acceptance is active.**
+**Windows convergence checkpoint complete; iPhone physical Web Access validation is next.**
 
 Current baseline:
 
@@ -31,7 +31,7 @@ Current baseline:
 - AVD acceptance remains pending under the same adaptive Windows policy;
 - no silent cloud-model fallback and no live RDC customer-data connection.
 
-Next acceptance work is to physically validate keyless DuckDuckGo Web Access on the Windows laptop and Rolo15, and then run the same shared acceptance policy on AVD. Multimodal/image work follows this web/tool foundation and remains an explicit privacy boundary.
+Windows keyless DuckDuckGo Web Access has now been physically exercised. The next acceptance work is Rolo15 physical Web Access + retained-context validation. Natural-language web-intent tuning, cross-model retained-web grounding, and rare Foundry stream retries are documented carry-forward items rather than Windows merge blockers. AVD remains deferred under the same adaptive Windows policy.
 
 ## Privacy boundary
 
