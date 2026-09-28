@@ -83,25 +83,15 @@ class WindowsSpeechInput implements SpeechInputProvider {
         const loaded = await invoke<RuntimeModelCandidate[]>('crownkeep_system_foundry_models')
         const speech = activeSpeechVariant(loaded, this.model)
         if (!speech) throw new Error(`System Foundry did not expose a loaded Speech variant for ${this.model}.`)
-      const endpoint = String(await invoke('crownkeep_system_foundry_endpoint'))
-      const body = new FormData()
-      body.append('file', new Blob([new Uint8Array(this.wav)], { type: 'audio/wav' }), 'dictation.wav')
-        body.append('model', speech.id)
-      const transcriptionUrl = `${endpoint.replace(/\/$/, '')}/v1/audio/transcriptions`
-      const response = await fetch(transcriptionUrl, { method: 'POST', body, signal: AbortSignal.timeout(90_000) })
-      if (!response.ok) {
-        let detail = ''
-        try {
-          detail = (await response.text()).trim()
-        } catch {
-          detail = ''
-        }
-        throw new Error(
-          `System Foundry transcription failed (${response.status}) at ${transcriptionUrl}${detail ? `: ${detail}` : ''}.`,
-        )
+      const payload = await invoke<{ text: string; modelId: string }>(
+        'crownkeep_system_foundry_transcribe',
+        { modelId: speech.id, wav: this.wav },
+      )
+      const result = {
+        text: payload.text ?? '',
+        modelId: payload.modelId || speech.id,
+        elapsedMs: performance.now() - started,
       }
-      const payload = await response.json() as { text?: string; model?: string }
-        const result = { text: payload.text ?? '', modelId: payload.model ?? speech.id, elapsedMs: performance.now() - started }
       if (!result.text) throw new Error('System Foundry returned no transcript.')
       if (epoch !== this.epoch) throw new Error('Dictation cancelled.')
       // Store only performance metadata; never audio or transcript text.
