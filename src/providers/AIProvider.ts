@@ -15,9 +15,32 @@ export interface AIModel {
   variantId?: string
 }
 
+export interface ChatToolCall {
+  id: string
+  name: string
+  arguments: string
+}
+
+export interface ChatToolCallDelta {
+  index: number
+  id?: string
+  name?: string
+  arguments?: string
+}
+
+export interface ChatToolDefinition {
+  id: string
+  functionName: string
+  description: string
+  inputSchema: Record<string, unknown>
+}
+
 export interface ChatMessageInput {
-  role: MessageRole
+  role: MessageRole | 'tool'
   content: string
+  name?: string
+  toolCallId?: string
+  toolCalls?: ChatToolCall[]
 }
 
 export interface ChatRequest {
@@ -26,6 +49,8 @@ export interface ChatRequest {
   maxTokens?: number
   context?: unknown
   traceId?: string
+  tools?: ChatToolDefinition[]
+  toolChoice?: 'auto' | 'none'
 }
 
 export interface TokenUsage {
@@ -38,6 +63,7 @@ export interface ChatChunk {
   text: string
   done?: boolean
   usage?: TokenUsage
+  toolCallDeltas?: ChatToolCallDelta[]
 }
 
 export interface AIProvider {
