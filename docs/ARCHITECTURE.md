@@ -14,6 +14,12 @@ flowchart LR
         SY["Sync Client"]
         AU["Entra Auth Client"]
         CP["ContextProvider Interface"]
+        TR["ToolRegistry + Web Access Policy"]
+    end
+
+    subgraph WebBoundary["Optional read-only network tool boundary"]
+        WG["CrownKeep Web Gateway"]
+        WEB["Public Web"]
     end
 
     subgraph Azure["RDC Azure Tenant"]
@@ -29,6 +35,9 @@ flowchart LR
     PR --> WL
     PR --> AF
     UI --> CP
+    UI --> TR
+    TR -->|Web Access ON only| WG
+    WG --> WEB
 
     AU --> API
     SY --> API
@@ -92,6 +101,7 @@ export interface AIProvider {
 
   getAvailability(): Promise<ProviderAvailability>;
   listModels(): Promise<AIModel[]>;
+  probeToolCalling?(modelId: string, signal?: AbortSignal): Promise<boolean | undefined>;
   streamChat(request: ChatRequest, signal?: AbortSignal): AsyncIterable<ChatChunk>;
 }
 ```
@@ -206,6 +216,9 @@ Initial application:
 4. Sync storage does not need plaintext conversations.
 5. Real RDC data remains disconnected until explicitly scheduled.
 6. Public repository contents must be safe for anonymous viewing.
+7. Web/network tool access is independent from AI provider selection; using a network tool does not imply cloud reasoning.
+8. Web Access OFF must block network tools before availability probes or execution.
+9. Public-web tools receive only the minimum query or selected URL, never implicit conversation/project/file context.
 
 
 ## Windows desktop distribution direction
@@ -360,3 +373,130 @@ The TypeScript runtime selector chooses `TauriLocalRuntimeManager` only when the
 `modelPolicy.ts` contains the host-label-neutral family/task/memory/benchmark policy. `ModelAnalyst` coordinates native lifecycle operations without touching conversation storage. Device fingerprints are local hashes of hardware/driver/OS/provider/catalog characteristics; no machine serial or user identity is gathered. Preferred families retain observed variants only for matching fingerprints.
 
 `SpeechInputProvider` separates capture, stopping, transcription, cancellation, and capability reporting. `DictationControl` only appends reviewed text to the composer. Windows uses a bounded WebView microphone capture and native Foundry `AudioClient`; iOS exposes Apple Speech through the native bridge. No browser cloud speech API or cloud fallback is used. Speech and chat/benchmark/lifecycle actions are mutually excluded in the shared UI. Speech releases immediately after each recording, including restoration of prior Windows chat models, rather than retaining both models in GPU memory.
+
+
+## Sprint 4A.4 Web Access and automatic-tool boundary
+
+CrownKeep treats public-web access as a **tool capability**, not an AI provider.
+
+```text
+User request
+   |
+   v
+Selected local Anne provider
+   |
+   +-- request does not need external/current data --> local answer
+   |
+   +-- Web Access OFF -----------------------------> local answer / explicit current-info limitation
+   |
+   +-- Web Access ON
+          |
+          v
+      ToolRegistry policy
+          |
+          +-- Web Search --> CrownKeep Web Gateway --> public search provider
+          |
+          +-- Web Read ---> CrownKeep Web Gateway --> selected public URL
+          |
+          v
+      untrusted tool result + source metadata
+          |
+          v
+      same selected local Anne provider
+          |
+          v
+      final answer
+```
+
+### ToolRegistry policy
+
+`ToolRegistry` is the authoritative execution boundary.
+
+Each tool declares:
+
+- stable ID/name/description;
+- read or write access;
+- whether network access is required;
+- structured input schema when available;
+- result metadata including whether data left the device and source URLs/titles.
+
+Current policy defaults:
+
+- `webAccess = off`;
+- write tools are denied unless a future explicit approval flow enables them;
+- a network tool is rejected **before** `isAvailable()` or `execute()` when Web Access is OFF;
+- tool execution never changes the selected `AIProvider`.
+
+The Web Access preference is stored locally as `crownkeep.webAccess.v1`. Turning it ON authorizes only the registered network tools; it does not authorize cloud-model fallback or bulk context upload.
+
+### Web Search / Web Read contract
+
+The client exposes two provider-neutral read-only tools:
+
+- `web-search`: sends one minimized search query and receives titles, URLs, snippets, and optional result metadata;
+- `web-read`: sends one selected public HTTP(S) URL and receives bounded readable content.
+
+The first gateway adapter lives under `services/web-gateway/` and uses Tavily Search/Extract server-side. That provider choice is intentionally hidden behind the CrownKeep gateway contract. The client receives only the gateway URL; `TAVILY_API_KEY` remains a server-side setting.
+
+The gateway is a narrow network-tool boundary, **not** a chat/model service. It accepts neither conversation history nor CrownKeep projects/files/images.
+
+### Automatic tool use by runtime
+
+**Windows / System Foundry**
+
+- `FoundryLocalProvider` supports OpenAI-compatible structured function definitions and streamed `tool_calls`.
+- Model Analyst measures function-call capability with a harmless local-only probe after a model has already passed the normal-context benchmark.
+- Structured tool calling is enabled only when current-device benchmark evidence records support.
+- Unknown/unsupported models use the provider-neutral bounded fallback instead of silently changing models/providers.
+- The structured loop permits read-only registered tools, is capped at three tool calls/rounds, returns tool results to the same local provider, and then forces a final answer without tools at the limit.
+
+**Native iPhone / Apple Foundation Models**
+
+- `AppleFoundationModelsProvider` passes the same logical registered web-tool definitions through `NativeAIHost`.
+- The Swift host implements Foundation Models `Tool` objects for Web Search and Web Read.
+- Web Access OFF exposes no network tools; where the SDK surface is available, tool calling is explicitly disallowed.
+- Tool results and source/activity metadata return through the existing native stream while reasoning remains Apple on-device.
+
+**Models without structured tool calling**
+
+- CrownKeep uses a small provider-neutral fallback that examines only the current prompt.
+- It does nothing for ordinary/local questions.
+- Clear current/external intent may trigger one search.
+- Source/page-detail intent may add at most two selected page reads.
+- The fallback never sends conversation history, local knowledge, attachments, or unrelated project context.
+
+### Tool-result trust and visibility
+
+Web content is treated as untrusted reference data, not instructions. Both the Windows and iPhone paths label it accordingly before returning it to the reasoning model.
+
+Assistant messages persist tool activity separately from provider metadata. The UI can therefore show:
+
+- `◆ Local` for the reasoning provider;
+- `Used web search`;
+- `Read N webpages`;
+- failed web search/read attempts;
+- source URLs/titles.
+
+This distinction is intentional: a response may be locally reasoned while using a visible network retrieval tool.
+
+### Status bar
+
+The persistent shared status bar supplements, rather than replaces, Local AI diagnostics. It shows at a glance:
+
+- Quick / Balanced / Deep role where applicable;
+- actual model;
+- execution device/provider;
+- Ready / Working / Benchmarking / Sleeping / Error;
+- Inside the Keep versus network/cloud boundary;
+- Web Access OFF/ON, including a missing-gateway state.
+
+The mobile layout collapses lower-value model/execution detail while retaining state, role, privacy boundary, and Web Access.
+
+### Image/multimodal continuation
+
+The next capability layer should reuse this same ToolRegistry/policy/result-metadata foundation:
+
+- image understanding/OCR should remain local-first where a supported device capability exists;
+- image generation is a provider-neutral tool;
+- any cloud image generation must expose an explicit visible boundary;
+- images/prompts must not be silently uploaded.
