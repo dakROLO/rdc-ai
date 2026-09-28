@@ -47,7 +47,8 @@ Cloud state should never visually resemble the default local/private state.
 
 Runtime V1 assets live under `public/brand/crownkeep-facelift/`.
 
-- `crownkeep-app-icon.png` — current application/PWA/iPhone/desktop icon source.
+- `public/crownkeep-mark.svg` — current runtime application/PWA/browser/desktop icon; clean vector implementation of the facelift C/crown direction.
+- `crownkeep-app-icon.png` — staged raster direction and current iPhone icon source.
 - `crownkeep-wordmark.png` — current expanded product lockup.
 - `crownkeep-crown-motif.png` and `crownkeep-glass-crown-transparent.png` — supporting hero/motion assets.
 - `crownkeep-knowledge-mark.png` — future knowledge-source/onboarding accent.
