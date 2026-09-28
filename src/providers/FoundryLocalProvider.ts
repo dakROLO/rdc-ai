@@ -19,6 +19,20 @@ interface OpenAIModelList {
   data?: OpenAIModelRecord[]
 }
 
+interface ToolProbeResponse {
+  choices?: Array<{
+    message?: {
+      tool_calls?: Array<{
+        type?: string
+        function?: {
+          name?: string
+          arguments?: string
+        }
+      }>
+    }
+  }>
+}
+
 interface StreamDelta {
   choices?: Array<{
     delta?: {
@@ -274,6 +288,126 @@ export class FoundryLocalProvider implements AIProvider {
       runtimeDevice: inferRuntimeDevice(name),
       variantId: name,
     }))
+  }
+
+  async probeToolCalling(
+    modelId: string,
+    signal?: AbortSignal,
+  ): Promise<boolean | undefined> {
+    const probeName = 'crownkeep_capability_probe'
+    let endpoint: string
+    let mode: ApiMode
+
+    try {
+      const resolved = await this.resolveEndpoint()
+      endpoint = resolved.endpoint
+      mode = resolved.mode
+    } catch (error) {
+      traceHost(
+        'tool-probe-endpoint-failed',
+        `model=${modelId} error=${String(error)}`,
+      )
+      return undefined
+    }
+
+    if (mode !== 'v1') {
+      traceHost(
+        'tool-probe-unsupported-api',
+        `model=${modelId} mode=${mode}`,
+      )
+      return undefined
+    }
+
+    let response: Response
+    try {
+      response = await fetch(`${endpoint}/v1/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          model: modelId,
+          messages: [
+            {
+              role: 'user',
+              content:
+                'For this capability check, call the provided function with value "ok". Do not answer in normal text.',
+            },
+          ],
+          tools: [
+            {
+              type: 'function',
+              function: {
+                name: probeName,
+                description:
+                  'CrownKeep local capability probe. Return the supplied value.',
+                parameters: {
+                  type: 'object',
+                  properties: {
+                    value: { type: 'string' },
+                  },
+                  required: ['value'],
+                  additionalProperties: false,
+                },
+              },
+            },
+          ],
+          tool_choice: {
+            type: 'function',
+            function: { name: probeName },
+          },
+          max_tokens: 32,
+          stream: false,
+        }),
+        signal,
+      })
+    } catch (error) {
+      traceHost(
+        'tool-probe-fetch-failed',
+        `model=${modelId} aborted=${Boolean(signal?.aborted)} error=${String(error)}`,
+      )
+      return undefined
+    }
+
+    if (response.status === 400 || response.status === 422) {
+      const detail = await response.text().catch(() => '')
+      traceHost(
+        'tool-probe-result',
+        `model=${modelId} supported=false status=${response.status} detail=${detail.slice(0, 240)}`,
+      )
+      return false
+    }
+
+    if (!response.ok) {
+      const detail = await response.text().catch(() => '')
+      traceHost(
+        'tool-probe-inconclusive',
+        `model=${modelId} status=${response.status} detail=${detail.slice(0, 240)}`,
+      )
+      return undefined
+    }
+
+    try {
+      const payload = (await response.json()) as ToolProbeResponse
+      const calls = payload.choices?.[0]?.message?.tool_calls ?? []
+      const supported = calls.some(
+        (call) =>
+          call.type === 'function' &&
+          call.function?.name === probeName,
+      )
+      traceHost(
+        'tool-probe-result',
+        `model=${modelId} supported=${supported} status=${response.status}`,
+      )
+      return supported
+    } catch (error) {
+      traceHost(
+        'tool-probe-inconclusive',
+        `model=${modelId} invalidJson=true error=${String(error)}`,
+      )
+      return undefined
+    }
   }
 
   async *streamChat(
