@@ -40,7 +40,7 @@ function minimalSearchQuery(prompt: string): string {
 }
 
 export function promptNeedsCurrentWeb(prompt: string): boolean {
-  return /\b(search (?:the )?(?:web|internet)|look (?:it )?up online|check online|current|currently|latest|today|tonight|this week|recent|recently|news|price|pricing|availability|schedule|release date|version|update|updated|weather|score|standings|who is (?:the )?(?:current|president|ceo)|right now)\b/i.test(
+  return /\b(search (?:the )?(?:web|internet)|look (?:it )?up online|check online|current|currently|latest|today|tonight|this week|recent|recently|news|price|pricing|availability|schedule|release date|updated|weather|score|standings|who is (?:the )?(?:current|president|ceo)|right now)\b/i.test(
     prompt,
   )
 }
@@ -97,7 +97,7 @@ export async function runAutomaticReadOnlyTools(
   if (registry.getPolicy().webAccess !== 'on') {
     return {
       context:
-        'Web Access is OFF. No network tools were called. Do not claim to have searched the web or verified current information; answer from local knowledge and clearly state when current web verification would be needed.',
+        'Web Access is OFF. No network tools were called. Do not claim a new web search or current verification. If CrownKeep supplies retained tool/web evidence from earlier turns, use that local conversation evidence when relevant; otherwise answer from local knowledge and clearly state when fresh verification would be needed.',
       activities: [],
       attemptedWeb: false,
     }
