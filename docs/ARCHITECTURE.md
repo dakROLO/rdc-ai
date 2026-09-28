@@ -377,7 +377,7 @@ The TypeScript runtime selector chooses `TauriLocalRuntimeManager` only when the
 
 ## Sprint 4A.4 Web Access and automatic-tool boundary
 
-CrownKeep treats public-web access as a **tool capability**, not an AI provider.
+CrownKeep treats public-web access as a **tool capability**, not an AI provider or cloud reasoning service.
 
 ```text
 User request
@@ -394,9 +394,14 @@ Selected local Anne provider
           v
       ToolRegistry policy
           |
-          +-- Web Search --> CrownKeep Web Gateway --> public search provider
+          v
+      Native Web Adapter
           |
-          +-- Web Read ---> CrownKeep Web Gateway --> selected public URL
+          +-- Web Search --> configured search provider
+          |                  (minimal query only)
+          |
+          +-- Web Read ----> selected public HTTP(S) page
+                             (selected URL only; no search key required)
           |
           v
       untrusted tool result + source metadata
@@ -407,6 +412,8 @@ Selected local Anne provider
           v
       final answer
 ```
+
+There is **no CrownKeep Web Gateway in the current architecture**. The earlier Azure Function prototype was removed before physical acceptance because it added an unnecessary CrownKeep-hosted network dependency for the local-first product.
 
 ### ToolRegistry policy
 
@@ -429,16 +436,38 @@ Current policy defaults:
 
 The Web Access preference is stored locally as `crownkeep.webAccess.v1`. Turning it ON authorizes only the registered network tools; it does not authorize cloud-model fallback or bulk context upload.
 
-### Web Search / Web Read contract
+### Native Web Search / Web Read transport
 
-The client exposes two provider-neutral read-only tools:
+The shared application exposes two provider-neutral read-only tools:
 
 - `web-search`: sends one minimized search query and receives titles, URLs, snippets, and optional result metadata;
 - `web-read`: sends one selected public HTTP(S) URL and receives bounded readable content.
 
-The first gateway adapter lives under `services/web-gateway/` and uses Tavily Search/Extract server-side. That provider choice is intentionally hidden behind the CrownKeep gateway contract. The client receives only the gateway URL; `TAVILY_API_KEY` remains a server-side setting.
+The logical tool contract is shared, but network execution belongs to the native host:
 
-The gateway is a narrow network-tool boundary, **not** a chat/model service. It accepts neither conversation history nor CrownKeep projects/files/images.
+**Windows**
+
+- the Tauri/Rust host performs HTTPS requests;
+- the first search adapter is Tavily;
+- the user-supplied Tavily credential is stored through the native credential-store library in **Windows Credential Manager**;
+- the React/webview layer may request save/remove and receive configuration status, but it does not receive the stored credential back;
+- Web Read fetches the selected public page directly and does not require the search credential.
+
+**iPhone**
+
+- the Swift host performs HTTPS requests with `URLSession`;
+- the first search adapter is Tavily;
+- the user-supplied Tavily credential is stored as a generic-password item in **iOS Keychain**, device-local and non-synchronizing;
+- the JavaScript bridge may request save/remove and receive configuration status, but it does not receive the stored credential back;
+- Web Read fetches the selected public page directly and does not require the search credential.
+
+**Browser-only development**
+
+- does not persist or expose a live search-provider credential;
+- reports native Web Access unavailable;
+- shared policy/tool behavior remains testable through injected test transports.
+
+Search-provider credentials are not Vite variables, are not bundled into the application, and are not part of CrownKeep conversation/project storage or future sync.
 
 ### Automatic tool use by runtime
 
@@ -454,6 +483,8 @@ The gateway is a narrow network-tool boundary, **not** a chat/model service. It 
 
 - `AppleFoundationModelsProvider` passes the same logical registered web-tool definitions through `NativeAIHost`.
 - The Swift host implements Foundation Models `Tool` objects for Web Search and Web Read.
+- Web Search is offered only when Web Access is ON and the device has a configured native search credential.
+- Web Read can be offered while Web Access is ON even when no search credential is stored.
 - Web Access OFF exposes no network tools; where the SDK surface is available, tool calling is explicitly disallowed.
 - Tool results and source/activity metadata return through the existing native stream while reasoning remains Apple on-device.
 
@@ -461,13 +492,22 @@ The gateway is a narrow network-tool boundary, **not** a chat/model service. It 
 
 - CrownKeep uses a small provider-neutral fallback that examines only the current prompt.
 - It does nothing for ordinary/local questions.
-- Clear current/external intent may trigger one search.
+- Clear current/external intent may trigger one search when configured.
 - Source/page-detail intent may add at most two selected page reads.
 - The fallback never sends conversation history, local knowledge, attachments, or unrelated project context.
 
-### Tool-result trust and visibility
+### Network and trust boundary
 
-Web content is treated as untrusted reference data, not instructions. Both the Windows and iPhone paths label it accordingly before returning it to the reasoning model.
+For current Web Access tools, only these values may leave the device:
+
+- the minimized public search query sent to the configured search provider; or
+- the single selected public URL requested by Web Read.
+
+The Tavily credential is sent only as authentication to Tavily by the native host. It is not model context.
+
+CrownKeep does **not** send entire conversation history, projects, local knowledge, attachments, files, images, or unrelated context through these web tools.
+
+Web content is treated as untrusted reference data, not instructions. Both the Windows and iPhone paths label retrieved content accordingly before returning it to the reasoning model.
 
 Assistant messages persist tool activity separately from provider metadata. The UI can therefore show:
 
@@ -479,7 +519,7 @@ Assistant messages persist tool activity separately from provider metadata. The 
 
 This distinction is intentional: a response may be locally reasoned while using a visible network retrieval tool.
 
-### Status bar
+### Status bar and configuration
 
 The persistent shared status bar supplements, rather than replaces, Local AI diagnostics. It shows at a glance:
 
@@ -488,7 +528,10 @@ The persistent shared status bar supplements, rather than replaces, Local AI dia
 - execution device/provider;
 - Ready / Working / Benchmarking / Sleeping / Error;
 - Inside the Keep versus network/cloud boundary;
-- Web Access OFF/ON, including a missing-gateway state.
+- Web Access OFF/ON;
+- whether direct web is ready or a search credential still needs to be configured.
+
+The Local AI surface exposes the device-local search-provider setup. The credential entry is a write-only setup action from the webview's perspective: after save, UI receives status such as configured/not configured and the native credential-store name, not the stored secret.
 
 The mobile layout collapses lower-value model/execution detail while retaining state, role, privacy boundary, and Web Access.
 
