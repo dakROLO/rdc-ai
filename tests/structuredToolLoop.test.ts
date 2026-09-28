@@ -45,6 +45,7 @@ test('structured loop executes ToolRegistry result and returns to the same provi
       turns += 1
       const hasToolOutput = request.messages.some((message) => message.role === 'tool')
       if (!hasToolOutput) {
+        yield { text: 'Stale pre-search answer. ' }
         yield {
           text: '',
           toolCallDeltas: [
@@ -67,7 +68,8 @@ test('structured loop executes ToolRegistry result and returns to the same provi
     },
   }
 
-  const activities: string[] = []
+  const activities: Array<{ toolId: string; retainedContext?: string }> = []
+  let modelActivities = 0
   let output = ''
   for await (const chunk of streamStructuredToolLoop({
     provider,
@@ -76,7 +78,14 @@ test('structured loop executes ToolRegistry result and returns to the same provi
       messages: [{ role: 'user', content: 'What is current?' }],
     },
     registry,
-    onToolActivity: (activity) => activities.push(activity.toolId),
+    onModelActivity: () => {
+      modelActivities += 1
+    },
+    onToolActivity: (activity) =>
+      activities.push({
+        toolId: activity.toolId,
+        retainedContext: activity.retainedContext,
+      }),
   })) {
     output += chunk.text
   }
@@ -84,10 +93,16 @@ test('structured loop executes ToolRegistry result and returns to the same provi
   assert.equal(executions, 1)
   assert.equal(turns, 2)
   assert.equal(output, 'Final local answer.')
-  assert.deepEqual(activities, ['web-search'])
+  assert.ok(modelActivities >= 2)
+  assert.deepEqual(activities, [
+    {
+      toolId: 'web-search',
+      retainedContext: 'Fresh result for current release',
+    },
+  ])
 })
 
-test('structured loop forwards ordinary local text chunks immediately without using web for a local question', async () => {
+test('structured loop returns ordinary local text without using web for a local question', async () => {
   const registry = new ToolRegistry()
   registry.setPolicy({ webAccess: 'on' })
   let webExecutions = 0
