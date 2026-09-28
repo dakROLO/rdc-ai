@@ -97,7 +97,12 @@ export function readResults(storage: Pick<Storage, 'getItem'>): BenchmarkResult[
     return Array.isArray(data) ? data.filter((r): r is BenchmarkResult =>
       r && typeof r.fingerprint === 'string' && typeof r.variantId === 'string' &&
       typeof r.alias === 'string' && Number.isFinite(r.totalMs) &&
-      ['accepted', 'slow', 'error', 'cancelled'].includes(r.outcome)) : []
+      ['accepted', 'slow', 'error', 'cancelled'].includes(r.outcome) &&
+      !(
+        r.outcome === 'error' &&
+        typeof r.detail === 'string' &&
+        /^Normal CrownKeep chat (?:timed out|exceeded)/.test(r.detail)
+      )) : []
   } catch { return [] }
 }
 export function readPreferred(storage: Pick<Storage, 'getItem'>): BenchmarkResult | undefined {
