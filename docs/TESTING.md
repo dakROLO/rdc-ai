@@ -2,6 +2,91 @@
 
 This guide is the executable test plan for the current sprint. It should evolve into the public installation/use documentation as the product matures.
 
+## Current acceptance target — Sprint 4A.4
+
+Sprint 4A.4 is the active validation target. The authoritative implementation/status records are `docs/STATUS.md`, `docs/ROADMAP.md`, `docs/ARCHITECTURE.md`, `docs/DECISIONS.md`, and `docs/SPRINT-4A4-VALIDATION.md`.
+
+### Already physically accepted
+
+- Primary Windows laptop: Quick / `phi-4-mini` startup + normal chat; Balanced / `mistral-nemo-12b-instruct` CUDA benchmark + normal chat; exclusive model switching; local dictation through installed System Foundry.
+- Rolo15: current convergence build built, signed, installed, and launched; chat, follow-up context, Apple-native on-device dictation, and restart/persistence all passed.
+- Deep remains a recorded failed qualification: `gpt-oss-20b-cuda-gpu:1` reached first token at about 19.15 s, exceeded the 45 s benchmark window, did not pass normal-context validation, and must not be auto-retried or promoted.
+- AVD acceptance remains separate and pending under the same adaptive Windows runtime/model policy.
+
+### Automated branch gate
+
+Before recording new physical acceptance, the active branch must pass:
+
+```powershell
+npm run lint
+npm test
+npm run build
+```
+
+CI additionally checks Web Gateway Python syntax, shared Playwright UI smoke tests, the Windows Tauri/Rust host, and the unsigned iOS Simulator build.
+
+### Web Access configuration boundary
+
+Web Access defaults to **OFF**. The client must never contain a search-provider secret.
+
+For a configured test build, set the public CrownKeep gateway endpoint only:
+
+```text
+VITE_CROWNKEEP_WEB_GATEWAY_URL=<CrownKeep Web Gateway URL>
+```
+
+The gateway owns any provider credential such as `TAVILY_API_KEY` server-side. Web tools may send only the minimum public search query or the one selected public URL. Do not send whole conversations, projects, local knowledge, files, attachments, or images through this boundary.
+
+### Windows laptop — Web Access acceptance
+
+1. Launch the current branch with the local reasoning provider ready.
+2. Confirm the compact status bar shows role/model/execution, **Inside the Keep**, runtime state, and **Web OFF**.
+3. With Web Access **OFF**, ask a current-information question that would normally need search.
+4. Confirm no Web Search/Web Read succeeds and no hidden network fallback occurs.
+5. Turn Web Access **ON**.
+6. Ask a local-only question. Confirm CrownKeep answers locally without unnecessary web activity.
+7. Ask a current-information question. Confirm bounded Web Search is visible on the assistant message and the reasoning provider remains the selected local provider.
+8. Ask for more detail from a returned source. Confirm CrownKeep can search and then read selected public pages within the bounded read-only tool loop.
+9. Confirm source URLs/titles remain visible with the assistant message.
+10. Turn Web Access **OFF** again and repeat a current-information question. Confirm network-tool use is blocked before tool availability/execution.
+11. If the gateway is missing or unavailable, confirm CrownKeep reports the failure explicitly and does not switch to cloud reasoning.
+
+### Rolo15 — current build + Web Access acceptance
+
+Use the established device/build path. Unlock the Mac login keychain first; do not chmod the script.
+
+From Windows PowerShell:
+
+```powershell
+ssh -t mac-dev 'cd ~/Projects/rdc-ai && security unlock-keychain ~/Library/Keychains/login.keychain-db && git pull --ff-only && CROWNKEEP_DEVICE_ID=00008150-001829503E38401C bash scripts/ios-device-build.sh'
+```
+
+Then on Rolo15:
+
+1. Confirm the current build launches and existing local conversation persistence remains intact.
+2. Confirm Apple Foundation Models remains the local reasoning provider and native Apple speech remains on-device.
+3. Repeat the Web OFF → local-only ON → current-information ON → source-read → OFF sequence above.
+4. Confirm network activity is shown as tool activity rather than relabeling Anne's response as cloud reasoning.
+5. Confirm a missing/unavailable gateway fails visibly without hidden network or cloud-model fallback.
+
+### AVD acceptance
+
+Run the same Windows status-bar, Quick/Balanced role, dictation, Web OFF/ON, and gateway-failure checks on AVD. Do not create an AVD-specific model policy or architecture. Select roles from observed benchmark evidence on that host.
+
+### Acceptance guardrails
+
+- No silent cloud-model fallback.
+- No RDC customer-data connection.
+- Web Access OFF means network tools are blocked at `ToolRegistry`.
+- Web Access ON does not authorize sending conversation history or local content.
+- Do not merge, tag, delete the convergence branch, or remove legacy cache data until remaining physical evidence is recorded and explicit approval is given.
+
+---
+
+## Historical and regression procedures
+
+The sections below preserve earlier sprint setup and regression tests. They remain useful for targeted checks, but they are not the current Sprint 4A.4 acceptance authority.
+
 ## What can be tested now
 
 Sprint 0.2 currently provides:
