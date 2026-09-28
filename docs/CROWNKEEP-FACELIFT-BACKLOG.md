@@ -1,6 +1,6 @@
-# CrownKeep Facelift — Deferred Implementation Package
+# CrownKeep Facelift — V1 Implementation Package
 
-**Status:** Captured for a later, intentional facelift. Do not let this work interrupt the current local-platform validation and Web Access acceptance gates.
+**Status:** V1 applied at the Windows convergence checkpoint on 2026-09-28. Remaining vector/motion polish is follow-on work and is not a platform acceptance blocker.
 
 ## Goal
 
@@ -26,14 +26,22 @@ The matching assets are committed under `public/brand/crownkeep-facelift/`:
 - Glass/ribbon crown imagery is supporting motion and hero art, not the small functional icon.
 - Product tone: calm, precise, premium, local-first. Avoid shields, padlocks, surveillance, hacker/cyberpunk imagery, generic cloud/server art, and medieval royal crests.
 
-## Recommended future implementation order
+## V1 implementation status
 
-1. Select a single icon direction and commission or create its final SVG variants (dark, light, monochrome, favicon/PWA sizes).
-2. Apply design tokens to app shell, top bar, cards, controls, and light mode without changing product behavior.
-3. Replace current brand lockups in the desktop host, PWA shell, and launch surfaces.
-4. Use the crown motif and knowledge mark selectively for onboarding, empty states, and launch video.
-5. For loading, prefer a CSS `rotateY` animation of the transparent crown PNG over a GIF. It preserves translucency, is sharper at any size, honors reduced-motion preferences, and avoids a large raster loop.
-6. Treat a true three-dimensional crown turn as a later WebM/3D-animation task; do not block the facelift on it.
+Implemented:
+
+1. Midnight navy, cobalt blue, electric cyan, cool silver/white tokens applied to the shared shell without changing runtime behavior.
+2. Copper retained as a rare emphasis color for external/network/cloud boundaries.
+3. `crownkeep-app-icon.png` is used by the shared UI, browser/favicon/PWA shell, Tauri desktop icon generation, CI iPhone icon preparation, and the physical iPhone build script.
+4. `crownkeep-wordmark.png` is used in the expanded sidebar lockup.
+5. Existing compact status/composer layout is preserved; the facelift is intentionally visual rather than a navigation redesign.
+
+Deferred:
+
+- final production SVG redraw of the selected geometric C/crown mark;
+- CSS/3D crown loading motion;
+- light-theme pass;
+- onboarding/empty-state use of the crown motif and knowledge mark.
 
 ## Implementation guardrail
 
