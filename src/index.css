@@ -2856,3 +2856,230 @@ body {
 .model-mode-segments button:disabled:not(.active) {
   opacity: .42;
 }
+
+
+/* Sprint 4A.4 — persistent runtime/privacy status */
+.workspace {
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+
+.keep-status-bar {
+  min-width: 0;
+  padding: 8px clamp(18px, 4vw, 44px);
+  border-bottom: 1px solid var(--line);
+  background: rgba(10, 25, 22, 0.94);
+  display: grid;
+  grid-template-columns: auto auto minmax(150px, 1fr) minmax(110px, auto) minmax(180px, auto) auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+}
+
+.keep-status-state,
+.keep-status-item,
+.keep-status-boundary {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border-right: 1px solid rgba(46, 230, 184, 0.12);
+  padding-right: 10px;
+}
+
+.keep-status-state strong,
+.keep-status-item strong,
+.keep-status-boundary strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.keep-status-state .status-dot {
+  flex: 0 0 auto;
+}
+
+.keep-status-state.ready .status-dot {
+  background: var(--jade-glow);
+}
+
+.keep-status-state.working .status-dot,
+.keep-status-state.benchmarking .status-dot {
+  background: #e7b091;
+  box-shadow: 0 0 0 4px rgba(201, 127, 91, 0.13);
+}
+
+.keep-status-state.sleeping .status-dot {
+  background: #91a59f;
+  box-shadow: 0 0 0 4px rgba(145, 165, 159, 0.12);
+}
+
+.keep-status-state.error .status-dot {
+  background: #e98c83;
+  box-shadow: 0 0 0 4px rgba(233, 140, 131, 0.12);
+}
+
+.keep-status-item span,
+.keep-status-boundary span {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.keep-status-boundary {
+  display: grid;
+  gap: 1px;
+}
+
+.keep-status-boundary span {
+  color: #d9f4ec;
+  font-weight: 800;
+}
+
+.keep-status-boundary strong {
+  color: var(--muted);
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+.web-access-toggle {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(232, 228, 218, 0.14);
+  border-radius: 999px;
+  padding: 6px 9px;
+  background: rgba(232, 228, 218, 0.04);
+  color: var(--stone);
+  font-size: 0.68rem;
+}
+
+.web-access-toggle strong {
+  min-width: 28px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.web-access-toggle.on {
+  border-color: rgba(201, 127, 91, 0.46);
+  background: rgba(201, 127, 91, 0.10);
+}
+
+.web-access-toggle.on strong {
+  color: #e7b091;
+}
+
+.web-access-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid rgba(201, 127, 91, 0.22);
+  border-radius: 12px;
+  padding: 11px 12px;
+  background: rgba(201, 127, 91, 0.06);
+}
+
+.web-access-setting > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.web-access-setting span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+
+.web-access-setting button {
+  flex: 0 0 auto;
+  border: 1px solid rgba(201, 127, 91, 0.30);
+  border-radius: 9px;
+  padding: 7px 9px;
+  background: rgba(201, 127, 91, 0.10);
+  color: #e7b091;
+  font-weight: 800;
+}
+
+.tool-use-badge {
+  color: #e7b091 !important;
+}
+
+.tool-sources {
+  margin-top: 10px;
+  border-top: 1px solid rgba(46, 230, 184, 0.10);
+  padding-top: 8px;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.tool-sources summary {
+  cursor: pointer;
+  color: #9ed9c9;
+  font-weight: 800;
+}
+
+.tool-sources > div {
+  display: grid;
+  gap: 5px;
+  margin-top: 7px;
+}
+
+.tool-sources a {
+  overflow: hidden;
+  color: #9ed9c9;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .keep-status-bar {
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+  }
+
+  .keep-status-item.execution,
+  .keep-status-item.model {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .workspace {
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+  }
+
+  .keep-status-bar {
+    padding: 7px 10px;
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    gap: 6px;
+    font-size: 0.65rem;
+  }
+
+  .keep-status-state,
+  .keep-status-item,
+  .keep-status-boundary {
+    padding-right: 7px;
+    gap: 5px;
+  }
+
+  .keep-status-boundary strong {
+    display: none;
+  }
+
+  .keep-status-boundary span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .web-access-toggle {
+    padding: 5px 7px;
+  }
+
+  .web-access-toggle span {
+    display: none;
+  }
+
+  .web-access-setting {
+    align-items: flex-start;
+  }
+}
