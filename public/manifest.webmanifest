@@ -4,20 +4,14 @@
   "description": "Private by default. Powerful by choice.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0F1F1E",
-  "theme_color": "#0F1F1E",
+  "background_color": "#030916",
+  "theme_color": "#030916",
   "icons": [
     {
-      "src": "/icons/crownkeep-192.png",
-      "sizes": "192x192",
+      "src": "/brand/crownkeep-facelift/crownkeep-app-icon.png",
+      "sizes": "1024x1024",
       "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icons/crownkeep-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ]
 }
