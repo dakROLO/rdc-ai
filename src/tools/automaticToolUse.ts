@@ -13,6 +13,7 @@ export interface ToolActivityRecord {
   dataLeftDevice: boolean
   outcome?: 'success' | 'error'
   sources: ToolResultSource[]
+  retainedContext?: string
 }
 
 export interface AutomaticToolResult {
@@ -64,6 +65,7 @@ function activityFor(
     dataLeftDevice: result.metadata?.dataLeftDevice === true,
     sources: result.metadata?.sources ?? [],
     outcome: 'success',
+    retainedContext: result.text.slice(0, 6000),
   }
 }
 
