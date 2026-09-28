@@ -513,3 +513,63 @@ Shared CrownKeep code depends on a minimal `LocalRuntime` contract, not Foundry-
 The packaged Windows chat/model path invokes the installed `foundry` CLI for lifecycle and discovery, then uses that reported service endpoint for OpenAI-compatible inference. CrownKeep activates aliases and records the actual API-visible model rather than restoring a stale exact variant.
 
 The prior embedded SDK manager remains temporarily for native dictation and dormant legacy commands. It is not registered as the normal chat/model runtime. The legacy `.CrownKeep` model cache is marked diagnostic-only and must not be deleted until physical evidence proves all normal model operations use the System Foundry cache.
+
+
+---
+
+## ADR-0028 — Web Access is an explicit tool boundary, not a model/provider switch
+
+**Status:** Accepted and implemented; physical web acceptance pending  
+**Date:** 2026-09-28
+
+### Decision
+
+CrownKeep exposes public-web access through registered read-only tools while keeping reasoning-provider selection independent.
+
+The user-facing preference is **Web Access: OFF / ON** and defaults to **OFF**, consistent with **Private by default. Powerful by choice.**
+
+When OFF:
+
+- network tools are rejected by `ToolRegistry` before availability checks or execution;
+- local chat remains available;
+- automatic tool selection cannot silently make a network request;
+- CrownKeep does not fall back to a cloud model.
+
+When ON:
+
+- Anne may use `Web Search` and `Web Read` when the request needs current/external information;
+- successful or failed network-tool activity is visible separately from model/provider metadata;
+- tool results return to the same selected reasoning provider.
+
+### Network/data boundary
+
+The client must not embed a web-search-provider API secret.
+
+CrownKeep uses a narrow provider-neutral Web Gateway. The first adapter is an Azure Functions implementation backed by Tavily Search/Extract, but the client contract is vendor-independent so that provider can be replaced without changing `ToolRegistry`, Windows model policy, Apple Foundation Models, or conversation storage.
+
+For current public-web tools the device may send only:
+
+- the minimum search query required for `Web Search`; or
+- the single selected public URL required for `Web Read`.
+
+These tools do **not** receive entire conversation history, projects, local knowledge, attachments, files, images, or unrelated context.
+
+Web content is returned to the model as untrusted reference data, never as instructions.
+
+### Automatic tool strategy
+
+Windows may use normal OpenAI-compatible structured function calling only when the active local model has **observed** function-call support for the current device/runtime fingerprint. CrownKeep does not infer this capability from a model name when System Foundry metadata is missing.
+
+If structured tool calling is unknown/unsupported, CrownKeep uses a bounded provider-neutral read-only fallback rather than silently switching AI providers.
+
+Native iPhone exposes the same logical CrownKeep tools through Apple Foundation Models `Tool` objects. The Foundation Model remains the local reasoning provider.
+
+All automatic tool loops are bounded. The current structured and fallback paths permit at most three read-only network-tool operations for one user turn before requiring a final answer.
+
+### Consequences
+
+- Web Access can be enabled without authorizing cloud AI.
+- A response may be labeled **Local** while also showing visible web-search/page-read activity.
+- A future enterprise/public-web provider can replace Tavily behind the gateway contract.
+- AVD uses the same Windows policy; there is no AVD-specific agent architecture.
+- Image/OCR/image-generation tools should reuse this boundary rather than creating a parallel agent system.
