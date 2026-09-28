@@ -1698,13 +1698,18 @@ export default function App() {
           : provider.streamChat(request, generationSignal)
 
       for await (const chunk of responseStream) {
-        if (chunk.text && firstTokenAt === undefined) {
+        const modelActivityStarted =
+          Boolean(chunk.text) ||
+          Boolean(chunk.toolCallDeltas?.length) ||
+          Boolean(chunk.toolActivities?.length)
+
+        if (modelActivityStarted && firstTokenAt === undefined) {
           firstTokenAt = performance.now()
           window.clearTimeout(firstTokenTimer)
           traceTerminal(
             'chat',
-            'first-token',
-            `model=${requestModelId} firstTokenMs=${Math.round(firstTokenAt - startedAt)}`,
+            'first-response',
+            `model=${requestModelId} firstResponseMs=${Math.round(firstTokenAt - startedAt)} text=${Boolean(chunk.text)} toolDelta=${Boolean(chunk.toolCallDeltas?.length)} nativeToolActivity=${Boolean(chunk.toolActivities?.length)}`,
             traceId,
           )
         }
