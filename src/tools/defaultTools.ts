@@ -1,6 +1,7 @@
 import { KnowledgeRegistry } from '../knowledge/KnowledgeRegistry.ts'
 import { LocalKnowledgeSource } from '../knowledge/KnowledgeSource.ts'
 import { ToolRegistry, type CrownKeepTool } from './ToolRegistry.ts'
+import { NativeWebClient } from '../web/NativeWebClient.ts'
 import { createWebTools } from './webTools.ts'
 
 export const knowledgeRegistry = new KnowledgeRegistry()
@@ -45,7 +46,8 @@ const localSearch: CrownKeepTool<{ query: string }> = {
   },
 }
 
-export const webTools = createWebTools()
+export const nativeWebClient = new NativeWebClient()
+export const webTools = createWebTools(nativeWebClient)
 
 toolRegistry.register(localSearch)
 toolRegistry.register(webTools.search)
