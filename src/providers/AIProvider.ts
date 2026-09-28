@@ -21,6 +21,14 @@ export interface ChatToolCall {
   arguments: string
 }
 
+export interface ToolExecutionActivity {
+  toolId: string
+  label: string
+  requiresNetwork: boolean
+  dataLeftDevice: boolean
+  sources: Array<{ url: string; title?: string }>
+}
+
 export interface ChatToolCallDelta {
   index: number
   id?: string
@@ -64,6 +72,7 @@ export interface ChatChunk {
   done?: boolean
   usage?: TokenUsage
   toolCallDeltas?: ChatToolCallDelta[]
+  toolActivities?: ToolExecutionActivity[]
 }
 
 export interface AIProvider {
