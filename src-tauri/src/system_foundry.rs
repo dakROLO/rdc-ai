@@ -27,6 +27,7 @@ struct FoundryVariant { alias: String, variant_name: String, variant_id: String,
 #[derive(Clone, Serialize)] #[serde(rename_all = "camelCase")] pub struct ModelCandidate { pub id: String, pub alias: String, pub display_name: String, pub cached: bool, pub loaded: bool, pub device: Option<String>, pub execution_provider: Option<String>, pub file_size_mb: Option<u64>, pub context_length: Option<u64>, pub model_type: String, pub task: Option<String>, pub supports_tool_calling: Option<bool> }
 #[derive(Serialize)] #[serde(rename_all = "camelCase")] pub struct ExecutionProviderStatus { pub name: String, pub registered: bool, pub registration_attempted: bool, pub registration_succeeded: bool }
 #[derive(Serialize)] #[serde(rename_all = "camelCase")] pub struct DeviceAnalysis { pub devices: Vec<String>, pub execution_providers: Vec<ExecutionProviderStatus>, pub accelerated_variant_count: usize, pub cpu_variant_count: usize, pub detail: String }
+#[derive(Serialize)] #[serde(rename_all = "camelCase")] pub struct SpeechTranscriptionResult { pub text: String, pub model_id: String }
 
 fn output(args: &[&str]) -> Result<String, String> { let result = Command::new("foundry").args(args).output().map_err(|e| format!("System Foundry is unavailable: {e}"))?; let out = String::from_utf8_lossy(&result.stdout).trim().to_string(); let err = String::from_utf8_lossy(&result.stderr).trim().to_string(); if result.status.success() { Ok(if out.is_empty() { err } else { out }) } else { Err(format!("System Foundry command `foundry {}` failed: {}", args.join(" "), if err.is_empty() { out } else { err })) } }
 async fn run(args: Vec<&'static str>) -> Result<String, String> { tauri::async_runtime::spawn_blocking(move || output(&args)).await.map_err(|e| e.to_string())? }
@@ -73,6 +74,83 @@ async fn unload_other_loaded_models(target:&str)->Result<(),String>{
 #[tauri::command] pub async fn crownkeep_system_foundry_load_model(model_id:String)->Result<ActionResult,String>{crownkeep_system_foundry_activate_model(model_id).await}
 #[tauri::command] pub async fn crownkeep_system_foundry_unload_model(model_id:String)->Result<ActionResult,String>{mutation(vec!["model".into(),"unload".into(),model_id.clone()],format!("System Foundry unloaded '{model_id}'.")).await}
 #[tauri::command] pub async fn crownkeep_system_foundry_remove_cached_model(model_id:String)->Result<ActionResult,String>{mutation(vec!["cache".into(),"remove".into(),model_id.clone(),"--force".into()],format!("System Foundry removed '{model_id}'.")).await}
+
+fn transcription_text_from_json(value:&serde_json::Value)->Option<String>{
+    for key in ["text","transcript","transcription","output"] {
+        if let Some(text)=value.get(key).and_then(|v|v.as_str()) {
+            let text=text.trim();
+            if !text.is_empty() { return Some(text.to_string()); }
+        }
+    }
+    if let Some(obj)=value.as_object() {
+        for value in obj.values() {
+            if let Some(text)=transcription_text_from_json(value) { return Some(text); }
+        }
+    }
+    None
+}
+
+fn plain_transcription_text(value:&str)->String{
+    let lines=value.lines()
+        .map(str::trim)
+        .filter(|line|!line.is_empty())
+        .filter(|line|!line.starts_with('■'))
+        .filter(|line|!line.starts_with("Downloading"))
+        .filter(|line|!line.starts_with("Loading"))
+        .collect::<Vec<_>>();
+    let joined=lines.join("\n");
+    joined.strip_prefix("Transcription:").unwrap_or(&joined).trim().to_string()
+}
+
+#[tauri::command]
+pub async fn crownkeep_system_foundry_transcribe(model_id:String,wav:Vec<u8>)->Result<SpeechTranscriptionResult,String>{
+    if wav.is_empty(){return Err("No audio bytes were supplied for transcription.".into());}
+    let model_for_result=model_id.clone();
+    tauri::async_runtime::spawn_blocking(move||{
+        let stamp=std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|v|v.as_millis()).unwrap_or(0);
+        let path=std::env::temp_dir().join(format!("crownkeep-dictation-{}-{stamp}.wav",std::process::id()));
+        fs::write(&path,&wav).map_err(|e|format!("Could not create temporary dictation WAV: {e}"))?;
+        let path_text=path.to_string_lossy().to_string();
+
+        let json_attempt=Command::new("foundry")
+            .args(["transcribe","-m",&model_id,"-f",&path_text,"--output","json"])
+            .output();
+        let mut text=String::new();
+        let mut failure=String::new();
+
+        if let Ok(result)=json_attempt {
+            let out=String::from_utf8_lossy(&result.stdout).trim().to_string();
+            let err=String::from_utf8_lossy(&result.stderr).trim().to_string();
+            if result.status.success() {
+                if let Ok(value)=serde_json::from_str::<serde_json::Value>(&out) {
+                    text=transcription_text_from_json(&value).unwrap_or_default();
+                }
+                if text.is_empty(){text=plain_transcription_text(&out);}
+            } else {
+                failure=if err.is_empty(){out}else{err};
+            }
+        }
+
+        if text.is_empty() {
+            let result=Command::new("foundry")
+                .args(["transcribe","-m",&model_id,"-f",&path_text])
+                .output()
+                .map_err(|e|format!("System Foundry transcribe command is unavailable: {e}"))?;
+            let out=String::from_utf8_lossy(&result.stdout).trim().to_string();
+            let err=String::from_utf8_lossy(&result.stderr).trim().to_string();
+            if !result.status.success() {
+                let _=fs::remove_file(&path);
+                return Err(format!("System Foundry transcription failed: {}",if err.is_empty(){if failure.is_empty(){out}else{failure}}else{err}));
+            }
+            text=plain_transcription_text(&out);
+            if text.is_empty() && !err.is_empty(){text=plain_transcription_text(&err);}
+        }
+
+        let _=fs::remove_file(&path);
+        if text.is_empty(){return Err("System Foundry transcription returned no text.".into());}
+        Ok(SpeechTranscriptionResult{text,model_id:model_for_result})
+    }).await.map_err(|e|e.to_string())?
+}
 
 #[cfg(test)] mod tests { use super::*; #[test] fn parses_actual_status_shape(){let s:FoundryStatus=serde_json::from_value(serde_json::json!({"system":{"operatingSystem":"Windows","architecture":"X64","cpu":"CPU","totalMemoryBytes":337,"availableMemoryBytes":12,"gpus":[{"name":"RTX","vendor":"NVIDIA","videoMemoryBytes":8}],"npus":[{"name":"AI Boost","vendor":"Intel"}]},"service":{"state":"ready","ready":true,"webUrls":["http://127.0.0.1:59757"],"cliVersion":"0.10.3","foundryLocalCoreVersion":"1","ortVersion":"1.26","ortGenAiVersion":"0"},"models":{"available":166,"loaded":0,"cached":1},"connectivity":{"localServiceReachable":true,"modelRegistryReachable":true},"warnings":[]})).unwrap();assert!(s.service.ready);assert_eq!(s.service.web_urls[0],"http://127.0.0.1:59757");assert_eq!(s.system.gpus[0].name,"RTX");}
 #[test] fn parses_variants_and_types(){let list:FoundryModelList=serde_json::from_value(serde_json::json!({"variants":[{"alias":"qwen3-4b","variantName":"qwen3-4b-cuda-gpu","variantId":"qwen3-4b-cuda-gpu:2","type":"Chat","device":"Gpu","executionProvider":"CUDAExecutionProvider","fileSizeMb":2692,"cached":true,"license":"apache-2.0"},{"alias":"speech","variantName":"speech-cpu","variantId":"speech-cpu:1","type":"Speech","device":"Cpu","executionProvider":"CPUExecutionProvider","fileSizeMb":1,"cached":false,"license":null}]})).unwrap();assert_eq!(list.variants.len(),2);let chat=candidate(list.variants[0].clone(),false);assert_eq!(chat.model_type,"Chat");assert!(chat.cached);assert_eq!(list.variants[1].model_type,"Speech");} }
