@@ -120,3 +120,22 @@ test('role winner remains available when API model id differs from catalog varia
     balanced.alias,
   )
 })
+
+
+test('legacy normal-chat timeout rows are ignored as benchmark evidence', () => {
+  const stored = JSON.stringify([
+    {
+      fingerprint: 'machine-a',
+      alias: 'mistral-nemo-12b-instruct',
+      variantId: 'mistral-nemo-12b-instruct-cuda-gpu:1',
+      cached: true,
+      timestamp: '2026-09-28T00:00:00.000Z',
+      totalMs: 20000,
+      realWorldValidated: false,
+      outcome: 'error',
+      detail: 'Normal CrownKeep chat timed out before the first token.',
+    },
+  ])
+
+  assert.deepEqual(readResults({ getItem: () => stored }), [])
+})
