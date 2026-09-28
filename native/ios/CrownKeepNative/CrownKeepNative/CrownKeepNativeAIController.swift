@@ -4,7 +4,6 @@ import WebKit
 import Speech
 import AVFoundation
 import UIKit
-import Security
 
 private final class CrownKeepNativeToolLog: @unchecked Sendable {
     struct Source {
@@ -34,135 +33,64 @@ private final class CrownKeepNativeToolLog: @unchecked Sendable {
     }
 }
 
-private enum CrownKeepWebCredentialStore {
-    static let service = "com.royaldigitalclarity.crownkeep.web"
-    static let account = "tavily-api-key"
-
-    static func load() throws -> String? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]
-
-        var result: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-        if status == errSecItemNotFound { return nil }
-        guard status == errSecSuccess else {
-            throw NSError(
-                domain: "CrownKeepWebCredential",
-                code: Int(status),
-                userInfo: [NSLocalizedDescriptionKey: "Could not read the CrownKeep web-search credential from Keychain."]
-            )
-        }
-
-        guard
-            let data = result as? Data,
-            let value = String(data: data, encoding: .utf8),
-            !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        else { return nil }
-
-        return value
-    }
-
-    static func save(_ value: String) throws {
-        let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !normalized.isEmpty else {
-            throw NSError(
-                domain: "CrownKeepWebCredential",
-                code: 1,
-                userInfo: [NSLocalizedDescriptionKey: "Search provider API key is required."]
-            )
-        }
-
-        let data = Data(normalized.utf8)
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account
-        ]
-        let attributes: [String: Any] = [
-            kSecValueData as String: data,
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-        ]
-
-        let updateStatus = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
-        if updateStatus == errSecItemNotFound {
-            var insert = query
-            attributes.forEach { insert[$0.key] = $0.value }
-            let addStatus = SecItemAdd(insert as CFDictionary, nil)
-            guard addStatus == errSecSuccess else {
-                throw NSError(
-                    domain: "CrownKeepWebCredential",
-                    code: Int(addStatus),
-                    userInfo: [NSLocalizedDescriptionKey: "Could not save the CrownKeep web-search credential to Keychain."]
-                )
-            }
-        } else if updateStatus != errSecSuccess {
-            throw NSError(
-                domain: "CrownKeepWebCredential",
-                code: Int(updateStatus),
-                userInfo: [NSLocalizedDescriptionKey: "Could not update the CrownKeep web-search credential in Keychain."]
-            )
-        }
-    }
-
-    static func clear() throws {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account
-        ]
-        let status = SecItemDelete(query as CFDictionary)
-        guard status == errSecSuccess || status == errSecItemNotFound else {
-            throw NSError(
-                domain: "CrownKeepWebCredential",
-                code: Int(status),
-                userInfo: [NSLocalizedDescriptionKey: "Could not remove the CrownKeep web-search credential from Keychain."]
-            )
-        }
-    }
-}
-
 private struct CrownKeepNativeWeb: @unchecked Sendable {
-    private let tavilySearchURL = URL(string: "https://api.tavily.com/search")!
+    private let duckDuckGoHTMLURL = URL(string: "https://html.duckduckgo.com/html/")!
     private let maxReadBytes = 2 * 1024 * 1024
 
-    func status() throws -> [String: Any] {
-        let configured = try CrownKeepWebCredentialStore.load() != nil
-        return [
+    func status() -> [String: Any] {
+        [
             "nativeAvailable": true,
-            "provider": "tavily",
-            "searchConfigured": configured,
+            "provider": "duckduckgo",
+            "searchAvailable": true,
             "readAvailable": true,
-            "credentialStore": "iOS Keychain",
-            "detail": configured
-                ? "Direct Web Access is ready. Search credentials stay in iOS Keychain; webpage reads are fetched directly from this device."
-                : "Direct webpage reading is ready. Add a Tavily API key to enable public-web search; the key will stay in iOS Keychain."
+            "detail": "Keyless DuckDuckGo search and direct webpage reading are ready. Only the search query or selected public URL leaves this device."
         ]
     }
 
-    func saveSearchCredential(_ value: String) throws -> [String: Any] {
-        try CrownKeepWebCredentialStore.save(value)
-        return try status()
+    private func normalizedText(_ value: String, limit: Int) -> String {
+        String(
+            value
+                .split(whereSeparator: { $0.isWhitespace })
+                .joined(separator: " ")
+                .prefix(limit)
+        )
     }
 
-    func clearSearchCredential() throws -> [String: Any] {
-        try CrownKeepWebCredentialStore.clear()
-        return try status()
-    }
-
-    private func apiKey() throws -> String {
-        guard let value = try CrownKeepWebCredentialStore.load() else {
-            throw NSError(
-                domain: "CrownKeepNativeWeb",
-                code: 1,
-                userInfo: [NSLocalizedDescriptionKey: "Web Search is not configured. Add a Tavily API key in CrownKeep Web Access settings."]
-            )
+    private func htmlFragmentText(_ fragment: String, limit: Int) -> String {
+        if let data = fragment.data(using: .utf8),
+           let attributed = try? NSAttributedString(
+                data: data,
+                options: [
+                    .documentType: NSAttributedString.DocumentType.html,
+                    .characterEncoding: String.Encoding.utf8.rawValue
+                ],
+                documentAttributes: nil
+           ) {
+            return normalizedText(attributed.string, limit: limit)
         }
-        return value
+
+        let stripped = fragment.replacingOccurrences(
+            of: "<[^>]+>",
+            with: " ",
+            options: .regularExpression
+        )
+        return normalizedText(stripped, limit: limit)
+    }
+
+    private func attributeValue(_ tag: String, name: String) -> String? {
+        let escapedName = NSRegularExpression.escapedPattern(for: name)
+        guard let regex = try? NSRegularExpression(
+            pattern: "\\b\(escapedName)\\s*=\\s*[\"']([^\"']+)[\"']",
+            options: [.caseInsensitive]
+        ) else { return nil }
+
+        let range = NSRange(tag.startIndex..<tag.endIndex, in: tag)
+        guard
+            let match = regex.firstMatch(in: tag, range: range),
+            let capture = Range(match.range(at: 1), in: tag)
+        else { return nil }
+
+        return String(tag[capture]).replacingOccurrences(of: "&amp;", with: "&")
     }
 
     private func validatePublicURL(_ value: String) throws -> URL {
@@ -182,25 +110,44 @@ private struct CrownKeepNativeWeb: @unchecked Sendable {
             )
         }
 
-        let blockedPrefixes = [
-            "127.", "10.", "192.168.", "169.254.",
-            "0.", "::1", "fc", "fd", "fe80:"
-        ]
-        let is172Private: Bool = {
-            let parts = host.split(separator: ".")
-            guard parts.count == 4, parts[0] == "172", let second = Int(parts[1]) else { return false }
-            return (16...31).contains(second)
-        }()
-
-        if host == "localhost"
-            || host.hasSuffix(".local")
-            || blockedPrefixes.contains(where: { host.hasPrefix($0) })
-            || is172Private {
+        if host == "localhost" || host.hasSuffix(".local") {
             throw NSError(
                 domain: "CrownKeepNativeWeb",
                 code: 3,
                 userInfo: [NSLocalizedDescriptionKey: "Local/private URLs are not supported by Web Read."]
             )
+        }
+
+        let ipv4Parts = host.split(separator: ".")
+        let isIPv4 = ipv4Parts.count == 4 && ipv4Parts.allSatisfy { Int($0) != nil }
+        if isIPv4 {
+            let octets = ipv4Parts.compactMap { Int($0) }
+            let blocked = octets[0] == 10
+                || octets[0] == 127
+                || octets[0] == 0
+                || (octets[0] == 169 && octets[1] == 254)
+                || (octets[0] == 172 && (16...31).contains(octets[1]))
+                || (octets[0] == 192 && octets[1] == 168)
+                || octets[0] >= 224
+            if blocked {
+                throw NSError(
+                    domain: "CrownKeepNativeWeb",
+                    code: 3,
+                    userInfo: [NSLocalizedDescriptionKey: "Local/private URLs are not supported by Web Read."]
+                )
+            }
+        } else if host.contains(":") {
+            let normalized = host.lowercased()
+            if normalized == "::1"
+                || normalized.hasPrefix("fc")
+                || normalized.hasPrefix("fd")
+                || normalized.hasPrefix("fe80:") {
+                throw NSError(
+                    domain: "CrownKeepNativeWeb",
+                    code: 3,
+                    userInfo: [NSLocalizedDescriptionKey: "Local/private URLs are not supported by Web Read."]
+                )
+            }
         }
 
         guard let url = components.url else {
@@ -213,7 +160,107 @@ private struct CrownKeepNativeWeb: @unchecked Sendable {
         return url
     }
 
-    func search(query: String, maxResults: Int = 5) async throws -> [(title: String, url: String, snippet: String, score: Double?, publishedAt: String?)] {
+    private func duckDuckGoResultURL(_ rawHref: String) -> String? {
+        let cleaned = rawHref.replacingOccurrences(of: "&amp;", with: "&")
+        let absolute: String
+        if cleaned.hasPrefix("//") {
+            absolute = "https:" + cleaned
+        } else if cleaned.hasPrefix("/") {
+            absolute = "https://duckduckgo.com" + cleaned
+        } else {
+            absolute = cleaned
+        }
+
+        guard let components = URLComponents(string: absolute),
+              let host = components.host?.lowercased()
+        else { return nil }
+
+        if host.hasSuffix("duckduckgo.com"),
+           components.path.hasPrefix("/l/"),
+           let target = components.queryItems?.first(where: { $0.name == "uddg" })?.value,
+           (try? validatePublicURL(target)) != nil {
+            return target
+        }
+
+        guard (try? validatePublicURL(absolute)) != nil else { return nil }
+        return components.url?.absoluteString
+    }
+
+    private func extractSnippet(_ segment: String) -> String {
+        let lower = segment.lowercased()
+        guard let marker = lower.range(of: "result__snippet")?.lowerBound else {
+            return ""
+        }
+
+        guard let open = segment[..<marker].lastIndex(of: "<"),
+              let openEnd = segment[open...].firstIndex(of: ">")
+        else { return "" }
+
+        let contentStart = segment.index(after: openEnd)
+        let rest = segment[contentStart...]
+        guard let close = rest.range(of: "</")?.lowerBound else {
+            return htmlFragmentText(String(rest), limit: 1_200)
+        }
+        return htmlFragmentText(String(rest[..<close]), limit: 1_200)
+    }
+
+    private func parseDuckDuckGoResults(
+        _ html: String,
+        maxResults: Int
+    ) -> [(title: String, url: String, snippet: String, score: Double?, publishedAt: String?)] {
+        guard let anchorRegex = try? NSRegularExpression(
+            pattern: "<a\\b[^>]*>.*?</a>",
+            options: [.caseInsensitive, .dotMatchesLineSeparators]
+        ) else { return [] }
+
+        let fullRange = NSRange(html.startIndex..<html.endIndex, in: html)
+        let matches = anchorRegex.matches(in: html, range: fullRange)
+        var results: [(title: String, url: String, snippet: String, score: Double?, publishedAt: String?)] = []
+
+        for (index, match) in matches.enumerated() {
+            guard results.count < maxResults,
+                  let anchorRange = Range(match.range, in: html)
+            else { break }
+
+            let anchor = String(html[anchorRange])
+            guard anchor.lowercased().contains("result__a"),
+                  let href = attributeValue(anchor, name: "href"),
+                  let url = duckDuckGoResultURL(href),
+                  let openEnd = anchor.firstIndex(of: ">"),
+                  let closeStart = anchor.lowercased().range(of: "</a>")?.lowerBound
+            else { continue }
+
+            let titleStart = anchor.index(after: openEnd)
+            let title = htmlFragmentText(String(anchor[titleStart..<closeStart]), limit: 400)
+            guard !title.isEmpty else { continue }
+
+            let segmentStart = anchorRange.upperBound
+            let segmentEnd: String.Index
+            if index + 1 < matches.count,
+               let nextRange = Range(matches[index + 1].range, in: html) {
+                segmentEnd = nextRange.lowerBound
+            } else {
+                segmentEnd = html.endIndex
+            }
+
+            let boundedEnd = html.index(
+                segmentStart,
+                offsetBy: min(6_000, html.distance(from: segmentStart, to: segmentEnd)),
+                limitedBy: segmentEnd
+            ) ?? segmentEnd
+            let snippet = extractSnippet(String(html[segmentStart..<boundedEnd]))
+
+            if results.contains(where: { $0.url == url }) { continue }
+            results.append((title, url, snippet, nil, nil))
+        }
+
+        return results
+    }
+
+    func search(
+        query: String,
+        maxResults: Int = 5
+    ) async throws -> [(title: String, url: String, snippet: String, score: Double?, publishedAt: String?)] {
         let normalized = query
             .split(whereSeparator: { $0.isWhitespace })
             .joined(separator: " ")
@@ -226,67 +273,55 @@ private struct CrownKeepNativeWeb: @unchecked Sendable {
             )
         }
 
-        var request = URLRequest(url: tavilySearchURL)
-        request.httpMethod = "POST"
+        var components = URLComponents(url: duckDuckGoHTMLURL, resolvingAgainstBaseURL: false)!
+        components.queryItems = [URLQueryItem(name: "q", value: String(normalized))]
+        guard let searchURL = components.url else {
+            throw NSError(
+                domain: "CrownKeepNativeWeb",
+                code: 6,
+                userInfo: [NSLocalizedDescriptionKey: "Could not build the DuckDuckGo search URL."]
+            )
+        }
+
+        var request = URLRequest(url: searchURL)
+        request.httpMethod = "GET"
         request.timeoutInterval = 15
-        request.setValue("Bearer \(try apiKey())", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue(
+            "text/html,application/xhtml+xml;q=0.9,*/*;q=0.1",
+            forHTTPHeaderField: "Accept"
+        )
         request.setValue("CrownKeep-Native-Web/0.1", forHTTPHeaderField: "User-Agent")
-        request.httpBody = try JSONSerialization.data(withJSONObject: [
-            "query": String(normalized),
-            "topic": "general",
-            "search_depth": "basic",
-            "max_results": max(1, min(8, maxResults)),
-            "include_answer": false,
-            "include_raw_content": false,
-            "include_images": false
-        ])
 
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else {
             throw NSError(
                 domain: "CrownKeepNativeWeb",
-                code: 6,
-                userInfo: [NSLocalizedDescriptionKey: "Search provider returned an invalid response."]
+                code: 7,
+                userInfo: [NSLocalizedDescriptionKey: "DuckDuckGo Search returned an invalid response."]
             )
         }
         guard (200..<300).contains(http.statusCode) else {
-            let detail = String(data: data, encoding: .utf8) ?? ""
             throw NSError(
                 domain: "CrownKeepNativeWeb",
                 code: http.statusCode,
-                userInfo: [NSLocalizedDescriptionKey:
-                    "Search provider returned HTTP \(http.statusCode)\(detail.isEmpty ? "" : ": \(detail.prefix(300))")"]
+                userInfo: [NSLocalizedDescriptionKey: "DuckDuckGo Search returned HTTP \(http.statusCode)."]
             )
         }
 
-        guard
-            let object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-        else {
+        let html = String(data: data, encoding: .utf8) ?? ""
+        let lower = html.lowercased()
+        if lower.contains("bots use duckduckgo too")
+            || lower.contains("anomaly-modal")
+            || lower.contains("challenge-form") {
             throw NSError(
                 domain: "CrownKeepNativeWeb",
-                code: 7,
-                userInfo: [NSLocalizedDescriptionKey: "Search provider returned invalid JSON."]
+                code: 8,
+                userInfo: [NSLocalizedDescriptionKey:
+                    "DuckDuckGo asked for an interactive verification. CrownKeep will not bypass it; try again later."]
             )
         }
 
-        let rows = object["results"] as? [[String: Any]] ?? []
-        return rows.prefix(max(1, min(8, maxResults))).compactMap { row in
-            guard
-                let title = row["title"] as? String,
-                let url = row["url"] as? String,
-                !title.isEmpty,
-                !url.isEmpty
-            else { return nil }
-            return (
-                title: title,
-                url: url,
-                snippet: (row["content"] as? String) ?? "",
-                score: row["score"] as? Double,
-                publishedAt: row["published_date"] as? String
-            )
-        }
+        return parseDuckDuckGoResults(html, maxResults: max(1, min(8, maxResults)))
     }
 
     func read(url value: String) async throws -> (url: String, title: String?, content: String) {
@@ -301,7 +336,7 @@ private struct CrownKeepNativeWeb: @unchecked Sendable {
         guard let http = response as? HTTPURLResponse else {
             throw NSError(
                 domain: "CrownKeepNativeWeb",
-                code: 8,
+                code: 9,
                 userInfo: [NSLocalizedDescriptionKey: "Webpage returned an invalid response."]
             )
         }
@@ -315,7 +350,7 @@ private struct CrownKeepNativeWeb: @unchecked Sendable {
         guard data.count <= maxReadBytes else {
             throw NSError(
                 domain: "CrownKeepNativeWeb",
-                code: 9,
+                code: 10,
                 userInfo: [NSLocalizedDescriptionKey: "Webpage is too large for the bounded CrownKeep Web Read tool."]
             )
         }
@@ -339,25 +374,37 @@ private struct CrownKeepNativeWeb: @unchecked Sendable {
                 documentAttributes: nil
             )
             content = attributed.string
-            title = nil
+
+            if let titleRegex = try? NSRegularExpression(
+                pattern: "<title[^>]*>(.*?)</title>",
+                options: [.caseInsensitive, .dotMatchesLineSeparators]
+            ),
+               let match = titleRegex.firstMatch(
+                    in: raw,
+                    range: NSRange(raw.startIndex..<raw.endIndex, in: raw)
+               ),
+               let range = Range(match.range(at: 1), in: raw) {
+                let parsedTitle = htmlFragmentText(String(raw[range]), limit: 240)
+                title = parsedTitle.isEmpty ? nil : parsedTitle
+            } else {
+                title = nil
+            }
         } else if mime.hasPrefix("text/") || mime.contains("json") || mime.isEmpty {
             content = raw
             title = nil
         } else {
             throw NSError(
                 domain: "CrownKeepNativeWeb",
-                code: 10,
+                code: 11,
                 userInfo: [NSLocalizedDescriptionKey: "Web Read does not support this content type: \(mime)."]
             )
         }
 
-        let normalized = content
-            .split(whereSeparator: { $0.isWhitespace })
-            .joined(separator: " ")
+        let normalized = normalizedText(content, limit: 18_000)
         guard !normalized.isEmpty else {
             throw NSError(
                 domain: "CrownKeepNativeWeb",
-                code: 11,
+                code: 12,
                 userInfo: [NSLocalizedDescriptionKey: "Web Read returned no readable content."]
             )
         }
@@ -365,7 +412,7 @@ private struct CrownKeepNativeWeb: @unchecked Sendable {
         return (
             url: http.url?.absoluteString ?? url.absoluteString,
             title: title,
-            content: String(normalized.prefix(18_000))
+            content: normalized
         )
     }
 }
@@ -512,8 +559,6 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
 
         web: {
           getStatus: () => call("webStatus"),
-          saveSearchCredential: (apiKey) => call("webSaveSearchCredential", { apiKey }),
-          clearSearchCredential: () => call("webClearSearchCredential"),
           search: (query, maxResults = 5) => call("webSearch", { query, maxResults }),
           read: (url) => call("webRead", { url })
         },
@@ -572,27 +617,14 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
                 } catch { self.reject(id: id, message: error.localizedDescription) }
             }
 
-        case "webStatus", "webSaveSearchCredential", "webClearSearchCredential", "webSearch", "webRead":
+        case "webStatus", "webSearch", "webRead":
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 do {
                     let web = CrownKeepNativeWeb()
                     switch method {
                     case "webStatus":
-                        self.resolve(id: id, value: try web.status())
-
-                    case "webSaveSearchCredential":
-                        guard let apiKey = args["apiKey"] as? String else {
-                            throw NSError(
-                                domain: "CrownKeepNativeWeb",
-                                code: 12,
-                                userInfo: [NSLocalizedDescriptionKey: "Search provider API key is required."]
-                            )
-                        }
-                        self.resolve(id: id, value: try web.saveSearchCredential(apiKey))
-
-                    case "webClearSearchCredential":
-                        self.resolve(id: id, value: try web.clearSearchCredential())
+                        self.resolve(id: id, value: web.status())
 
                     case "webSearch":
                         let query = (args["query"] as? String) ?? ""
@@ -718,8 +750,7 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
         var nativeTools: [any Tool] = []
 
         if webAccess {
-            if allowedToolIds.contains("web-search"),
-               (try? CrownKeepWebCredentialStore.load()) != nil {
+            if allowedToolIds.contains("web-search") {
                 nativeTools.append(CrownKeepWebSearchTool(web: web, log: toolLog))
             }
             if allowedToolIds.contains("web-read") {
