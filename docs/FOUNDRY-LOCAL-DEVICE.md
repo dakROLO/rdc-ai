@@ -61,3 +61,7 @@ Good small-footprint candidates to benchmark first, based only on this observed 
 - `qwen3.5-2b-text` — 1.3 GB, tool-capable in the listing.
 
 Model quality, latency, memory use, startup behavior, and actual Foundry Local API compatibility must be tested before a default is chosen.
+
+## Sprint 4A.3 device profiles
+
+Use the same Model Analyst on all Windows hosts. Device labels such as laptop and AVD are validation locations only. The persisted profile contains the preferred alias and measured variant/provider, hardware/runtime fingerprint, cache/tool metadata, timing and outcome. Old measurements become advisory when fingerprints change. Record fresh results in `SPRINT-4A3-VALIDATION.md`; earlier CLI results do not validate the new native dictation or selection implementation.

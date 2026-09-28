@@ -14,23 +14,24 @@ The visual above is shared with the CrownKeep app. Detailed sprint definitions a
 
 ## Current status
 
-**Phase 2 — Windows Local AI / Sprint 2.1 Foundry Local connectivity is complete.
+**Windows convergence checkpoint complete; iPhone physical Web Access validation is next.**
 
-Current build:
+Current baseline:
 
-- CrownKeep brand and Anne assistant identity;
-- local-only IndexedDB conversation storage;
-- create/open/rename/delete conversations;
-- messages survive browser refresh;
-- provider registry and provider/model selection;
-- development provider switching without changing conversations;
-- Enter-to-send and Shift+Enter newline behavior;
-- mock local streaming providers;
-- first real Microsoft Foundry Local REST provider;
-- deterministic message ordering across IndexedDB reloads;
-- responsive Windows/mobile browser UI;
-- future cloud controls intentionally disabled;
-- no RDC customer data connection.
+- shared provider-neutral CrownKeep conversation experience on Windows and iPhone;
+- Windows System Foundry authority with Quick/Balanced/Deep role policy and observed benchmark evidence;
+- physical Windows Quick, Balanced Mistral Nemo, exclusive model switching, and local dictation validated;
+- Rolo15 current convergence build physically validated for Apple Foundation Models chat, follow-up context, native on-device dictation, and restart/persistence;
+- persistent compact status bar restored with role/model/execution, Inside-the-Keep boundary, runtime state, and Web Access state;
+- provider-neutral Web Access foundation implemented with **OFF by default**, bounded read-only Web Search/Web Read tools, and visible source/activity metadata;
+- Web Access is now **native, direct, and keyless**: Windows and iPhone use DuckDuckGo's public non-JavaScript search results for discovery, with no API account, API key, CrownKeep gateway, or credential-store setup;
+- Web Search sends only the minimized query to DuckDuckGo; Web Read fetches the selected public page directly from the native device; all reasoning remains on the selected local model;
+- Windows structured tool use is enabled only when function-calling support is observed; otherwise CrownKeep uses the bounded provider-neutral fallback; iPhone uses the matching Apple Foundation Models Tool boundary;
+- the Azure Function/Web Gateway prototype has been removed; there is no CrownKeep web middleman in the current architecture;
+- AVD acceptance remains pending under the same adaptive Windows policy;
+- no silent cloud-model fallback and no live RDC customer-data connection.
+
+Windows keyless DuckDuckGo Web Access has now been physically exercised. The next acceptance work is Rolo15 physical Web Access + retained-context validation. Natural-language web-intent tuning, cross-model retained-web grounding, and rare Foundry stream retries are documented carry-forward items rather than Windows merge blockers. AVD remains deferred under the same adaptive Windows policy.
 
 ## Privacy boundary
 

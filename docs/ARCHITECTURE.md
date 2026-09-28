@@ -14,6 +14,12 @@ flowchart LR
         SY["Sync Client"]
         AU["Entra Auth Client"]
         CP["ContextProvider Interface"]
+        TR["ToolRegistry + Web Access Policy"]
+    end
+
+    subgraph WebBoundary["Optional native read-only network tool boundary"]
+        NW["Native Web Adapter\nDuckDuckGo Search + Direct Read"]
+        WEB["Public Web / Search Provider"]
     end
 
     subgraph Azure["RDC Azure Tenant"]
@@ -29,6 +35,9 @@ flowchart LR
     PR --> WL
     PR --> AF
     UI --> CP
+    UI --> TR
+    TR -->|Web Access ON only| NW
+    NW --> WEB
 
     AU --> API
     SY --> API
@@ -92,6 +101,7 @@ export interface AIProvider {
 
   getAvailability(): Promise<ProviderAvailability>;
   listModels(): Promise<AIModel[]>;
+  probeToolCalling?(modelId: string, signal?: AbortSignal): Promise<boolean | undefined>;
   streamChat(request: ChatRequest, signal?: AbortSignal): AsyncIterable<ChatChunk>;
 }
 ```
@@ -206,6 +216,9 @@ Initial application:
 4. Sync storage does not need plaintext conversations.
 5. Real RDC data remains disconnected until explicitly scheduled.
 6. Public repository contents must be safe for anonymous viewing.
+7. Web/network tool access is independent from AI provider selection; using a network tool does not imply cloud reasoning.
+8. Web Access OFF must block network tools before availability probes or execution.
+9. Public-web tools receive only the minimum query or selected URL, never implicit conversation/project/file context.
 
 
 ## Windows desktop distribution direction
@@ -309,3 +322,207 @@ For the first device vertical slice, the native host may return a complete non-s
 After the bridge works, Sprint 3.2 will add native streaming, cancellation, token/context instrumentation, and mobile resource handling.
 
 WebLLM/WebGPU remains an optional fallback/experimental provider rather than the primary iPhone implementation.
+
+
+## Phase 4A Windows product host
+
+CrownKeep's Windows productization path preserves the existing React conversation application and adds a native desktop host only for capabilities the browser cannot own reliably.
+
+Target shape:
+
+```text
+CrownKeep React UI
+        |
+        +---- AIProvider ----------------------> conversation inference
+        |
+        +---- LocalRuntimeManager
+                     |
+                     +-- browser development -> BrowserLocalRuntimeManager
+                     |
+                     +-- Windows desktop -----> TauriLocalRuntimeManager
+                                                    |
+                                                    v
+                                               Tauri/Rust host
+                                                    |
+                                      Phase 4A.2: Foundry Local Rust SDK
+                                                    |
+                                               Windows WinML
+```
+
+Sprint 4A.1 exposes only a native host identity command. It intentionally does not start/stop Foundry Local or install/load/unload models yet.
+
+The first native command is:
+
+```text
+crownkeep_host_info
+```
+
+The TypeScript runtime selector chooses `TauriLocalRuntimeManager` only when the frontend is actually running inside Tauri. Ordinary browser/PWA development continues to use `BrowserLocalRuntimeManager`.
+
+### Windows host invariants
+
+1. The React conversation/domain/provider layer remains shared.
+2. The native host owns OS/runtime lifecycle capabilities, not conversation identity.
+3. Browser mode remains usable for engineering and regression testing.
+4. Native runtime actions are surfaced through `LocalRuntimeManager`, not direct UI shell commands.
+5. Foundry Local SDK integration must not require Azure or cloud credentials.
+6. The installed product must eventually use a stable local storage location/origin and explicitly handle migration/export from browser-development storage.
+
+## Sprint 4A.3 shared model and speech boundaries
+
+`modelPolicy.ts` contains the host-label-neutral family/task/memory/benchmark policy. `ModelAnalyst` coordinates native lifecycle operations without touching conversation storage. Device fingerprints are local hashes of hardware/driver/OS/provider/catalog characteristics; no machine serial or user identity is gathered. Preferred families retain observed variants only for matching fingerprints.
+
+`SpeechInputProvider` separates capture, stopping, transcription, cancellation, and capability reporting. `DictationControl` only appends reviewed text to the composer. Windows uses a bounded WebView microphone capture and native Foundry `AudioClient`; iOS exposes Apple Speech through the native bridge. No browser cloud speech API or cloud fallback is used. Speech and chat/benchmark/lifecycle actions are mutually excluded in the shared UI. Speech releases immediately after each recording, including restoration of prior Windows chat models, rather than retaining both models in GPU memory.
+
+
+## Sprint 4A.4 Web Access and automatic-tool boundary
+
+CrownKeep treats public-web access as a **tool capability**, not an AI provider or cloud reasoning service.
+
+```text
+User request
+   |
+   v
+Selected local Anne provider
+   |
+   +-- request does not need external/current data --> local answer
+   |
+   +-- Web Access OFF -----------------------------> local answer / explicit current-info limitation
+   |
+   +-- Web Access ON
+          |
+          v
+      ToolRegistry policy
+          |
+          v
+      Native Web Adapter
+          |
+          +-- Web Search --> DuckDuckGo HTML search
+          |                  (minimal query only; no key)
+          |
+          +-- Web Read ----> selected public HTTP(S) page
+                             (selected URL only)
+          |
+          v
+      untrusted tool result + source metadata
+          |
+          v
+      same selected local Anne provider
+          |
+          v
+      final answer
+```
+
+There is **no CrownKeep Web Gateway, search API account, or API key** in the current architecture. The earlier Azure Function/Web Gateway and Tavily credential-store prototypes were removed before physical acceptance.
+
+### ToolRegistry policy
+
+`ToolRegistry` is the authoritative execution boundary.
+
+Current defaults:
+
+- `webAccess = off`;
+- write tools remain denied unless a future explicit approval flow enables them;
+- a network tool is rejected **before** `isAvailable()` or `execute()` when Web Access is OFF;
+- tool execution never changes the selected `AIProvider`.
+
+Turning Web Access ON authorizes only the registered network tools. It does not authorize cloud-model fallback, bulk context upload, or alternate search-provider fallback.
+
+### Native Web Search / Web Read transport
+
+The shared application exposes two provider-neutral read-only tools:
+
+- `web-search`: sends one minimized search query and receives parsed titles, URLs, and snippets;
+- `web-read`: sends one selected public HTTP(S) URL and receives bounded readable content.
+
+**Windows**
+
+- the Tauri/Rust host performs HTTPS requests;
+- Web Search requests DuckDuckGo's public non-JavaScript HTML search surface;
+- returned HTML is parsed locally into result titles, destination URLs, and snippets;
+- DuckDuckGo redirect links are unwrapped locally;
+- Web Read fetches the selected public page directly.
+
+**iPhone**
+
+- the Swift host performs HTTPS requests with `URLSession`;
+- Web Search uses the same DuckDuckGo non-JavaScript HTML search surface;
+- result parsing and redirect unwrapping happen locally;
+- Web Read fetches the selected public page directly;
+- Apple Foundation Models remains the local reasoning provider.
+
+**Browser-only development**
+
+- does not perform live native web search;
+- reports native Web Access unavailable;
+- shared policy/tool behavior remains testable through injected test transports.
+
+### DuckDuckGo is discovery, not reasoning
+
+DuckDuckGo is used only to locate public pages. CrownKeep does not delegate answer generation or reasoning to DuckDuckGo.
+
+Only the minimized query is sent to DuckDuckGo. Search results return to CrownKeep, selected pages are read directly, and the same local Anne provider produces the answer.
+
+DuckDuckGo HTML/Lite search is a public browser-facing surface rather than a formal developer API. Therefore:
+
+- parser changes, rate limits, or interactive verification may cause search failure;
+- CrownKeep reports that failure visibly;
+- CrownKeep does not bypass interactive verification;
+- CrownKeep does not silently switch to Google, Bing, Brave, Tavily, another search service, or cloud AI.
+
+### Automatic tool use by runtime
+
+**Windows / System Foundry**
+
+- structured local-model tool calling is used only when current-device evidence proves support;
+- otherwise CrownKeep uses the bounded provider-neutral read-only fallback;
+- all tool results return to the same selected local provider;
+- the current loop is capped at three read-only web operations for one turn.
+
+**Native iPhone / Apple Foundation Models**
+
+- the same logical Web Search/Web Read definitions are exposed as Foundation Models `Tool` objects;
+- Web Access ON exposes both tools with no credential prerequisite;
+- Web Access OFF exposes no network tools;
+- reasoning remains Apple on-device.
+
+**Models without structured tool calling**
+
+- the fallback examines only the current prompt;
+- ordinary/local questions make no web request;
+- current/external intent may trigger one search;
+- source-detail intent may add at most two selected page reads;
+- conversation history, local knowledge, attachments, and unrelated project context are not sent to search.
+
+### Network and trust boundary
+
+For current Web Access tools, only these values may leave the device:
+
+- the minimized public search query sent to DuckDuckGo; or
+- the single selected public URL requested by Web Read.
+
+CrownKeep does **not** send entire conversation history, projects, local knowledge, attachments, files, images, or unrelated context through these tools.
+
+Retrieved web content is treated as untrusted reference data, not instructions.
+
+### Status and visibility
+
+The persistent status bar continues to show:
+
+- Quick / Balanced / Deep role where applicable;
+- actual model and execution device/provider;
+- Ready / Working / Benchmarking / Sleeping / Error;
+- Inside the Keep versus network boundary;
+- Web Access OFF/ON;
+- `Local reasoning · keyless web` when the native keyless web tools are available.
+
+Assistant messages retain web-tool activity and source URLs separately from provider metadata, so a locally reasoned response can visibly show that public-web retrieval occurred.
+
+### Image/multimodal continuation
+
+The next capability layer should reuse this same ToolRegistry/policy/result-metadata foundation:
+
+- image understanding/OCR should remain local-first where a supported device capability exists;
+- image generation remains a provider-neutral tool;
+- any cloud image generation must expose an explicit visible boundary;
+- images/prompts must not be silently uploaded.

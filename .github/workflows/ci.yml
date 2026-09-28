@@ -2,15 +2,19 @@ name: CI
 
 on:
   push:
-    branches: [main, phase-3-iphone-local-ai]
+    branches: [main, phase-3-iphone-local-ai, phase-4a-windows-product-host, sprint-4a3-local-platform-convergence]
   pull_request:
     branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  verify:
+  web-verify:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -19,13 +23,73 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Lint
         run: npm run lint
 
+      - name: Install test browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Shared UI smoke tests
+        run: npm run test:ui
+
+      - name: Policy tests
+        run: npm test
+
       - name: Build
         run: npm run build
+
+  windows-host-check:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install frontend / Tauri CLI dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Generate CrownKeep desktop icons
+        run: npm run desktop:prepare
+
+      - name: Check CrownKeep Tauri host
+        run: cargo check --manifest-path src-tauri/Cargo.toml
+
+      - name: Verify committed Cargo lockfile is current
+        shell: pwsh
+        run: |
+          git diff --exit-code -- src-tauri/Cargo.lock
+
+      - name: Upload regenerated Cargo lockfile on mismatch
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crownkeep-cargo-lock
+          path: src-tauri/Cargo.lock
+          if-no-files-found: error
+
+  ios-host-check:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build
+      - name: Prepare branded iPhone icon
+        run: sips -z 1024 1024 public/brand/crownkeep-facelift/crownkeep-app-icon.png --out native/ios/CrownKeepNative/CrownKeepNative/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png
+      - name: Compile native iPhone host without signing
+        run: >-
+          xcodebuild -project native/ios/CrownKeepNative/CrownKeepNative.xcodeproj
+          -scheme CrownKeepNative -sdk iphonesimulator -configuration Debug
+          -destination 'generic/platform=iOS Simulator'
+          CODE_SIGNING_ALLOWED=NO build

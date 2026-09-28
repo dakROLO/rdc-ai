@@ -1,0 +1,141 @@
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { bestObserved, bestObservedForRole, taskOf, groupFamilies, memoryFit, readResults, roleOf, viableVariants } from '../src/runtime/modelPolicy.ts'
+import type { BenchmarkResult } from '../src/runtime/modelPolicy.ts'
+const cpu = { id: 'phi-cpu:5', alias: 'phi-4-mini', modelType: 'chat', displayName: 'Phi', cached: true, loaded: false, device: 'CPU', fileSizeMb: 2000 }
+const gpu = { ...cpu, id: 'phi-gpu:5', device: 'GPU' }
+const profile = { fingerprint: 'machine-a', memoryMb: 16000, detail: '' }
+test('family choices collapse variants and exclude non-chat tasks', () => {
+  const families = groupFamilies([cpu, gpu, { ...cpu, alias: 'whisper-tiny', modelType: 'speech' }, { ...cpu, alias: 'embedding', modelType: 'embeddings' }])
+  assert.equal(families.length, 2)
+  assert.equal(families[0].variants.length, 2)
+  assert.equal(families[1].role, 'Voice')
+})
+test('tool metadata and memory constraints filter before benchmarking', () => {
+  const family = groupFamilies([cpu, { ...gpu, supportsToolCalling: true }])[0]
+  assert.equal(viableVariants(family, profile, true)[0].id, gpu.id)
+  assert.match(memoryFit({ ...cpu, fileSizeMb: 15000 }, profile)!, /headroom/)
+})
+test('observed CPU beats nominal GPU, excludes stale and failed results', () => {
+  const result: BenchmarkResult = { fingerprint: 'machine-a', alias: cpu.alias, variantId: cpu.id, cached: true, timestamp: '', firstTokenMs: 200, totalMs: 970, outcome: 'accepted' }
+  assert.equal(bestObserved([result, { ...result, variantId: gpu.id, firstTokenMs: 3000, totalMs: 49900, outcome: 'slow' }, { ...result, fingerprint: 'old', variantId: 'old-fast', totalMs: 1 }], 'machine-a')?.variantId, cpu.id)
+  assert.equal(bestObserved([{ ...result, outcome: 'error' }], 'machine-a'), undefined)
+})
+test('malformed local records are discarded', () => {
+  assert.deepEqual(readResults({ getItem: () => '{' }), [])
+  assert.deepEqual(readResults({ getItem: () => '[null,{}]' }), [])
+})
+
+test('native text catalogs are chat-capable but embedding and unknown tasks are excluded', () => {
+  assert.equal(taskOf({ ...cpu, modelType: 'text' }), 'chat')
+  assert.equal(taskOf({ ...cpu, modelType: 'text', task: 'embeddings' }), 'other')
+  assert.equal(taskOf({ ...cpu, modelType: 'unknown' }), 'other')
+})
+
+test('Foundry 0.10.3 type values classify Chat, Speech, and Embedding correctly', () => {
+  assert.equal(taskOf({ ...cpu, modelType: 'Chat' }), 'chat')
+  assert.equal(taskOf({ ...cpu, modelType: 'Speech', alias: 'any-speech' }), 'speech')
+  assert.equal(taskOf({ ...cpu, modelType: 'Embedding' }), 'other')
+  assert.equal(taskOf({ ...cpu, modelType: 'Multimodal' }), 'other')
+})
+
+
+test('reasoning variants stay out of the default Quick role', () => {
+  assert.equal(roleOf({ ...cpu, alias: 'phi-4-mini-reasoning' }), 'Deep')
+  assert.equal(roleOf({ ...cpu, alias: 'phi-4-mini' }), 'Quick')
+})
+
+test('CrownKeep role names remain Quick, Balanced, Deep, and Voice', () => {
+  assert.equal(roleOf({ ...cpu, alias: 'mistral-nemo-12b-instruct' }), 'Balanced')
+  assert.equal(roleOf({ ...cpu, alias: 'whisper-tiny', modelType: 'speech' }), 'Voice')
+  assert.equal(roleOf({ ...cpu, alias: 'gpt-oss-20b' }), 'Deep')
+})
+
+
+test('Phi-4 Mini remains Quick even when a package is over the generic size threshold', () => {
+  assert.equal(roleOf({ ...cpu, alias: 'phi-4-mini', fileSizeMb: 4915 }), 'Quick')
+})
+
+
+test('heavier role winners require representative context validation', () => {
+  const balanced = { ...gpu, id: 'nemo-cuda:1', alias: 'mistral-nemo-12b-instruct', fileSizeMb: 6600 }
+  const speedOnly: BenchmarkResult = {
+    fingerprint: 'machine-a',
+    alias: balanced.alias,
+    variantId: balanced.id,
+    cached: true,
+    timestamp: '',
+    firstTokenMs: 800,
+    totalMs: 1200,
+    outcome: 'accepted',
+  }
+  assert.equal(
+    bestObservedForRole([speedOnly], 'machine-a', 'Balanced', [balanced]),
+    undefined,
+  )
+  assert.equal(
+    bestObservedForRole(
+      [{ ...speedOnly, realWorldValidated: true }],
+      'machine-a',
+      'Balanced',
+      [balanced],
+    )?.variantId,
+    balanced.id,
+  )
+})
+
+test('Quick can remain usable with legacy accepted measurements', () => {
+  const quick: BenchmarkResult = {
+    fingerprint: 'machine-a',
+    alias: cpu.alias,
+    variantId: cpu.id,
+    cached: true,
+    timestamp: '',
+    firstTokenMs: 200,
+    totalMs: 970,
+    outcome: 'accepted',
+  }
+  assert.equal(
+    bestObservedForRole([quick], 'machine-a', 'Quick', [cpu])?.variantId,
+    cpu.id,
+  )
+})
+
+
+test('role winner remains available when API model id differs from catalog variant suffix', () => {
+  const balanced = { ...gpu, id: 'mistral-nemo-12b-instruct-cuda-gpu:1', alias: 'mistral-nemo-12b-instruct', fileSizeMb: 6600 }
+  const result: BenchmarkResult = {
+    fingerprint: 'machine-a',
+    alias: balanced.alias,
+    variantId: 'mistral-nemo-12b-instruct-cuda-gpu',
+    cached: true,
+    timestamp: '',
+    firstTokenMs: 800,
+    totalMs: 1200,
+    realWorldValidated: true,
+    outcome: 'accepted',
+  }
+  assert.equal(
+    bestObservedForRole([result], 'machine-a', 'Balanced', [balanced])?.alias,
+    balanced.alias,
+  )
+})
+
+
+test('legacy normal-chat timeout rows are ignored as benchmark evidence', () => {
+  const stored = JSON.stringify([
+    {
+      fingerprint: 'machine-a',
+      alias: 'mistral-nemo-12b-instruct',
+      variantId: 'mistral-nemo-12b-instruct-cuda-gpu:1',
+      cached: true,
+      timestamp: '2026-09-28T00:00:00.000Z',
+      totalMs: 20000,
+      realWorldValidated: false,
+      outcome: 'error',
+      detail: 'Normal CrownKeep chat timed out before the first token.',
+    },
+  ])
+
+  assert.deepEqual(readResults({ getItem: () => stored }), [])
+})

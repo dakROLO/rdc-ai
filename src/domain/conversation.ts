@@ -2,6 +2,22 @@ export type MessageRole = 'system' | 'user' | 'assistant'
 export type InferenceLocation = 'local' | 'cloud'
 export type SyncState = 'local-only' | 'pending' | 'synced' | 'conflict'
 
+export interface MessageToolSource {
+  url: string
+  title?: string
+}
+
+export interface MessageToolActivity {
+  toolId: string
+  label: string
+  requiresNetwork: boolean
+  dataLeftDevice: boolean
+  outcome?: 'success' | 'error'
+  sources: MessageToolSource[]
+  /** Bounded local copy of tool output retained for future conversation context. */
+  retainedContext?: string
+}
+
 export interface Conversation {
   id: string
   title: string
@@ -26,6 +42,8 @@ export interface Message {
   providerId?: string
   modelId?: string
   inferenceLocation?: InferenceLocation
+  /** Visible evidence of read-only tool/network use for this response. */
+  toolActivity?: MessageToolActivity[]
   /**
    * When true, the message remains visible in local history but is omitted from
    * future inference requests until the user restores it.

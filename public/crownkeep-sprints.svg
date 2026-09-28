@@ -49,7 +49,7 @@
   <g transform="translate(1180 58)">
     <rect width="330" height="78" rx="20" fill="#102925" stroke="#2EE6B8" stroke-opacity=".34"/>
     <text x="22" y="30" class="phaseNo">CURRENT BUILD</text>
-    <text x="22" y="57" class="phase">Sprint 3.1 · iPhone local AI</text>
+    <text x="22" y="57" class="phase">Sprint 4A.4 · Local convergence</text>
     <circle cx="304" cy="39" r="8" fill="#2EE6B8" filter="url(#softGlow)"/>
   </g>
 
@@ -103,32 +103,48 @@
 
   <!-- Row 2 -->
   <g transform="translate(70 467)">
-    <rect width="455" height="225" rx="24" fill="url(#activeCard)" stroke="#C97F5B" stroke-width="2"/>
+    <rect width="455" height="225" rx="24" fill="#0E221F" stroke="#2EE6B8" stroke-width="2"/>
     <text x="24" y="34" class="phaseNo">PHASE 3</text>
     <text x="24" y="66" class="phase">iPhone Local AI</text>
     <line x1="24" y1="84" x2="431" y2="84" class="line"/>
-    <circle cx="34" cy="115" r="7" fill="#C97F5B"/>
+    <circle cx="34" cy="115" r="6" fill="#2EE6B8"/>
     <text x="52" y="121" class="sprint">3.1 · Native Apple capability + host</text>
-    <text x="52" y="143" class="small">Foundation Models · bridge · device support</text>
-    <circle cx="34" cy="173" r="6" fill="#56736C"/>
+    <text x="52" y="143" class="small">Foundation Models · native bridge · streaming</text>
+    <circle cx="34" cy="173" r="6" fill="#2EE6B8"/>
     <text x="52" y="179" class="sprint">3.2 · Mobile local conversation</text>
-    <text x="52" y="201" class="small">Streaming · cancel · mobile resource handling</text>
+    <text x="52" y="201" class="small">Baseline complete · Rolo15 current build deployed</text>
   </g>
 
   <g transform="translate(572 467)">
-    <rect width="455" height="225" rx="24" fill="#0C1D1A" stroke="#1C3833"/>
-    <text x="24" y="34" class="phaseNo">PHASE 4</text>
-    <text x="24" y="66" class="phase">Cloud Identity + API</text>
+    <rect width="455" height="225" rx="24" fill="url(#activeCard)" stroke="#C97F5B" stroke-width="2"/>
+    <text x="24" y="34" class="phaseNo">PHASE 4A</text>
+    <text x="24" y="66" class="phase">Local Platform Convergence</text>
     <line x1="24" y1="84" x2="431" y2="84" class="line"/>
-    <circle cx="34" cy="115" r="6" fill="#56736C"/>
-    <text x="52" y="121" class="sprint">4.1 · Microsoft Entra ID</text>
-    <text x="52" y="143" class="small">Cloud auth without blocking local use</text>
-    <circle cx="34" cy="173" r="6" fill="#56736C"/>
-    <text x="52" y="179" class="sprint">4.2 · Minimal Azure API</text>
-    <text x="52" y="201" class="small">Protected CrownKeep cloud boundary</text>
+    <circle cx="34" cy="108" r="6" fill="#2EE6B8"/>
+    <text x="52" y="114" class="sprint">4A.3 · Shared local platform</text>
+    <circle cx="34" cy="143" r="7" fill="#C97F5B"/>
+    <text x="52" y="149" class="sprint">4A.4 · System Foundry + agent</text>
+    <circle cx="34" cy="178" r="6" fill="#E8E4DA"/>
+    <text x="52" y="184" class="sprint">4A.5 · Installer + stable storage</text>
+    <circle cx="34" cy="211" r="6" fill="#56736C"/>
+    <text x="52" y="217" class="small">4A.6 · Tools + image/multimodal proof</text>
   </g>
 
   <g transform="translate(1074 467)">
+    <rect width="455" height="225" rx="24" fill="#0C1D1A" stroke="#1C3833"/>
+    <text x="24" y="34" class="phaseNo">PHASE 4B</text>
+    <text x="24" y="66" class="phase">Cloud Identity + API</text>
+    <line x1="24" y1="84" x2="431" y2="84" class="line"/>
+    <circle cx="34" cy="115" r="6" fill="#56736C"/>
+    <text x="52" y="121" class="sprint">4B.1 · Microsoft Entra ID</text>
+    <text x="52" y="143" class="small">Cloud auth never blocks local use</text>
+    <circle cx="34" cy="173" r="6" fill="#56736C"/>
+    <text x="52" y="179" class="sprint">4B.2 · Minimal Azure API</text>
+    <text x="52" y="201" class="small">Protected CrownKeep cloud boundary</text>
+  </g>
+
+  <!-- Row 3 -->
+  <g transform="translate(70 724)">
     <rect width="455" height="225" rx="24" fill="#0C1D1A" stroke="#1C3833"/>
     <text x="24" y="34" class="phaseNo">PHASE 5</text>
     <text x="24" y="66" class="phase">Encrypted Cross-Device Sync</text>
@@ -141,8 +157,7 @@
     <text x="52" y="200" class="sprint">5.3 · Conflict + recovery UX</text>
   </g>
 
-  <!-- Row 3 -->
-  <g transform="translate(70 724)">
+  <g transform="translate(572 724)">
     <rect width="455" height="225" rx="24" fill="#0C1D1A" stroke="#1C3833"/>
     <text x="24" y="34" class="phaseNo">PHASE 6</text>
     <text x="24" y="66" class="phase">Explicit Cloud Escalation</text>
@@ -151,35 +166,23 @@
     <text x="52" y="121" class="sprint">6.1 · CrownKeep cloud provider</text>
     <text x="52" y="143" class="small">Server-held credentials · explicit provider</text>
     <circle cx="34" cy="173" r="6" fill="#56736C"/>
-    <text x="52" y="179" class="sprint">6.2 · Open / Return to the Keep</text>
+    <text x="52" y="179" class="sprint">6.2 · Take to Cloud / Return Local</text>
     <text x="52" y="201" class="small">One conversation across local and cloud</text>
-  </g>
-
-  <g transform="translate(572 724)">
-    <rect width="455" height="225" rx="24" fill="#0C1D1A" stroke="#1C3833"/>
-    <text x="24" y="34" class="phaseNo">PHASE 7</text>
-    <text x="24" y="66" class="phase">Product Hardening</text>
-    <line x1="24" y1="84" x2="431" y2="84" class="line"/>
-    <circle cx="34" cy="115" r="6" fill="#56736C"/>
-    <text x="52" y="121" class="sprint">7.1 · Reliability + security</text>
-    <text x="52" y="143" class="small">Tests · CSP · privacy-safe diagnostics</text>
-    <circle cx="34" cy="173" r="6" fill="#56736C"/>
-    <text x="52" y="179" class="sprint">7.2 · Install + release workflow</text>
-    <text x="52" y="201" class="small">Repeatable Windows + iPhone delivery</text>
   </g>
 
   <g transform="translate(1074 724)">
     <rect width="455" height="225" rx="24" fill="#0C1D1A" stroke="#1C3833"/>
-    <text x="24" y="34" class="phaseNo">PHASE 8</text>
-    <text x="24" y="66" class="phase">Future Context Contract</text>
+    <text x="24" y="34" class="phaseNo">PHASES 7–8</text>
+    <text x="24" y="66" class="phase">Harden + Extend Context</text>
     <line x1="24" y1="84" x2="431" y2="84" class="line"/>
-    <circle cx="34" cy="116" r="6" fill="#56736C"/>
-    <text x="52" y="122" class="sprint">8.1 · ContextProvider contract</text>
-    <text x="52" y="146" class="small">Synthetic context only</text>
-    <text x="52" y="178" class="small">No live RDC customer / Blueprint /</text>
-    <text x="52" y="198" class="small">dashboard connection in this roadmap.</text>
+    <circle cx="34" cy="115" r="6" fill="#56736C"/>
+    <text x="52" y="121" class="sprint">7.x · Reliability + release</text>
+    <text x="52" y="143" class="small">Security · testing · normal-user delivery</text>
+    <circle cx="34" cy="173" r="6" fill="#56736C"/>
+    <text x="52" y="179" class="sprint">8.1 · ContextProvider contract</text>
+    <text x="52" y="201" class="small">RDC remains an optional configured source</text>
   </g>
 
   <text x="70" y="1002" class="footer">Visual summary only · docs/ROADMAP.md remains the detailed source of truth.</text>
-  <text x="1528" y="1002" text-anchor="end" class="footer">CrownKeep · Anne · 2026-09-25</text>
+  <text x="1528" y="1002" text-anchor="end" class="footer">CrownKeep · Anne · 2026-09-27</text>
 </svg>

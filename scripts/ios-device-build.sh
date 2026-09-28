@@ -40,9 +40,21 @@ if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
   exit 4
 fi
 
-if [[ ! -d "$ROOT/node_modules" ]]; then
-  echo "Installing CrownKeep web dependencies…"
-  npm install
+DEPENDENCIES_OK=1
+if [[ ! -d "$ROOT/node_modules" || ! -d "$ROOT/node_modules/@tauri-apps/api" ]]; then
+  DEPENDENCIES_OK=0
+elif ! npm ls --depth=0 >/dev/null 2>&1; then
+  DEPENDENCIES_OK=0
+fi
+
+if [[ "$DEPENDENCIES_OK" -ne 1 ]]; then
+  if [[ -f "$ROOT/package-lock.json" ]]; then
+    echo "Refreshing CrownKeep web dependencies from package-lock.json…"
+    npm ci
+  else
+    echo "Refreshing CrownKeep web dependencies…"
+    npm install
+  fi
 fi
 
 echo "Building CrownKeep React UI…"
@@ -53,38 +65,18 @@ if [[ ! -f "$ROOT/dist/index.html" ]]; then
   exit 5
 fi
 
-ICON_SVG="$ROOT/public/crownkeep-mark.svg"
-ICON_FALLBACK="$ROOT/public/icons/crownkeep-512.png"
+ICON_SOURCE="$ROOT/public/brand/crownkeep-facelift/crownkeep-app-icon.png"
 ICON_DIR="$ROOT/native/ios/CrownKeepNative/CrownKeepNative/Assets.xcassets/AppIcon.appiconset"
 ICON_OUTPUT="$ICON_DIR/AppIcon-1024.png"
 
-if [[ ! -f "$ICON_SVG" && ! -f "$ICON_FALLBACK" ]]; then
-  echo "CrownKeep icon source was not found."
+if [[ ! -f "$ICON_SOURCE" ]]; then
+  echo "CrownKeep facelift icon source was not found."
   exit 6
 fi
 
 mkdir -p "$ICON_DIR"
 echo "Preparing CrownKeep iOS app icon…"
-
-ICON_RENDERED=0
-if [[ -f "$ICON_SVG" ]] && command -v qlmanage >/dev/null 2>&1; then
-  ICON_TMP="$(mktemp -d)"
-  if qlmanage -t -s 1024 -o "$ICON_TMP" "$ICON_SVG" >/dev/null 2>&1; then
-    SVG_PNG="$ICON_TMP/$(basename "$ICON_SVG").png"
-    if [[ -f "$SVG_PNG" ]]; then
-      # Flatten any transparent SVG corners so iOS receives an opaque icon.
-      sips -s format jpeg "$SVG_PNG" --out "$ICON_TMP/AppIcon.jpg" >/dev/null
-      sips -s format png -z 1024 1024 "$ICON_TMP/AppIcon.jpg" --out "$ICON_OUTPUT" >/dev/null
-      ICON_RENDERED=1
-    fi
-  fi
-  rm -rf "$ICON_TMP"
-fi
-
-if [[ "$ICON_RENDERED" -ne 1 ]]; then
-  echo "SVG rasterization unavailable; using committed CrownKeep PNG fallback."
-  sips -z 1024 1024 "$ICON_FALLBACK" --out "$ICON_OUTPUT" >/dev/null
-fi
+sips -z 1024 1024 "$ICON_SOURCE" --out "$ICON_OUTPUT" >/dev/null
 
 rm -rf "$DERIVED"
 

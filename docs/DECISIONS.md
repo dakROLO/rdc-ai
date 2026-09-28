@@ -385,3 +385,304 @@ The native framework exposes the device's Apple on-device language model, availa
 ### Constraint
 
 This decision does not permit silent cloud fallback. If the Apple on-device model is unavailable, CrownKeep must surface that state and preserve the user's explicit choice boundary.
+
+
+---
+
+## ADR-0021 — Projects are a local organizational layer
+
+**Status:** Accepted  
+**Date:** 2026-09-25
+
+### Decision
+
+A CrownKeep conversation may belong to zero or one local Project.
+
+Projects organize conversations but do not change inference context, conversation identity, provider selection, or message ownership.
+
+Deleting a Project does not delete its conversations; those conversations become Unassigned.
+
+### Reason
+
+Projects provide useful organization without coupling the core conversation model to future RDC context or synchronization decisions.
+
+---
+
+## ADR-0022 — Tauri 2 selected for the Windows product-host spike
+
+**Status:** Accepted for Phase 4A validation  
+**Date:** 2026-09-26
+
+### Decision
+
+Use Tauri 2 for the Phase 4A Windows native-host spike around the existing CrownKeep Vite/React application.
+
+The host must preserve the existing provider-neutral conversation UI and use the established `LocalRuntimeManager` boundary for native runtime/model lifecycle actions.
+
+If the shell proof validates, the intended Windows runtime integration is the official Foundry Local Rust SDK with the Windows `winml` feature. The framework choice remains reversible until the host/runtime/installer slices are validated.
+
+### Reason
+
+CrownKeep now has a concrete browser capability gap: normal Windows users should not have to operate Vite, PowerShell, or a separately managed Foundry CLI.
+
+Tauri supports an existing Vite frontend while providing a Rust native host. Microsoft currently publishes an official Foundry Local Rust SDK, including a Windows WinML integration path, which aligns with the existing runtime abstraction.
+
+### Constraints
+
+- Do not move conversation/provider logic into Rust merely because a native host exists.
+- Do not make Azure required for local Windows use.
+- Browser development must remain functional.
+- Do not add Foundry SDK lifecycle ownership until the Tauri shell/bridge proof is validated.
+- No real RDC customer data is introduced by this phase.
+
+
+---
+
+## ADR-0023 — Adaptive Windows model selection is capability- and benchmark-driven
+
+**Status:** Accepted  
+**Date:** 2026-09-26
+
+### Decision
+
+CrownKeep uses one Windows model-selection policy across physical PCs, laptops, virtual desktops, and other Windows hosts.
+
+The selection flow is:
+
+1. discover actual hardware and execution-provider capabilities;
+2. inspect compatible model families and variants;
+3. filter candidates by task, memory/resource fit, and required capabilities such as tool calling or speech;
+4. benchmark viable candidates using observed performance;
+5. recommend and persist the best observed result for the current machine/runtime fingerprint.
+
+The product must not choose a model or execution provider merely because the host is labeled `AVD`, `laptop`, `desktop`, or similar.
+
+Different hosts may produce different selected models or execution providers, but those outcomes must emerge from the same analysis rather than separate hard-coded host policies.
+
+### Reason
+
+Testing already showed that a virtual WebGPU path can be much slower than CPU on one Windows host, while the primary laptop exposes CUDA/TensorRT-capable NVIDIA acceleration. Host labels are therefore a poor proxy for usable local-AI capability.
+
+Observed performance and real runtime capability are the durable decision inputs.
+
+### Constraints
+
+- A catalog `GPU` label is only a candidate signal, not a recommendation.
+- Manual variant forcing remains an advanced diagnostic override, not the normal user path.
+- Re-analysis should occur when meaningful hardware, driver, execution-provider, or runtime characteristics change.
+- This decision applies to Windows model/runtime selection; iPhone continues to use its native Apple capability path behind the same shared product experience.
+
+## ADR-0024 — Measured family preferences and local dictation
+
+**Status:** Implemented; native validation pending
+**Date:** 2026-09-26
+
+Normal Windows choices are model families. Compare compatible execution paths using the same short prompt and persist only accepted observations, including the resolved variant and hardware/runtime fingerprint. A stale fingerprint cannot reuse a measured variant as an authoritative preference. Tool capability remains catalog metadata, not actual tool execution. Experimental families require an explicit user action.
+
+Dictation is review-before-send and behind a separate speech provider boundary. Windows uses the existing pinned Foundry SDK; iPhone uses Apple SpeechAnalyzer with installed on-device language assets. Unsupported speech is explicitly unavailable. Speech resources release after each recording. Cancellation never appends a late transcript; Windows native work finishes cleanup before another runtime operation is enabled.
+
+The local-baseline merge/tag remains gated on actual laptop, second Windows host, and iPhone validation. CI compilation is necessary but does not replace those tests.
+
+---
+
+## ADR-0025 — System Foundry is the Windows runtime authority
+
+**Status:** Accepted; migration validation pending
+**Date:** 2026-09-27
+
+Windows CrownKeep requests model aliases and records the actual variant/provider/device chosen by System Foundry. CrownKeep owns roles, policy, benchmarks, UX, diagnostics, and recovery; it does not own a second Foundry cache or duplicate Foundry hardware routing.
+
+The installed Foundry CLI's cache location and local service are discovered at physical acceptance. The existing SDK-backed host remains a compatibility path until that migration proves the system cache, lifecycle, and REST model state agree. No legacy cache is deleted by this decision.
+
+---
+
+## ADR-0026 — LocalRuntime, tools, and knowledge sources remain provider-neutral
+
+**Status:** Accepted
+**Date:** 2026-09-27
+
+Shared CrownKeep code depends on a minimal `LocalRuntime` contract, not Foundry-specific types. Tool and knowledge-source contracts declare network/access requirements explicitly. An RDC integration, when authorized later, will be a configured `KnowledgeSource`, not a CrownKeep product mode or direct data dependency.
+
+---
+
+## ADR-0027 — Installed System Foundry is the Windows chat/model authority
+
+**Status:** Implemented; physical validation pending
+**Date:** 2026-09-27
+
+The packaged Windows chat/model path invokes the installed `foundry` CLI for lifecycle and discovery, then uses that reported service endpoint for OpenAI-compatible inference. CrownKeep activates aliases and records the actual API-visible model rather than restoring a stale exact variant.
+
+The prior embedded SDK manager remains temporarily for native dictation and dormant legacy commands. It is not registered as the normal chat/model runtime. The legacy `.CrownKeep` model cache is marked diagnostic-only and must not be deleted until physical evidence proves all normal model operations use the System Foundry cache.
+
+
+---
+
+## ADR-0028 — Web Access is an explicit tool boundary, not a model/provider switch
+
+**Status:** Accepted for policy/tool semantics; network-transport details superseded by ADR-0029  
+**Date:** 2026-09-28
+
+### Decision
+
+CrownKeep exposes public-web access through registered read-only tools while keeping reasoning-provider selection independent.
+
+The user-facing preference is **Web Access: OFF / ON** and defaults to **OFF**, consistent with **Private by default. Powerful by choice.**
+
+When OFF:
+
+- network tools are rejected by `ToolRegistry` before availability checks or execution;
+- local chat remains available;
+- automatic tool selection cannot silently make a network request;
+- CrownKeep does not fall back to a cloud model.
+
+When ON:
+
+- Anne may use `Web Search` and `Web Read` when the request needs current/external information;
+- successful or failed network-tool activity is visible separately from model/provider metadata;
+- tool results return to the same selected reasoning provider.
+
+### Network/data boundary
+
+The client must not embed a web-search-provider API secret.
+
+CrownKeep uses a narrow provider-neutral Web Gateway. The first adapter is an Azure Functions implementation backed by Tavily Search/Extract, but the client contract is vendor-independent so that provider can be replaced without changing `ToolRegistry`, Windows model policy, Apple Foundation Models, or conversation storage.
+
+For current public-web tools the device may send only:
+
+- the minimum search query required for `Web Search`; or
+- the single selected public URL required for `Web Read`.
+
+These tools do **not** receive entire conversation history, projects, local knowledge, attachments, files, images, or unrelated context.
+
+Web content is returned to the model as untrusted reference data, never as instructions.
+
+### Automatic tool strategy
+
+Windows may use normal OpenAI-compatible structured function calling only when the active local model has **observed** function-call support for the current device/runtime fingerprint. CrownKeep does not infer this capability from a model name when System Foundry metadata is missing.
+
+If structured tool calling is unknown/unsupported, CrownKeep uses a bounded provider-neutral read-only fallback rather than silently switching AI providers.
+
+Native iPhone exposes the same logical CrownKeep tools through Apple Foundation Models `Tool` objects. The Foundation Model remains the local reasoning provider.
+
+All automatic tool loops are bounded. The current structured and fallback paths permit at most three read-only network-tool operations for one user turn before requiring a final answer.
+
+### Consequences
+
+- Web Access can be enabled without authorizing cloud AI.
+- A response may be labeled **Local** while also showing visible web-search/page-read activity.
+- A future enterprise/public-web provider can replace Tavily behind the gateway contract.
+- AVD uses the same Windows policy; there is no AVD-specific agent architecture.
+- Image/OCR/image-generation tools should reuse this boundary rather than creating a parallel agent system.
+
+## ADR-0029 — Web Access uses native direct transport with device-local credentials
+
+**Status:** Superseded by ADR-0030 before physical acceptance  
+**Date:** 2026-09-28
+
+### Context
+
+ADR-0028 established the durable rule that Web Access is an explicit read-only tool boundary and does not change the selected reasoning provider. Its first transport used a CrownKeep-hosted Azure Function/Web Gateway primarily to keep a shared search-provider key out of the client.
+
+Before physical acceptance, that gateway dependency was rejected as unnecessary for CrownKeep's current local-first product. Windows and iPhone already have native hosts capable of making bounded HTTPS requests and protecting a user-supplied credential locally.
+
+### Decision
+
+Keep ADR-0028's ToolRegistry, Web Access OFF/ON, bounded automatic-tool, source-metadata, and same-local-provider rules, but replace the gateway transport with native direct execution.
+
+**Windows**
+
+- the Tauri/Rust host performs Web Search and Web Read network requests;
+- Tavily is the first Web Search adapter;
+- the user supplies the search credential once through CrownKeep;
+- the native host stores it in Windows Credential Manager;
+- the React/webview layer receives configured/not-configured status but never reads the stored credential back.
+
+**iPhone**
+
+- the Swift host performs Web Search and Web Read network requests with `URLSession`;
+- Tavily is the first Web Search adapter;
+- the user supplies the search credential once through CrownKeep;
+- the native host stores it in iOS Keychain using a device-local, non-synchronizing accessibility class;
+- the JavaScript bridge receives configured/not-configured status but never reads the stored credential back.
+
+**Web Search**
+
+- requires Web Access ON;
+- requires a configured native search credential;
+- sends only the minimized public search query plus provider authentication directly to the configured provider.
+
+**Web Read**
+
+- requires Web Access ON;
+- does not require a search-provider credential;
+- fetches only the selected public HTTP(S) URL directly from the native device;
+- returns bounded readable content as untrusted reference material.
+
+Browser-only development does not store a live provider credential and does not pretend native direct Web Access is available.
+
+### Removed architecture
+
+The Azure Function/Web Gateway prototype, its `VITE_CROWNKEEP_WEB_GATEWAY_URL` configuration, Python service files, and gateway CI check are removed. There is no hidden fallback to that path.
+
+### Consequences
+
+- CrownKeep does not operate a web-retrieval middleman for the current local-first product.
+- Search credentials remain local to each device and are not bundled, synced, or placed in Vite/environment configuration.
+- Users configure the search credential separately on Windows, iPhone, and AVD as applicable.
+- Direct Web Read remains useful even before a search credential is configured.
+- Search-provider replacement remains an adapter concern behind `WebSearchTool` / the native web transport rather than a conversation/model concern.
+- A future centrally managed enterprise or public distribution may add an **optional** managed search boundary if credential distribution, quota, abuse protection, or organization policy requires it; that would require a new explicit decision rather than silently restoring the removed gateway.
+- Physical acceptance must prove OFF blocks all network tools, ON does not search unnecessarily, search/read activity is visible, provider identity remains local, and network/provider failures do not trigger cloud-model fallback.
+
+## ADR-0030 — Web Search is keyless DuckDuckGo retrieval
+
+**Status:** Accepted and implemented; physical Web Access acceptance pending  
+**Date:** 2026-09-28
+
+### Context
+
+CrownKeep should remain useful without requiring the user to create, fund, or manage a third-party search API account. The prior direct-native Tavily design removed the CrownKeep-hosted gateway but still required a Tavily API key stored separately on each device.
+
+DuckDuckGo provides public non-JavaScript HTML/Lite search results and states that DuckDuckGo Search does not track individual searches. This allows CrownKeep to use a normal public search surface for discovery while keeping model reasoning local.
+
+The non-JavaScript search page is a browser-facing public surface, not a formal developer API. Its HTML can change and DuckDuckGo can rate-limit or require interactive verification.
+
+### Decision
+
+Replace Tavily and all search-credential handling with a **keyless DuckDuckGo search adapter**.
+
+- Web Access remains OFF by default and enforced by `ToolRegistry`.
+- Web Search sends only the minimized public query to DuckDuckGo's non-JavaScript HTML search surface.
+- CrownKeep parses returned result titles, URLs, and snippets locally.
+- DuckDuckGo redirect URLs are unwrapped locally to the selected public destination.
+- Web Read continues to fetch selected public HTTP(S) pages directly from the native device.
+- The selected local model remains the reasoning provider.
+- No API account, API key, Windows Credential Manager entry, iOS Keychain search item, Azure Function, or CrownKeep web gateway is required.
+- The shared webview does not perform live search directly; native Windows/iPhone hosts own network execution.
+
+### Failure behavior
+
+If DuckDuckGo returns a rate limit, interactive verification, challenge, unexpected markup, or other retrieval failure:
+
+- surface the Web Search failure visibly;
+- do not attempt to bypass an interactive verification;
+- do not silently switch to Google, Bing, Brave, Tavily, or another search provider;
+- do not switch to cloud-model reasoning;
+- keep local chat available.
+
+A future additional search provider must be an explicit user/product capability and requires a new decision rather than an invisible fallback.
+
+### Privacy/data boundary
+
+For search, only the minimized query leaves the device for DuckDuckGo. For page reading, only the selected public URL is requested from that website.
+
+CrownKeep does not send whole conversations, local knowledge bases, files, attachments, projects, images, or unrelated context through Web Search/Web Read.
+
+### Consequences
+
+- Zero search credentials to provision, store, rotate, bundle, or sync.
+- Windows, iPhone, and AVD can share the same logical Web Access behavior without per-device provider setup.
+- Public-search reliability is intentionally best-effort because the DuckDuckGo HTML surface is not a formal API contract.
+- Direct URL reading remains independent of search discovery.
+- The provider-neutral `WebSearchTool` contract remains replaceable later without changing conversation/model architecture.
+

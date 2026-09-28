@@ -1,6 +1,8 @@
+import type { NativeSpeechBridge } from '../speech/SpeechInputProvider.ts'
 import type {
   ChatMessageInput,
   TokenUsage,
+  ToolExecutionActivity,
 } from '../providers/AIProvider.ts'
 
 export type NativeModelUnavailableReason =
@@ -22,18 +24,51 @@ export interface NativeModelDescriptor {
   contextWindow?: number
 }
 
+export interface NativeToolDefinition {
+  id: string
+  name: string
+  description: string
+}
+
+export interface NativeWebStatus {
+  nativeAvailable: boolean
+  provider: 'duckduckgo'
+  searchAvailable: boolean
+  readAvailable: boolean
+  detail: string
+}
+
+export interface NativeWebSearchResult {
+  title: string
+  url: string
+  snippet: string
+  score?: number
+  publishedAt?: string
+}
+
+export interface NativeWebBridge {
+  getStatus(): Promise<NativeWebStatus>
+  search(query: string, maxResults: number): Promise<{ results: NativeWebSearchResult[] }>
+  read(url: string): Promise<{ url: string; title?: string; content: string }>
+}
+
 export interface NativeChatRequest {
   modelId: string
   messages: ChatMessageInput[]
+  webAccess?: 'off' | 'on'
+  tools?: NativeToolDefinition[]
 }
 
 export interface NativeChatChunk {
   text: string
   done?: boolean
   usage?: TokenUsage
+  toolActivities?: ToolExecutionActivity[]
 }
 
 export interface NativeAIHost {
+  readonly speech?: NativeSpeechBridge
+  readonly web?: NativeWebBridge
   readonly platform: 'ios'
   readonly provider: 'apple-foundation-models'
 

@@ -14,7 +14,7 @@ Anne should feel capable, calm, discreet, and approachable. The name intentional
 
 CrownKeep is a protected local stronghold for AI conversations.
 
-The mark uses a rounded protected boundary, an illuminated inner keep, and a restrained crown shape. The visual language should communicate privacy and user sovereignty before it communicates royalty.
+The current V1 mark direction uses a geometric C/crown identity with luminous blue/cyan depth. The visual language should communicate precision, local-first control, and calm capability before it communicates royalty.
 
 Avoid medieval novelty, ornate heraldry, shields, swords, or decorative fantasy styling.
 
@@ -22,13 +22,14 @@ Avoid medieval novelty, ornate heraldry, shields, swords, or decorative fantasy 
 
 | Token | Hex | Use |
 | --- | --- | --- |
-| Graphite | `#0F1F1E` | Primary dark surface/background |
-| Deep Jade | `#115E4F` | Structural surfaces and protected-state accents |
-| Jade Glow | `#2EE6B8` | Local/private/active state |
-| Burnished Copper | `#C97F5B` | Crown accent and deliberate elevated actions |
-| Stone | `#E8E4DA` | Primary text and crown highlight |
+| Midnight | `#030916` | Primary dark canvas |
+| Deep Navy | `#071426` | Structural surfaces |
+| Cobalt | `#1558D6` | Functional emphasis and selected states |
+| Electric Cyan | `#38D8FF` | Local/active state and luminous detail |
+| Cool Silver | `#EEF6FF` | Primary text / bright mark detail |
+| Burnished Copper | `#D49467` | Rare explicit network/cloud/elevated-choice accent |
 
-Derived darker surfaces are allowed when needed for contrast, but the five colors above are the canonical brand palette.
+Copper should stay uncommon. Local/private state is primarily navy/cobalt/cyan, not copper.
 
 ## State language
 
@@ -44,13 +45,12 @@ Cloud state should never visually resemble the default local/private state.
 
 ## Logo
 
-The canonical icon is `public/crownkeep-mark.svg`.
+Runtime V1 assets live under `public/brand/crownkeep-facelift/`.
 
-The mark combines:
+- `public/crownkeep-mark.svg` — current runtime application/PWA/browser/desktop icon; clean vector implementation of the facelift C/crown direction.
+- `crownkeep-app-icon.png` — staged raster direction and current iPhone icon source.
+- `crownkeep-wordmark.png` — current expanded product lockup.
+- `crownkeep-crown-motif.png` and `crownkeep-glass-crown-transparent.png` — supporting hero/motion assets.
+- `crownkeep-knowledge-mark.png` — future knowledge-source/onboarding accent.
 
-1. an outer protected boundary;
-2. a jade inner keep;
-3. a simple crown;
-4. a copper point representing deliberate user choice.
-
-The mark must remain legible as an app icon and favicon.
+A final clean SVG redraw of the selected geometric C/crown mark remains desirable, but is not required for the current cross-platform testing checkpoint.

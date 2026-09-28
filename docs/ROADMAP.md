@@ -4,6 +4,29 @@ This roadmap is outcome-based. A sprint ends when its exit criteria are met, not
 
 Visual summary: `public/crownkeep-sprints.svg`. The same asset is rendered in the repository README and inside CrownKeep.
 
+## Current handoff — Windows checkpoint to iPhone
+
+The Windows local-platform convergence checkpoint is approved for squash merge to `main`.
+
+Accepted for the checkpoint:
+
+- Quick and Balanced local-role operation on the primary Windows laptop;
+- role-aware watchdogs and recovery;
+- native direct keyless Web Search/Web Read privacy boundary;
+- compact unified runtime/status UI;
+- CrownKeep facelift v1.
+
+Carry-forward, non-blocking items:
+
+- tune natural-language web-intent detection so Web Access ON better matches user expectations without forcing every local question onto the network;
+- continue physical validation of retained web evidence across Quick, Balanced, and Apple Foundation Models;
+- monitor rare Foundry stream transport errors after model switches;
+- Deep remains unqualified.
+
+**Next active physical work:** iPhone Web Access + retained-context testing on Rolo15. AVD validation can follow the shared Windows/iPhone bug pass.
+
+---
+
 ## Phase 0 — Foundation
 
 ### Sprint 0.1 — Repository and project contract — **COMPLETE**
@@ -216,9 +239,199 @@ Exit criteria:
 
 ---
 
-## Phase 4 — RDC Cloud Identity & API Foundation
+## Phase 4A — Windows Product Host — **ACTIVE**
 
-### Sprint 4.1 — Entra authentication
+### Sprint 4A.1 — Native shell proof — **COMPLETE**
+
+**Outcome:** The existing CrownKeep React application runs unchanged inside a Windows native desktop host and can prove the native host boundary without breaking browser development.
+
+Deliverables:
+
+- Tauri 2 shell around the existing Vite/React application;
+- fixed development URL/origin compatible with the existing local-storage assumptions;
+- native host identity command exposed to the React layer;
+- runtime-manager selection between browser development and native Windows host;
+- no Foundry Local lifecycle ownership yet;
+- browser/PWA mode remains functional.
+
+Exit criteria:
+
+- `npm run desktop:dev` opens CrownKeep in a native Windows window;
+- CrownKeep reports that the native Windows host is connected;
+- existing conversations/projects render normally;
+- existing Foundry Local browser-development path still works outside Tauri;
+- normal web build/lint/typecheck remain green.
+
+### Sprint 4A.2 — Embedded Foundry Local lifecycle — **ACTIVE**
+
+**Outcome:** The Windows host owns the local runtime/model lifecycle so a normal user does not need to operate the Foundry CLI.
+
+#### Sprint 4A.2A — CrownKeep-owned lifecycle proof — **COMPLETE**
+
+Validated on the primary Windows development machine:
+
+- native Foundry Local SDK initialization;
+- application-owned model acquisition/cache;
+- model load;
+- embedded OpenAI-compatible service start;
+- verified Anne response without manual Foundry CLI lifecycle commands;
+- application close releases the embedded runtime while preserving the downloaded model cache.
+
+#### Sprint 4A.2B — Automatic restore + normal-user startup — **ACTIVE**
+
+Focus:
+
+- when a known-good model is cached, automatically restore/load/start local AI on CrownKeep startup;
+- keep **Prepare local AI** as first-run/recovery behavior rather than a normal repeated step;
+- preserve a visible Stop local AI resource-release action;
+- recover cleanly if the prior model/runtime cannot start;
+- persist the working model/variant after observed verification;
+- keep startup non-blocking so conversation history opens even if local AI preparation is still running;
+- add idle unload/reload behavior so CrownKeep can free local model resources without closing the application.
+
+#### Sprint 4A.2C — Local AI product experience
+
+Focus:
+
+- responsive desktop header / Local AI layout at medium window widths;
+- fenced code-block rendering with per-block Copy action;
+- native Foundry catalog/model inspection;
+- local Model Analyst view for model/variant/device comparison;
+- observed benchmark flow before persisting the preferred model;
+- user-selectable local model rather than a permanently hard-coded bootstrap alias;
+- clear sleeping/loading/ready runtime indicator with one-click reload.
+
+Deliverables:
+
+- integrate the official Foundry Local Rust SDK with Windows WinML support;
+- inspect compatible models for the current hardware;
+- acquire/install a selected model;
+- load/unload model lifecycle;
+- runtime start/stop or equivalent host-owned lifecycle;
+- expose lifecycle operations through the existing `LocalRuntimeManager` contract;
+- retain observed-performance verification before persisting a recommended model choice.
+
+Exit criteria:
+
+- a clean Windows test host can reach a ready local-model state from CrownKeep without manual Foundry CLI commands;
+- runtime/model failures surface through CrownKeep without corrupting conversations;
+- the browser build remains capability-aware and does not pretend to own native lifecycle actions.
+
+### Sprint 4A.3 — Local Platform Convergence / Pause Point — **IMPLEMENTED · ACCEPTANCE IN PROGRESS**
+
+**Outcome:** Converge the validated Windows, iPhone, and AVD local-first paths into one device-aware baseline before beginning cloud work.
+
+Detailed sprint contract: [Sprint 4A.3 — Local Platform Convergence](SPRINT-4A3-LOCAL-PLATFORM-CONVERGENCE.md).
+
+Implemented:
+
+- shared provider-neutral runtime, speech, tool, and knowledge-source contracts;
+- device-aware Windows model roles (**Quick**, **Balanced**, **Deep**) with observed benchmark evidence instead of hardware-name assumptions;
+- shared iPhone build using Apple Foundation Models and native Apple on-device speech;
+- shared Windows/iPhone conversation UI, streaming, persistence, and review-before-send dictation;
+- local registered-tool proofs for `/search` and `/url`;
+- no silent cloud fallback.
+
+Physical acceptance status as of 2026-09-28:
+
+- **Primary Windows laptop:** Quick startup/restore and normal chat validated; Balanced Mistral Nemo CUDA benchmark, exclusive model switching, and normal chat validated; Windows dictation validated through the installed System Foundry CLI. Laptop microphone transcription quality remains a hardware/input-quality observation, not a runtime failure.
+- **Rolo15:** current convergence build physically built/signed/installed/launched; chat, follow-up context, native dictation, and restart/persistence validated successfully.
+- **AVD:** current shared adaptive Windows policy and acceptance matrix remain pending.
+- **Web Access package:** native direct **keyless DuckDuckGo** implementation is on the shared branch; OFF/ON physical validation remains pending on Windows laptop, Rolo15, and AVD. No CrownKeep Web Gateway, search API account, or API key is required.
+- **Merge/tag/cleanup:** blocked until remaining physical acceptance is recorded and explicit approval is given.
+
+Exit criteria:
+
+- primary Windows, physical iPhone, and AVD all run the current shared CrownKeep baseline;
+- Windows shows a short useful model recommendation set with observed benchmark evidence;
+- local dictation reaches the composer on Windows and iPhone;
+- the same Windows selection policy is proven on both the laptop and AVD, even when the resulting execution provider/model differs;
+- no silent cloud fallback is introduced;
+- validated work is merged to `main` and documented without relying on chat history.
+
+---
+
+### Sprint 4A.4 — System Foundry Convergence + Local Agent Foundation — **ACTIVE**
+
+**Outcome:** Make the installed System Foundry service the normal Windows authority while preserving one provider-neutral CrownKeep experience across Windows and iPhone.
+
+Delivered:
+
+- System Foundry CLI/service owns Windows catalog, cache, model lifecycle, and current inference endpoint;
+- alias-first role selection with exact variants retained as evidence;
+- exclusive model activation and startup reconciliation so CrownKeep does not intentionally leave multiple chat models loaded;
+- Windows Voice uses the System Foundry speech model path and restores the previous chat alias;
+- one-system-message local chat normalization for stricter local chat templates;
+- failed provider messages are excluded from future inference context;
+- `ToolRegistry` and `KnowledgeSource` foundations plus local `/search` diagnostics;
+- restored persistent/glanceable role/model/execution/privacy status bar;
+- persisted **Web Access OFF/ON**, default OFF, enforced at the ToolRegistry boundary;
+- provider-neutral `WebSearchTool` + `WebReadTool` contracts with source/boundary metadata;
+- native direct keyless Web Access: Windows uses native HTTPS and iPhone uses `URLSession`; DuckDuckGo's public non-JavaScript HTML search surface supplies discovery results without an API key;
+- direct Web Read fetches only the selected public HTTP(S) page from the native device;
+- DuckDuckGo interactive-verification/rate-limit failures are surfaced visibly; CrownKeep does not bypass them or silently fall back to another search/model provider;
+- the earlier Azure Function/Web Gateway and Tavily credential-store prototypes were removed before physical acceptance;
+- bounded automatic web use: structured local-model function calls when support is measured, safe read-only fallback otherwise;
+- Apple Foundation Models native `Tool` bridge for the same logical web capabilities;
+- visible successful/failed network-tool activity while the assistant message remains marked with its actual local reasoning provider.
+
+Remaining acceptance:
+
+- prove **Web Access OFF** causes zero search/page-read calls;
+- prove **Web Access ON** does not search for a local-only question, does search for a current-information question, and can search then read selected webpages;
+- physically validate the new web/status-bar package on the primary Windows laptop and Rolo15;
+- run the same shared Windows baseline + Web Access acceptance policy in AVD;
+- record final evidence before branch merge/tag/cleanup; do not merge/tag/delete branches or remove legacy cache before explicit approval.
+
+---
+
+### Sprint 4A.5 — Stable desktop storage + installer proof — **NEXT**
+
+**Outcome:** CrownKeep behaves like an installed Windows product rather than a development web origin.
+
+Deliverables:
+
+- stable desktop application storage/origin validation;
+- local conversation/project migration/export strategy from the browser-development origin;
+- first Windows setup executable proof;
+- CrownKeep icon/product metadata;
+- install/update/uninstall behavior documented;
+- code-signing/reputation plan documented before public distribution.
+
+Exit criteria:
+
+- install on a second Windows machine does not require Vite, PowerShell, or manual lifecycle commands;
+- local conversations survive normal application restart/update behavior;
+- uninstall/data-retention behavior is explicit.
+
+---
+
+### Sprint 4A.6 — Multimodal + image-tool proof — **PLANNED**
+
+**Outcome:** Extend the now-established provider-neutral tool boundary to useful image capabilities without silently moving private work off-device.
+
+The automatic/tool-registry foundation and public-web tools moved forward into Sprint 4A.4. This sprint should build on that foundation rather than creating a second agent system.
+
+Deliverables:
+
+- photo/file input bridge for supported native hosts;
+- local-first image understanding/OCR path where the device supports it;
+- image-generation tool contract with a local generator when practical and an explicit user-visible cloud boundary when cloud generation is chosen;
+- tool-result context returned to the currently selected reasoning provider;
+- explicit per-tool local/network/cloud metadata and user-visible upload boundary.
+
+Exit criteria:
+
+- a user can attach/select an image and obtain local understanding/OCR on a supported device;
+- image understanding remains local when a supported local capability is selected;
+- image generation never silently sends prompts/images to a cloud service;
+- unsupported local image capabilities fail clearly rather than pretending they are available.
+
+---
+
+## Phase 4B — RDC Cloud Identity & API Foundation
+
+### Sprint 4B.1 — Entra authentication
 
 **Outcome:** Cloud features can authenticate an RDC user without coupling local chat to sign-in.
 
@@ -236,7 +449,7 @@ Exit criteria:
 - authenticated API calls can obtain a scoped token;
 - secrets are not present in the client.
 
-### Sprint 4.2 — Minimal Azure API foundation
+### Sprint 4B.2 — Minimal Azure API foundation
 
 **Outcome:** A small RDC-hosted API exists as the cloud boundary.
 
@@ -443,3 +656,13 @@ Projects should be implemented as an organizational layer above conversations, n
 - Preserve explicit timestamps and conversation identity in retrieved context.
 - Keep this local-first and permission-aware before any future cloud synchronization/context integration.
 - Do not conflate this with the current active-conversation history, which remains isolated by default.
+
+### Sprint 4A.3 implementation checkpoint
+
+Family-based adaptive selection, fingerprinted observations, provider-neutral local dictation, lifecycle safeguards, and native compile gates are implemented on the convergence branch. Sprint status remains **VALIDATION PENDING** until `docs/SPRINT-4A3-VALIDATION.md` is completed. Cloud, sync, RDC context, RAG, tools/MCP, and duplex voice remain deferred.
+
+### Sprint 4A.4 — System Foundry convergence + local-agent foundation — **IN PROGRESS**
+
+**Outcome:** One local-first experience with System Foundry as the Windows authority and Apple-native runtime on iPhone.
+
+Current vertical slice: provider-neutral `LocalRuntime`, explicit Tool Registry boundaries, and a generic local KnowledgeSource proof. System-cache migration, image proofs, and physical acceptance remain gated in `SPRINT-4A4-VALIDATION.md`.

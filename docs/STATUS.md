@@ -1,14 +1,82 @@
 # CrownKeep — Current Status
 
-**Updated:** 2026-09-26
+**Updated:** 2026-09-28
+
+## Current — Sprint 4A.4 local convergence + Web Access foundation
+
+## Windows convergence cutoff — 2026-09-28
+
+The Windows checkpoint is approved to land on `main` and the next physical workstream moves to iPhone.
+
+- **Quick:** `phi-4-mini` remains the safe/default role. Quick switching no longer requires a surviving benchmark-winner record; a cached Quick chat candidate is enough to return from Balanced.
+- **Balanced:** `mistral-nemo-12b-instruct-cuda-gpu` is physically usable on the primary laptop. Role-aware chat watchdogs now allow 45 s to first token / 180 s total for Balanced instead of applying Quick's 20 s threshold.
+- **Deep:** remains unqualified after the recorded `gpt-oss-20b-cuda-gpu` failure. Do not auto-promote or auto-retry Deep.
+- **Web Access:** native direct keyless DuckDuckGo search/read is physically functional on Windows. Web Access ON is permission, not a mandate: CrownKeep still decides whether a prompt needs a network tool. Natural-language web-intent detection and cross-model weighting of retained web evidence remain tuning items after iOS validation.
+- **Retained web evidence:** successful tool results are persisted locally in bounded form and reinjected as explicitly untrusted conversation evidence. Physical behavior still varies by small local model, so do not treat perfect follow-up grounding as fully accepted yet.
+- **Observed transient runtime issue:** one Balanced request returned an immediate Foundry/OpenAI stream `TypeError: network error`; a following lightweight request and later normal Balanced chats succeeded. Monitor/retry after iOS rather than blocking this checkpoint.
+- **Benchmark evidence protection:** normal chat timeouts/errors no longer overwrite accepted benchmark qualification records.
+- **Facelift v1:** the shared shell now uses the midnight-navy / cobalt / electric-cyan CrownKeep treatment. A clean geometric C/crown SVG is the runtime browser/PWA/desktop mark; the staged facelift PNG remains the iPhone icon source, and the facelift wordmark is used in the expanded sidebar.
+- **Next:** physical iPhone Web Access + retained-context validation, then return to shared Windows/iOS bug tuning. AVD remains deferred under the same adaptive Windows policy.
+
+- **Primary Windows laptop physically validated for the local baseline:** Quick / `phi-4-mini` startup and normal chat work; Balanced / `mistral-nemo-12b-instruct` CUDA benchmark and normal conversation work; exclusive chat-model switching is physically proven; Windows local dictation works through the installed System Foundry CLI and restores the prior chat role. Laptop microphone transcription quality was mediocre, but the local speech path itself completed successfully.
+- **Rolo15 physically validated for the current convergence baseline:** the shared build was built, signed, installed, and launched on the physical iPhone. Chat, follow-up context, native on-device dictation, and restart/persistence were physically tested successfully. iPhone reasoning remains Apple Foundation Models local-first and speech remains native/on-device.
+- **AVD physical acceptance remains separate and pending:** use the same adaptive Windows runtime/model policy. Do not create an AVD-specific CrownKeep architecture.
+- **Deep physical attempt remains a failed result:** `gpt-oss-20b-cuda-gpu:1` reached first token at ~19.15 s, exceeded the 45 s benchmark window, never passed normal-context validation, selected no Deep winner, and CrownKeep restored Phi Quick. `foundrylocal.exe` then surfaced a Windows memory-read application error during/after cleanup. Do not auto-retry or auto-promote this model as Deep.
+- **Persistent status-bar regression is restored in the shared UI:** CrownKeep again shows role, actual model when useful, execution/device, Inside-the-Keep versus network/cloud boundary, Ready/Working/Benchmarking/Sleeping/Error state, and a compact Web Access control without replacing Local AI diagnostics.
+- **Provider-neutral Web Access foundation is implemented on this branch:** Web Access persists **OFF by default**; `ToolRegistry` blocks network tools before availability/execution while OFF; `WebSearchTool` and `WebReadTool` retain source metadata; successful and failed network-tool activity is visible on assistant messages; tool use does not change the selected reasoning provider.
+- **Automatic tool paths are runtime-appropriate:** Windows uses a bounded OpenAI-compatible structured tool loop only after the loaded model has observed local function-call support; otherwise it uses a bounded provider-neutral read-only fallback. Native iPhone exposes the same logical web capabilities through Apple Foundation Models `Tool` objects. AVD inherits the Windows policy.
+- **Web Access now uses native direct keyless network tools instead of a CrownKeep gateway or search API:** Windows and iPhone use DuckDuckGo's public non-JavaScript HTML search surface for discovery with no API account/key. Web Search sends only the minimized query to DuckDuckGo. Web Read fetches the selected public HTTP(S) page directly from the device. If DuckDuckGo returns an interactive verification/rate-limit/challenge, CrownKeep reports a visible Web Search failure and does not bypass it or silently switch search/model providers. The earlier Azure Function/Web Gateway and Tavily credential-store prototypes were removed before physical acceptance.
+- **Privacy boundary remains explicit:** Web Access ON may send only the needed public search query or selected URL. CrownKeep does not send entire conversation history, projects, local knowledge, attachments, files, or images through these web tools. No web-search credential exists in source, build configuration, device storage, or sync. No RDC customer-data connection was introduced.
+- **Keyless DuckDuckGo package is automated-validated:** CI run #778 on commit `43468ce` passed shared lint/UI/policy/build checks, the unsigned native iPhone host compile, the Windows Tauri/Rust host compile, and committed `Cargo.lock` consistency. Live DuckDuckGo retrieval remains a physical acceptance item; automated compile success does not claim that the public search surface has been physically proven on the laptop or Rolo15.
+- **Merge approval is now explicit for this Windows checkpoint.** Squash the convergence branch to `main` after final CI. Branch deletion and legacy-cache cleanup remain separate actions; do not delete cache data as part of the merge.
+- **Next physical workstream:** iPhone validation of the shared Web Access / retained-context behavior. Multimodal/image work follows the cross-platform checkpoint; any cloud image generation remains an explicit visible boundary.
+- The historical entries below are retained as evidence; they are not current implementation work.
+
+## Sprint 4A.4 start — 2026-09-27
+
+- Added a lean provider-neutral `LocalRuntime` contract and an adapter over the established provider/lifecycle split. It supports a Windows implementation with lifecycle ownership and an honest iOS Quick/Voice-only implementation without pretending unsupported roles exist.
+- Added `ToolRegistry` and `KnowledgeSource`/`KnowledgeRegistry` contracts. The included local-search/knowledge implementation is synthetic and read-only; no RDC data or cloud-model routing was added.
+- Normal UI/model-policy roles are now **Quick**, **Balanced**, and **Deep**. Balanced and Deep remain disabled until validated observed results exist.
+- Added automated contract tests and the concise Sprint 4A.4 acceptance handoff.
+- Verified from current Foundry documentation that the Rust SDK defaults model storage to an app-specific `{app_data_dir}/cache/models`; this confirms why `FoundryLocalConfig::new("CrownKeep")` produced a separate cache. The exact installed CLI cache/service migration needs physical Windows discovery and remains open.
+- Do not merge, tag, delete branches, or delete legacy cache data. `docs/SPRINT-4A4-VALIDATION.md` is the handoff record.
+
+## Sprint 4A.4B — Windows System Foundry bridge — 2026-09-27
+
+- Normal packaged Windows lifecycle calls now use the installed `foundry` CLI instead of the CrownKeep SDK manager: runtime/cache discovery, dynamic service endpoint, alias download/load, unload, cache removal, and catalog/cache inspection.
+- `FoundryLocalProvider` asks the native host for the current System Foundry service URL before using the OpenAI-compatible `/v1` API; it no longer assumes port 39839 in a packaged build.
+- Startup restores the saved Quick **alias**, then adopts the actual API-visible model selected by System Foundry. A missing alias or model/API mismatch keeps chat blocked.
+- System Foundry and the untouched legacy `.CrownKeep\\cache\\models` path now appear separately in diagnostics.
+- The old SDK manager remains only behind the existing Windows dictation implementation and unused legacy native commands. It is not on the normal Windows chat/model path; removing/replacing dictation is a follow-on after this bridge is physically proven.
+- Automated result: Node tests, TypeScript, lint, and production build passed. Native Rust/Tauri check could not run in this workspace because `cargo` is absent. UI tests could launch their local server but Chromium is not provisioned; the attempted Playwright browser download returned a truncated/non-ZIP artifact from the execution environment.
+
+## Sprint 4A.4C — System Foundry bridge hardening — 2026-09-27
+
+- Replaced human-readable CLI-table parsing with JSON status/model surfaces in the System Foundry bridge. The narrow `foundry cache location` fallback is isolated and documented.
+- Lightweight runtime status no longer fetches the full catalog; catalog discovery occurs only for Model Analyst.
+- Structured model metadata now preserves chat type/task, device, provider, cache/load state, size/context, and tool support when emitted by Foundry.
+- Packaged Windows endpoint discovery no longer trusts a cached endpoint across requests; it re-reads System Foundry state before `/v1/models` probing.
+
+## Sprint 4A.4D–4F — Foundry contract, alias roles, cleanup readiness — 2026-09-27
+
+- Replaced generic JSON traversal with small serde structures for the physical Foundry 0.10.3 contract: `service.webUrls`, `variants[]`, and actual type/device/provider/size/cache fields.
+- Endpoint discovery now uses only `foundry server status --output json`; normal status uses `foundry status --output json` counts and structured hardware facts. A failing API request refreshes the endpoint and retries once.
+- CrownKeep activates role aliases rather than selecting CUDA/OpenVINO/etc. variants. Actual API-visible variants are retained as benchmark evidence. Balanced discovery is live-catalog-driven; Deep remains gated.
+- Added read-only legacy CrownKeep cache inventory and explicit cleanup-pending diagnostics. No cache data was deleted or migrated.
+
+## Sprint 4A.4G–4I — final convergence preparation — 2026-09-27
+
+- Legacy cache inspection is on-demand only; normal System Foundry health is cheap. Foundry device labels are normalized at the bridge and cache-location fallback accepts all observed JSON forms.
+- Windows dictation now follows the installed System Foundry alias/service path and restores the chat alias after transcription. The old Rust SDK dictation command is no longer exposed to the webview.
+- Registered local-search and URL-read tools provide a small local-agent proof while preserving the selected Apple Foundation Models provider. Image analysis and native Foundation Models automatic tool-calling remain physical/iOS follow-up evidence, not claimed complete.
 
 ## Active phase
 
-Phase 3 complete — Windows + iPhone local baseline validated
+Phase 4A — Windows Product Host
 
 ## Active sprint
 
-Next-phase planning — product continuity, cloud identity/sync, and Windows productization.
+Sprint 4A.4 — System Foundry Convergence + Local Agent Foundation.
 
 ## Completed
 
@@ -561,3 +629,310 @@ Validated baseline:
 - conversations remain provider-neutral and local-first.
 
 This establishes the first shared **Windows + iPhone local baseline** suitable for merging into `main`. Cloud identity, sync, explicit cloud escalation, RAG, agents, and live RDC data remain later phases.
+
+
+## Phase 4A Windows host kickoff — 2026-09-26
+
+Branch: `phase-4a-windows-product-host`
+
+Goal: turn the validated Windows browser/Foundry development path into the beginning of a normal desktop product without disturbing the working Windows + iPhone local baseline on `main`.
+
+Delivered in the kickoff slice:
+
+- added Tauri 2 development dependencies and desktop scripts;
+- added a minimal `src-tauri` Windows host around the existing Vite/React application;
+- added `crownkeep_host_info` as the first native Rust command;
+- added `TauriLocalRuntimeManager` and runtime-manager host selection;
+- browser mode continues to use `BrowserLocalRuntimeManager`;
+- the native host currently reports lifecycle controls as unavailable rather than pretending Foundry ownership is complete;
+- Vite ignores Rust/Tauri source changes for frontend file watching;
+- Tauri bundle generation remains disabled during the shell proof.
+
+Research basis:
+
+- current Tauri 2 documentation explicitly supports adding Tauri to an existing Vite frontend;
+- current Microsoft Foundry Local documentation publishes an official Rust SDK and a Windows `winml` feature for hardware-accelerated Windows integration.
+
+Next validation target:
+
+1. install/verify Windows Tauri prerequisites on the primary development PC;
+2. run `npm install`;
+3. run `npm run desktop:dev`;
+4. confirm the real CrownKeep UI opens in a native Windows window;
+5. open Local AI and confirm the runtime text says the native Windows host is connected;
+6. confirm ordinary `npm run dev` still uses browser-development runtime behavior;
+7. only after that validation, begin Sprint 4A.2 Foundry Local Rust SDK lifecycle integration.
+
+
+## Phase 4A.1 physical Windows validation — 2026-09-26
+
+The CrownKeep Tauri desktop host successfully launched on the primary Windows development machine.
+
+Validated:
+
+- Rust toolchain and MSVC build prerequisites are installed;
+- Smart App Control initially blocked Cargo-generated unsigned build helpers and was identified as the local policy blocker;
+- after the local development policy issue was addressed, `npm run desktop:dev` compiled and launched `target\debug\crownkeep.exe`;
+- CrownKeep rendered inside a real native Windows application window.
+
+Current expected limitation:
+
+- selecting **Anne · Foundry Local** while the external development daemon is stopped produces `ECONNREFUSED 127.0.0.1:39839`;
+- Sprint 4A.1 still intentionally uses the existing external Foundry Local development endpoint;
+- the native Windows host does not yet start, stop, acquire, load, or unload Foundry Local models.
+
+Immediate validation continuation:
+
+1. keep the Tauri development host running;
+2. start Foundry Local on fixed port 39839;
+3. load the previously validated local model;
+4. use CrownKeep **Recheck**;
+5. confirm a real Foundry Local response works inside the native Windows window.
+
+Successful inference through the Tauri-hosted UI will close the core Sprint 4A.1 shell proof and allow work to move into Sprint 4A.2 native Foundry lifecycle ownership.
+
+
+## Sprint 4A.1 complete — 2026-09-26
+
+Physical Windows validation completed successfully.
+
+Validated in the native CrownKeep desktop host:
+
+- `npm run desktop:dev` launches the real CrownKeep Tauri application window;
+- the existing React/CrownKeep UI renders correctly inside the native host;
+- the native host identity bridge is active;
+- CrownKeep reports **Native Windows host connected**;
+- Foundry Local on `127.0.0.1:39839` is reachable through the existing provider path;
+- `phi-4-mini-instruct-openvino-gpu` is discovered and selected;
+- Local AI setup reports Runtime connected, Model selected, and Verify passed;
+- a real Anne response is generated successfully inside the native Windows application;
+- existing projects/conversations remain usable;
+- browser-development and provider-neutral architecture remain intact.
+
+Observed performance guidance correctly warned that the GPU-labeled variant took roughly 11 seconds on this machine and suggested comparing a CPU variant. This confirms the existing observed-performance logic continues to work inside the native host.
+
+**Sprint 4A.1 is complete.**
+
+Next active slice: **Sprint 4A.2 — Embedded Foundry Local lifecycle**, beginning with native runtime/model discovery and lifecycle ownership through the existing `LocalRuntimeManager` seam.
+
+
+## Sprint 4A.2A native Foundry lifecycle implementation — 2026-09-26
+
+Implementation delivered; physical Windows validation pending.
+
+Native host changes:
+
+- added the official `foundry-local-sdk` Rust dependency with the Windows `winml` feature;
+- CrownKeep initializes its own Foundry Local manager with an embedded OpenAI-compatible service bound to `127.0.0.1:39839`;
+- native Tauri commands now expose Foundry SDK status, service start/stop, model download, model load, and model unload;
+- native status reports catalog size plus cached and loaded model state;
+- execution-provider download/registration is performed through the SDK before first model acquisition;
+- `TauriLocalRuntimeManager` now advertises real lifecycle capabilities rather than placeholder unsupported actions;
+- browser mode remains on `BrowserLocalRuntimeManager` and is unchanged.
+
+Product-facing first-run slice:
+
+- the native Local AI setup adds **Prepare phi-4-mini** when the embedded provider is not ready;
+- Prepare uses the native manager to register execution providers, download/cache `phi-4-mini` when needed, load it, start the embedded Foundry service, and recheck CrownKeep;
+- a **Stop local AI** action stops the embedded service and attempts to unload the bootstrap model;
+- the bootstrap alias is intentionally the already-validated `phi-4-mini` for this engineering slice; broader model recommendation/selection remains part of Sprint 4A.2.
+
+Important validation boundary:
+
+- stop the externally managed Foundry CLI server before testing this slice so port 39839 is free;
+- the SDK uses CrownKeep's application-owned cache by default, so the first native preparation may download model/runtime assets even if a CLI-managed copy already exists;
+- successful validation means CrownKeep reaches a ready Anne response without running `foundry server restart`, `foundry model download`, or `foundry model load` manually.
+
+
+## 4A.2 first-run model preparation correction — 2026-09-26
+
+First physical validation of the native **Prepare phi-4-mini** flow failed before the local OpenAI service became reachable. The UI surfaced an execution-provider setup failure while the Vite proxy continued to receive expected `ECONNREFUSED 127.0.0.1:39839` responses because the embedded service never reached the start stage.
+
+Correction:
+
+- removed the unconditional `download_and_register_eps(None)` call, which attempted to download/register every discovered execution provider before model preparation;
+- retained the SDK's Windows `winml` feature and allow the model/SDK path to select the appropriate runtime normally;
+- added native terminal stage logging for SDK initialization, model resolution, cache inspection, model download, model load, and embedded-service start;
+- the next validation should begin with the external Foundry CLI server stopped and use **Prepare phi-4-mini** again.
+
+This keeps execution-provider tuning available for a later hardware-optimization slice without making it a prerequisite for basic CrownKeep self-managed local AI.
+
+
+## Sprint 4A.2A physical validation succeeded — 2026-09-26
+
+The first CrownKeep-owned Foundry Local lifecycle was successfully validated on the primary Windows development machine with the external Foundry CLI server stopped.
+
+Observed native sequence:
+
+- CrownKeep resolved the bootstrap alias `phi-4-mini`;
+- the SDK selected `Phi-4-mini-instruct-generic-cpu:5`;
+- CrownKeep downloaded the model into its application-managed cache;
+- CrownKeep loaded the model through the native Foundry Local SDK;
+- CrownKeep started its embedded OpenAI-compatible service at `http://127.0.0.1:39839`;
+- the existing Foundry provider discovered the running model through the local API;
+- Local AI setup reported Runtime connected, Model selected, and Verify passed;
+- Anne generated a verified response inside the native Windows application without manual `foundry server` or `foundry model load` commands.
+
+The initial application-owned model download took several minutes. This is expected first-run behavior. The downloaded model remains cached on disk across app restarts.
+
+Current shutdown behavior:
+
+- **Stop local AI** is optional and is useful when the user wants to keep CrownKeep open while freeing the local inference runtime/model;
+- closing the current single-window CrownKeep desktop application terminates the Tauri process, which also terminates CrownKeep's embedded Foundry service and releases the loaded model/runtime from memory;
+- closing CrownKeep does not remove the downloaded model from its application-managed cache.
+
+This completes the core 4A.2A proof: CrownKeep can prepare and run Windows local AI without requiring normal-user Foundry CLI lifecycle commands.
+
+
+## Phase 4A.2B productization direction — 2026-09-26
+
+Restart validation confirmed CrownKeep's application-managed model cache persists across app restarts:
+
+- `phi-4-mini` resolved to `Phi-4-mini-instruct-generic-cpu:5`;
+- native preparation reported `download-model skipped cached=true`;
+- load/start completed without repeating the several-minute first-run model download.
+
+New product requirements captured from physical Windows use:
+
+- automatically restore the last verified cached local model on CrownKeep startup;
+- make the desktop top/header layout behave better at medium window widths;
+- render fenced code responses as dedicated code blocks with a Copy action;
+- expose a local Foundry model analyst/catalog experience so the user can inspect and choose models/variants;
+- benchmark observed performance before remembering a preferred local model;
+- support timed idle unload of the local model to release resources while CrownKeep stays open;
+- show a clear sleeping indicator that can reload the model and continue the same conversation.
+
+These requirements stay inside the provider/runtime boundaries and do not change conversation identity.
+
+
+## Sprint 4A.2B/C implementation package — 2026-09-26
+
+Implemented on the Windows product-host branch; physical validation pending.
+
+### Automatic restore and resource sleep
+
+- CrownKeep remembers the last verified Foundry model/variant.
+- When the native Windows app opens and the saved model is healthy/cached but the embedded service is stopped, CrownKeep automatically restores the model/runtime in the background.
+- Conversation storage opens independently; local AI startup is not allowed to block access to chat history.
+- Local AI can unload after an idle period while the app remains open.
+- Idle unload is configurable: Never, 5, 15, 30, or 60 minutes.
+- A sleeping Local AI state is visible in the top status pill; clicking it wakes the remembered model.
+- Manual **Sleep local AI** remains available to release model/runtime resources while keeping CrownKeep open.
+
+### Code output
+
+- Anne is instructed to use fenced Markdown blocks for copyable commands/config/code.
+- CrownKeep recognizes fenced code blocks in assistant messages.
+- Each code block renders in a dedicated panel with language label and Copy action.
+
+### Local Model Analyst
+
+- Added a native Foundry catalog command that exposes model variants, alias/display name, cached/loaded status, device, execution provider, file size, and context length where available.
+- The Local AI panel includes a **Local Model Analyst** section.
+- The user can inspect candidates, select a model/variant, download it when required, load it, start the CrownKeep-owned runtime, and then verify observed performance.
+- Preferred model/variant is persisted separately from generic provider selection so startup can restore the known-good choice.
+- Model decisions remain performance-informed rather than assuming GPU/NPU labels are faster.
+
+### Responsive desktop polish
+
+- Added a compact medium-width Windows header layout through 1320px viewport width.
+- Local AI status/project/title controls use less vertical space before the mobile layout activates.
+
+### Repo hygiene
+
+- generated `src-tauri/gen/` artifacts are ignored.
+- `package-lock.json` and `src-tauri/Cargo.lock` remain candidates to intentionally commit from a generated Windows build for reproducible installer work in Sprint 4A.3.
+
+
+## Auto-restore startup trigger correction — 2026-09-26
+
+Physical restart testing showed that CrownKeep's Local Model Analyst could see the cached `phi-4-mini` CPU variant, but automatic startup still did not run. No native Foundry stage logs were emitted, proving that the restore trigger itself was blocked before model resolution.
+
+Root cause:
+
+- automatic restore was gated by the prior `LocalAiSetupRecord.healthy` browser/provider record;
+- the native Foundry catalog already had enough information to prove that a cached model was available;
+- therefore a stale/missing setup record could prevent startup even when the native cache was healthy.
+
+Correction:
+
+- startup restore now waits for the native Foundry catalog inspection;
+- when the provider is down and a cached native model exists, CrownKeep matches the preferred model by normalized native/provider ID or alias;
+- if the preferred value is stale, CrownKeep falls back to the cached `phi-4-mini` alias and then to the first cached candidate;
+- the matched native variant ID is persisted and loaded automatically;
+- prior verification/performance data remains advisory rather than controlling whether the runtime is allowed to start.
+
+This makes the native catalog the source of truth for Windows local-model restore.
+
+
+## Device-aware Local Model Analyst — 2026-09-26
+
+Physical laptop testing confirmed automatic restore works, but the initial Local Model Analyst exposed only CPU variants. This was expected from the implementation because CrownKeep was reading the current Foundry catalog without first running Foundry's execution-provider discovery/registration flow.
+
+Microsoft's Foundry Local WinML verification flow explicitly performs:
+
+1. discover compatible execution providers;
+2. register/download those execution providers;
+3. refresh the model catalog;
+4. inspect GPU/NPU accelerated variants;
+5. download/load a candidate and validate observed performance.
+
+CrownKeep now implements the same sequence through the native Rust SDK with one important resilience improvement: execution providers are registered individually so one failed provider does not abort the entire device analysis.
+
+New behavior:
+
+- **Local Model Analyst → Analyze this device** discovers Foundry execution providers for the current Windows machine;
+- previously registered providers are reused;
+- unregistered discovered providers are attempted individually;
+- partial provider-registration failures are surfaced but do not discard successful providers;
+- the Foundry model catalog is refreshed after provider analysis;
+- Model Analyst then refreshes model/variant choices and exposes CPU/GPU/NPU device labels and execution-provider metadata;
+- the analysis reports detected device classes, execution-provider status, CPU variant count, and accelerated GPU/NPU variant count;
+- acceleration is treated as a candidate, not an automatic winner: CrownKeep continues to use observed verification/benchmark timing before persisting a preferred model.
+
+This intentionally makes device analysis machine-specific. An AVD CPU result does not constrain a physical laptop with compatible GPU/NPU execution providers.
+
+### Windows UI refinement
+
+The Local AI panel is now a bounded fixed desktop overlay with internal scrolling and a sticky heading so long Model Analyst content does not run off-screen. The medium/desktop top bar now uses an explicit two-column title/status layout instead of allowing the Local AI status control to wrap underneath the conversation title.
+
+
+## Sprint 4A.3 planning reset — 2026-09-26
+
+The next sprint is intentionally a convergence sprint rather than the start of cloud identity/sync.
+
+A detailed contract now lives in `docs/SPRINT-4A3-LOCAL-PLATFORM-CONVERGENCE.md`.
+
+Planned outcome:
+
+- reduce the Windows Foundry catalog from raw variant volume to useful model-family/role choices;
+- benchmark the primary RTX 5070 Laptop GPU (8,151 MiB VRAM) for Quick, Balanced, and Experimental/Deep model roles;
+- keep `gpt-oss-20b` experimental on this hardware because its intended memory footprint exceeds the laptop's dedicated VRAM;
+- add provider-neutral local dictation, using Foundry Local Whisper on Windows and native Apple Speech on iPhone;
+- revalidate the current shared build on the physical iPhone and church AVD;
+- use one adaptive Windows discovery/benchmark/recommendation policy on both the primary laptop and AVD, allowing different model/provider outcomes only when the same analysis justifies them;
+- preserve tool-call capability metadata for model choice without implementing CrownKeep tools/MCP in this sprint;
+- finish with all validated local-first work merged to `main`, stale contained phase branches cleaned up, and a documented local-baseline pause point before cloud work.
+
+Branch: `sprint-4a3-local-platform-convergence`.
+
+## Sprint 4A.3 implementation — 2026-09-26
+
+**Implementation delivered on `sprint-4a3-local-platform-convergence`; device validation remains open. Do not merge/tag the baseline yet.**
+
+- Model Analyst groups catalog variants into Quick, Balanced, Deep / Experimental, and Voice families. Raw variants remain in Advanced.
+- A single Windows policy filters task/tool metadata and estimated RAM headroom, benchmarks one representative per device/execution-provider path using a fixed 48-token prompt, and persists accepted observed results. GPU labels confer no performance preference.
+- Preferred family plus resolved variant, provider, device, cache/tool metadata, timestamps, first-token/total timing, outcome and throughput (when usage is reported) are stored against a local hardware/runtime fingerprint. CPU, GPU names/drivers, OS version, total RAM, registered execution providers, SDK policy version, and catalog IDs contribute to invalidation. Changed fingerprints prompt re-analysis.
+- Progress comes from native discovery/registration/catalog events and actual benchmark preparation/measurement stages. Benchmark cancellation releases resources and restores the previous model; native downloads finish before cancellation cleanup.
+- Dictation uses `SpeechInputProvider`. Windows captures a bounded mono WAV, invokes the pinned Foundry SDK transcription API, releases Whisper and restores prior chat models. iOS records natively and uses `SpeechAnalyzer` / `SpeechTranscriber` only with installed on-device language assets. Missing capabilities disable dictation without disabling chat.
+- Transcript is appended to the current draft for review, never automatically sent. Microphone permission errors and cancellation are visible. Recordings are temporary and removed after use; browser speech services are not used. Windows cancellation discards output but waits for native transcription/resource cleanup before releasing the UI lock.
+- Fixed idle-timeout dependencies, resource switching rollback, cached endpoint health rechecks, and Apple-provider preference in native iPhone development builds.
+- Added policy tests, dependency lockfile, convergence-branch CI, and unsigned iOS compile gate.
+
+Validation at implementation time: local lint, TypeScript, production build, policy tests. Native CI and device tests must be recorded separately; a Linux web build is not evidence of a working Windows microphone or iPhone installation.
+
+Remaining gates: current Windows/laptop and AVD inference/benchmarks/dictation, `Rolo15` install/chat/dictation/persistence, native compilation, and the matrix in `docs/SPRINT-4A3-VALIDATION.md`. Merge, stale contained-branch deletion, and `v0.4-local-baseline` are intentionally pending those gates.
+
+Native CI caught an existing Foundation Models SDK compatibility gap: the iOS 26.5 runner has `GenerationOptions.sampling`, while the earlier device branch used the iOS 27 spelling. Use the compatible property and conditionally compile iOS 27 token-usage telemetry only when the project is built with a matching SDK. iOS 26 chat/dictation remains supported. CI also generates the branded icon before compilation.
+
+CI evidence: the native Windows host compiled successfully in run 36266994648. After the SDK correction, unsigned iPhone compilation and shared UI smoke tests passed in run 36267159109. Final follow-up makes provider selection follow the actually loaded chat variant, preserves sleep during catalog-only analysis, offers explicit Whisper tiny/base/small choices, and includes loaded runtime module versions in the fingerprint. These checks still do not validate physical-device inference.

@@ -22,11 +22,54 @@ export interface RuntimeSnapshot {
   state: RuntimeLifecycleState
   detail: string
   models: AIModel[]
+  authority?: string
+  runtimeVersion?: string
+  cacheLocation?: string
+  legacyCacheLocation?: string
+  legacyCache?: {
+    path: string
+    exists: boolean
+    approximateSizeBytes: number
+    entries: string[]
+    entryCount: number
+    status: string
+    cleanup: string
+  }
 }
 
 export interface RuntimeActionResult {
   supported: boolean
   detail: string
+}
+
+export interface RuntimeExecutionProvider {
+  name: string
+  registered: boolean
+  registrationAttempted: boolean
+  registrationSucceeded: boolean
+}
+
+export interface RuntimeDeviceAnalysis {
+  devices: string[]
+  executionProviders: RuntimeExecutionProvider[]
+  acceleratedVariantCount: number
+  cpuVariantCount: number
+  detail: string
+}
+
+export interface RuntimeModelCandidate {
+  id: string
+  alias: string
+  displayName: string
+  cached: boolean
+  loaded: boolean
+  device?: string
+  executionProvider?: string
+  fileSizeMb?: number
+  modelType?: string
+  task?: string
+  supportsToolCalling?: boolean
+  contextLength?: number
 }
 
 export interface LocalRuntimeManager {
@@ -44,6 +87,11 @@ export interface LocalRuntimeManager {
   start(): Promise<RuntimeActionResult>
   stop(): Promise<RuntimeActionResult>
   installModel(modelId: string): Promise<RuntimeActionResult>
+  activateModel(modelId: string): Promise<RuntimeActionResult>
   loadModel(modelId: string): Promise<RuntimeActionResult>
   unloadModel(modelId: string): Promise<RuntimeActionResult>
+  removeCachedModel(modelId: string): Promise<RuntimeActionResult>
+  listModelCandidates(): Promise<RuntimeModelCandidate[]>
+  analyzeDevice(): Promise<RuntimeDeviceAnalysis>
+  inspectLegacyCache?(): Promise<NonNullable<RuntimeSnapshot['legacyCache']>>
 }

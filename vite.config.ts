@@ -6,6 +6,9 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    watch: {
+      ignored: ['**/src-tauri/**'],
+    },
     proxy: {
       '/foundry-local': {
         target: 'http://127.0.0.1:39839',

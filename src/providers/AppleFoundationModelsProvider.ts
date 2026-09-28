@@ -67,10 +67,21 @@ export class AppleFoundationModelsProvider implements AIProvider {
       resume = undefined
     }
 
+    const nativeTools = (request.tools ?? [])
+      .filter((tool) => tool.id === 'web-search' || tool.id === 'web-read')
+      .map((tool) => ({
+        id: tool.id,
+        name: tool.functionName,
+        description: tool.description,
+      }))
+    const nativeWebEnabled = Boolean(this.host.web && nativeTools.length)
+
     const handle = await this.host.streamChat(
       {
         modelId: request.modelId,
         messages: request.messages,
+        webAccess: nativeWebEnabled ? 'on' : 'off',
+        tools: nativeWebEnabled ? nativeTools : [],
       },
       (chunk) => {
         queue.push({
@@ -78,6 +89,7 @@ export class AppleFoundationModelsProvider implements AIProvider {
             text: chunk.text,
             done: chunk.done,
             usage: chunk.usage,
+            toolActivities: chunk.toolActivities,
           },
         })
         wake()

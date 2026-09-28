@@ -1,3 +1,4 @@
+import { invoke, isTauri } from '@tauri-apps/api/core'
 import type {
   AIModel,
   AIProvider,
@@ -18,10 +19,32 @@ interface OpenAIModelList {
   data?: OpenAIModelRecord[]
 }
 
+interface ToolProbeResponse {
+  choices?: Array<{
+    message?: {
+      tool_calls?: Array<{
+        type?: string
+        function?: {
+          name?: string
+          arguments?: string
+        }
+      }>
+    }
+  }>
+}
+
 interface StreamDelta {
   choices?: Array<{
     delta?: {
       content?: string | null
+      tool_calls?: Array<{
+        index: number
+        id?: string
+        function?: {
+          name?: string
+          arguments?: string
+        }
+      }>
     }
   }>
   usage?: {
@@ -32,6 +55,19 @@ interface StreamDelta {
 }
 
 type ApiMode = 'v1' | 'legacy'
+
+function traceHost(event: string, detail: string, requestId?: string) {
+  try {
+    void invoke('crownkeep_trace', {
+      scope: 'provider',
+      event,
+      detail,
+      requestId,
+    }).catch(() => {})
+  } catch {
+    // Browser-only tests do not have the Tauri bridge.
+  }
+}
 
 function normalizeEndpoint(value: string): string {
   const trimmed = value.trim().replace(/\/+$/, '')
@@ -59,6 +95,43 @@ function inferRuntimeDevice(modelId: string): AIModel['runtimeDevice'] {
   if (/(^|[-_:])gpu($|[-_:])/.test(normalized)) return 'GPU'
   if (/(^|[-_:])cpu($|[-_:])/.test(normalized)) return 'CPU'
   return undefined
+}
+
+function openAIMessage(message: ChatRequest['messages'][number]) {
+  const value: Record<string, unknown> = {
+    role: message.role,
+    content:
+      message.toolCalls && message.toolCalls.length > 0
+        ? null
+        : message.content,
+  }
+
+  if (message.name) value.name = message.name
+  if (message.toolCallId) value.tool_call_id = message.toolCallId
+  if (message.toolCalls?.length) {
+    value.tool_calls = message.toolCalls.map((call) => ({
+      id: call.id,
+      type: 'function',
+      function: {
+        name: call.name,
+        arguments: call.arguments,
+      },
+    }))
+  }
+
+  return value
+}
+
+function openAITools(request: ChatRequest) {
+  if (!request.tools?.length) return undefined
+  return request.tools.map((tool) => ({
+    type: 'function',
+    function: {
+      name: tool.functionName,
+      description: tool.description,
+      parameters: tool.inputSchema,
+    },
+  }))
 }
 
 function parseModelNames(payload: unknown): string[] {
@@ -104,13 +177,13 @@ export class FoundryLocalProvider implements AIProvider {
   }
 
   private async probeEndpoint(endpoint: string): Promise<ApiMode> {
-    const currentResponse = await fetch(`${endpoint}/v1/models`)
+    const currentResponse = await fetch(`${endpoint}/v1/models`, { signal: AbortSignal.timeout(5000) })
 
     if (currentResponse.ok) {
       return 'v1'
     }
 
-    const legacyResponse = await fetch(`${endpoint}/openai/status`)
+    const legacyResponse = await fetch(`${endpoint}/openai/status`, { signal: AbortSignal.timeout(5000) })
 
     if (legacyResponse.ok) {
       return 'legacy'
@@ -122,11 +195,27 @@ export class FoundryLocalProvider implements AIProvider {
   }
 
   private async resolveEndpoint(): Promise<{ endpoint: string; mode: ApiMode }> {
-    if (this.activeEndpoint && this.apiMode) {
+    if (!isTauri() && this.activeEndpoint && this.apiMode) {
       return { endpoint: this.activeEndpoint, mode: this.apiMode }
     }
 
     const failures: string[] = []
+
+    // A packaged Windows app follows the installed System Foundry service,
+    // including its dynamically reported endpoint. Browser development keeps
+    // its explicitly configured/proxied loopback behavior.
+    if (isTauri()) {
+      try {
+        const endpoint = normalizeEndpoint(await invoke<string>('crownkeep_system_foundry_endpoint'))
+        const mode = await this.probeEndpoint(endpoint)
+        this.activeEndpoint = endpoint
+        this.apiMode = mode
+        return { endpoint, mode }
+      } catch (error) {
+        failures.push(`System Foundry: ${error instanceof Error ? error.message : 'unreachable'}`)
+        throw new Error(`Could not reach the current System Foundry endpoint. ${failures.join(' | ')}`)
+      }
+    }
 
     for (const endpoint of this.endpointCandidates) {
       try {
@@ -148,6 +237,8 @@ export class FoundryLocalProvider implements AIProvider {
 
   async getAvailability(): Promise<ProviderAvailability> {
     try {
+      this.activeEndpoint = undefined
+      this.apiMode = undefined
       const { endpoint, mode } = await this.resolveEndpoint()
 
       return {
@@ -172,14 +263,21 @@ export class FoundryLocalProvider implements AIProvider {
   }
 
   async listModels(): Promise<AIModel[]> {
-    const { endpoint, mode } = await this.resolveEndpoint()
-    const url =
-      mode === 'v1'
-        ? `${endpoint}/v1/models`
-        : `${endpoint}/openai/models`
-
-    const response = await fetch(url)
-    await assertOk(response, 'Foundry Local model discovery')
+    let response: Response | undefined
+    let lastError: unknown
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        const { endpoint, mode } = await this.resolveEndpoint()
+        response = await fetch(mode === 'v1' ? `${endpoint}/v1/models` : `${endpoint}/openai/models`)
+        await assertOk(response, 'Foundry Local model discovery')
+        break
+      } catch (error) {
+        lastError = error
+        this.activeEndpoint = undefined
+        this.apiMode = undefined
+      }
+    }
+    if (!response?.ok) throw new Error(`System Foundry endpoint retry failed: ${String(lastError)}`)
 
     const payload = (await response.json()) as unknown
     const modelNames = parseModelNames(payload)
@@ -192,45 +290,257 @@ export class FoundryLocalProvider implements AIProvider {
     }))
   }
 
+  async probeToolCalling(
+    modelId: string,
+    signal?: AbortSignal,
+  ): Promise<boolean | undefined> {
+    const probeName = 'crownkeep_capability_probe'
+    let endpoint: string
+    let mode: ApiMode
+
+    try {
+      const resolved = await this.resolveEndpoint()
+      endpoint = resolved.endpoint
+      mode = resolved.mode
+    } catch (error) {
+      traceHost(
+        'tool-probe-endpoint-failed',
+        `model=${modelId} error=${String(error)}`,
+      )
+      return undefined
+    }
+
+    if (mode !== 'v1') {
+      traceHost(
+        'tool-probe-unsupported-api',
+        `model=${modelId} mode=${mode}`,
+      )
+      return undefined
+    }
+
+    let response: Response
+    try {
+      response = await fetch(`${endpoint}/v1/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          model: modelId,
+          messages: [
+            {
+              role: 'user',
+              content:
+                'For this capability check, call the provided function with value "ok". Do not answer in normal text.',
+            },
+          ],
+          tools: [
+            {
+              type: 'function',
+              function: {
+                name: probeName,
+                description:
+                  'CrownKeep local capability probe. Return the supplied value.',
+                parameters: {
+                  type: 'object',
+                  properties: {
+                    value: { type: 'string' },
+                  },
+                  required: ['value'],
+                  additionalProperties: false,
+                },
+              },
+            },
+          ],
+          tool_choice: {
+            type: 'function',
+            function: { name: probeName },
+          },
+          max_tokens: 32,
+          stream: false,
+        }),
+        signal,
+      })
+    } catch (error) {
+      traceHost(
+        'tool-probe-fetch-failed',
+        `model=${modelId} aborted=${Boolean(signal?.aborted)} error=${String(error)}`,
+      )
+      return undefined
+    }
+
+    if (response.status === 400 || response.status === 422) {
+      const detail = await response.text().catch(() => '')
+      traceHost(
+        'tool-probe-result',
+        `model=${modelId} supported=false status=${response.status} detail=${detail.slice(0, 240)}`,
+      )
+      return false
+    }
+
+    if (!response.ok) {
+      const detail = await response.text().catch(() => '')
+      traceHost(
+        'tool-probe-inconclusive',
+        `model=${modelId} status=${response.status} detail=${detail.slice(0, 240)}`,
+      )
+      return undefined
+    }
+
+    try {
+      const payload = (await response.json()) as ToolProbeResponse
+      const calls = payload.choices?.[0]?.message?.tool_calls ?? []
+      const supported = calls.some(
+        (call) =>
+          call.type === 'function' &&
+          call.function?.name === probeName,
+      )
+      traceHost(
+        'tool-probe-result',
+        `model=${modelId} supported=${supported} status=${response.status}`,
+      )
+      return supported
+    } catch (error) {
+      traceHost(
+        'tool-probe-inconclusive',
+        `model=${modelId} invalidJson=true error=${String(error)}`,
+      )
+      return undefined
+    }
+  }
+
   async *streamChat(
     request: ChatRequest,
     signal?: AbortSignal,
   ): AsyncIterable<ChatChunk> {
-    const { endpoint } = await this.resolveEndpoint()
+    const traceId = request.traceId
+    const started = performance.now()
+    const messageChars = request.messages.reduce(
+      (total, message) => total + message.content.length,
+      0,
+    )
 
-    const response = await fetch(`${endpoint}/v1/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'text/event-stream',
-      },
-      body: JSON.stringify({
-        model: request.modelId,
-        messages: request.messages,
-        stream: true,
-      }),
-      signal,
-    })
+    traceHost(
+      'chat-begin',
+      `model=${request.modelId} messages=${request.messages.length} chars=${messageChars} maxTokens=${request.maxTokens ?? 'default'}`,
+      traceId,
+    )
+
+    let endpoint: string
+    try {
+      const resolved = await this.resolveEndpoint()
+      endpoint = resolved.endpoint
+      traceHost(
+        'endpoint-ready',
+        `endpoint=${endpoint} mode=${resolved.mode} elapsedMs=${Math.round(performance.now() - started)}`,
+        traceId,
+      )
+    } catch (error) {
+      traceHost(
+        'endpoint-failed',
+        `elapsedMs=${Math.round(performance.now() - started)} error=${String(error)}`,
+        traceId,
+      )
+      throw error
+    }
+
+    let response!: Response
+    const fetchStarted = performance.now()
+    try {
+      let lastError: unknown
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        try {
+          response = await fetch(`${endpoint}/v1/chat/completions`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
+            body: JSON.stringify({
+              model: request.modelId,
+              messages: request.messages.map(openAIMessage),
+              stream: true,
+              ...(request.maxTokens ? { max_tokens: request.maxTokens } : {}),
+              ...(request.tools?.length ? { tools: openAITools(request) } : {}),
+              ...(request.tools?.length
+                ? { tool_choice: request.toolChoice ?? 'auto' }
+                : {}),
+            }),
+            signal,
+          })
+          if (response.ok || attempt === 1 || signal?.aborted) break
+          this.activeEndpoint = undefined; this.apiMode = undefined
+          endpoint = (await this.resolveEndpoint()).endpoint
+        } catch (error) {
+          lastError = error
+          if (attempt === 1 || signal?.aborted) throw error
+          this.activeEndpoint = undefined; this.apiMode = undefined
+          endpoint = (await this.resolveEndpoint()).endpoint
+        }
+      }
+      if (!response!) throw lastError
+    } catch (error) {
+      traceHost(
+        'http-fetch-failed',
+        `model=${request.modelId} elapsedMs=${Math.round(performance.now() - fetchStarted)} aborted=${Boolean(signal?.aborted)} error=${String(error)}`,
+        traceId,
+      )
+      throw error
+    }
+
+    traceHost(
+      'http-response',
+      `model=${request.modelId} status=${response.status} contentType=${response.headers.get('content-type') ?? '-'} elapsedMs=${Math.round(performance.now() - fetchStarted)}`,
+      traceId,
+    )
 
     if (response.status === 404) {
+      traceHost('model-not-found', `model=${request.modelId}`, traceId)
       throw new Error(
         `Foundry Local could not find model "${request.modelId}". Load it first with: foundry model load <model-alias>`,
       )
     }
 
-    await assertOk(response, 'Foundry Local chat completion')
+    try {
+      await assertOk(response, 'Foundry Local chat completion')
+    } catch (error) {
+      traceHost(
+        'http-error',
+        `model=${request.modelId} status=${response.status} error=${String(error)}`,
+        traceId,
+      )
+      throw error
+    }
 
     if (!response.body) {
+      traceHost('stream-missing', `model=${request.modelId}`, traceId)
       throw new Error('Foundry Local returned no response stream.')
     }
 
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
     let buffer = ''
+    let outputChars = 0
+    let firstTokenLogged = false
+
+    traceHost(
+      'stream-open',
+      `model=${request.modelId} elapsedMs=${Math.round(performance.now() - started)}`,
+      traceId,
+    )
 
     try {
       while (true) {
-        const { done, value } = await reader.read()
+        let chunk: ReadableStreamReadResult<Uint8Array>
+        try {
+          chunk = await reader.read()
+        } catch (error) {
+          traceHost(
+            'stream-read-failed',
+            `model=${request.modelId} elapsedMs=${Math.round(performance.now() - started)} aborted=${Boolean(signal?.aborted)} outputChars=${outputChars} error=${String(error)}`,
+            traceId,
+          )
+          throw error
+        }
+
+        const { done, value } = chunk
 
         if (done) {
           buffer += decoder.decode()
@@ -249,12 +559,24 @@ export class FoundryLocalProvider implements AIProvider {
           if (!data) continue
 
           if (data === '[DONE]') {
+            traceHost(
+              'stream-done',
+              `model=${request.modelId} elapsedMs=${Math.round(performance.now() - started)} outputChars=${outputChars}`,
+              traceId,
+            )
             yield { text: '', done: true }
             return
           }
 
           const parsed = JSON.parse(data) as StreamDelta
-          const text = parsed.choices?.[0]?.delta?.content ?? ''
+          const delta = parsed.choices?.[0]?.delta
+          const text = delta?.content ?? ''
+          const toolCallDeltas = delta?.tool_calls?.map((call) => ({
+            index: call.index,
+            id: call.id,
+            name: call.function?.name,
+            arguments: call.function?.arguments,
+          }))
           const usage = parsed.usage
             ? {
                 promptTokens: parsed.usage.prompt_tokens,
@@ -263,14 +585,29 @@ export class FoundryLocalProvider implements AIProvider {
               }
             : undefined
 
-          if (text || usage) {
-            yield { text, usage }
+          if (text && !firstTokenLogged) {
+            firstTokenLogged = true
+            traceHost(
+              'first-token',
+              `model=${request.modelId} elapsedMs=${Math.round(performance.now() - started)}`,
+              traceId,
+            )
+          }
+
+          outputChars += text.length
+          if (text || usage || toolCallDeltas?.length) {
+            yield { text, usage, toolCallDeltas }
           }
         }
 
         if (done) break
       }
 
+      traceHost(
+        'stream-eof',
+        `model=${request.modelId} elapsedMs=${Math.round(performance.now() - started)} outputChars=${outputChars}`,
+        traceId,
+      )
       yield { text: '', done: true }
     } finally {
       reader.releaseLock()

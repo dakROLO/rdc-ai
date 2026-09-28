@@ -1,0 +1,24 @@
+[package]
+name = "crownkeep"
+version = "0.1.0"
+description = "CrownKeep Windows native host"
+authors = ["Royal Digital Clarity"]
+edition = "2021"
+
+[lib]
+name = "crownkeep_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+tauri = { version = "2", features = [] }
+foundry-local-sdk = { version = "=1.2.3", features = ["winml"] }
+
+serde_json = "1"
+tempfile = "3"
+tokio = { version = "1", features = ["sync", "time"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+html2text = "0.17.1"

@@ -2,6 +2,124 @@
 
 This guide is the executable test plan for the current sprint. It should evolve into the public installation/use documentation as the product matures.
 
+## Current acceptance target — Sprint 4A.4
+
+Sprint 4A.4 is the active validation target. The authoritative implementation/status records are `docs/STATUS.md`, `docs/ROADMAP.md`, `docs/ARCHITECTURE.md`, `docs/DECISIONS.md`, and `docs/SPRINT-4A4-VALIDATION.md`.
+
+### Already physically accepted
+
+- Primary Windows laptop: Quick / `phi-4-mini` startup + normal chat; Balanced / `mistral-nemo-12b-instruct` CUDA benchmark + normal chat; exclusive model switching; local dictation through installed System Foundry.
+- Rolo15: convergence baseline chat, follow-up context, Apple-native on-device dictation, and restart/persistence.
+- Deep remains a recorded failed qualification and must not be auto-retried/promoted.
+- AVD remains separately pending under the same adaptive Windows policy.
+
+### Automated branch gate
+
+Before recording new physical acceptance, the active branch must pass:
+
+```powershell
+npm run lint
+npm test
+npm run build
+```
+
+CI additionally runs shared Playwright UI smoke tests, the Windows Tauri/Rust host check, the Cargo.lock consistency check, and the unsigned iOS Simulator build.
+
+### Web Access architecture under test
+
+Web Access defaults to **OFF** and is enforced by `ToolRegistry`.
+
+There is no CrownKeep Web Gateway, Tavily integration, search API account, API key, Windows Credential Manager web-search item, or iOS Keychain web-search item.
+
+Current native behavior:
+
+- **Windows:** direct native HTTPS to DuckDuckGo's public non-JavaScript HTML search surface.
+- **iPhone:** direct native `URLSession` request to the same DuckDuckGo search surface.
+- **Web Search:** sends only the minimized public query and locally parses result titles/URLs/snippets.
+- **Web Read:** fetches only the selected public HTTP(S) URL directly from the native device.
+- **Reasoning:** remains on the selected local model.
+- **DuckDuckGo challenge/rate limit:** visible failure only; CrownKeep does not bypass it and does not silently switch search/model providers.
+
+### Windows laptop — keyless Web Access acceptance
+
+Update and launch the native app:
+
+```powershell
+Set-Location C:\path\to\rdc-ai
+git fetch origin
+git switch sprint-4a3-local-platform-convergence
+git pull --ff-only
+npm ci
+npm run desktop:dev
+```
+
+Then:
+
+1. Confirm the compact status bar shows role/model/execution, **Inside the Keep**, runtime state, and **Web OFF**.
+2. Confirm normal Quick local chat still works.
+3. With Web Access **OFF**, ask: `What is the latest stable Node.js release right now? Verify it using current web information.`
+4. Confirm no Web Search/Web Read executes and Anne does not claim current verification.
+5. Open Local AI / Web Access. Confirm it identifies **DuckDuckGo** and explicitly says no account/API key is required.
+6. Turn **Web ON**.
+7. Ask a local-only question such as `Explain the difference between Quick and Balanced in CrownKeep.` Confirm no unnecessary search occurs.
+8. Ask: `What is the latest stable Node.js release right now? Verify it using current sources.`
+9. Confirm visible Web Search activity, source URLs/titles, and the assistant message remains attributed to the actual local reasoning provider.
+10. Ask: `Search for the latest stable Node.js release, read the two most relevant sources, and summarize the version and release date.`
+11. Confirm bounded DuckDuckGo Web Search + direct Web Read activity and source metadata.
+12. Run `/url https://example.com` while Web Access is ON. Confirm direct Web Read works independently of search.
+13. Disconnect networking and repeat a current-information request. Confirm failure is visible and no cloud-model or alternate-search fallback occurs.
+14. Turn Web Access **OFF** and confirm subsequent automatic/manual network tools are blocked.
+
+Do **not** retry the failed Deep candidate during this acceptance run.
+
+### Rolo15 — wife’s Mac build/deploy path
+
+Use the established physical-device path:
+
+- Mac repo: `~/Projects/rdc-ai`
+- Apple team: `QJ9HLPX482`
+- Rolo15 device ID: `00008150-001829503E38401C`
+- unlock the Mac login keychain before the build;
+- run the script with `bash`; **do not chmod it**;
+- keep Rolo15 awake/unlocked and on the same network during wireless install/launch.
+
+Preflight from Windows PowerShell:
+
+```powershell
+ssh mac-dev 'cd ~/Projects/rdc-ai && echo "=== GIT ===" && git branch --show-current && git status --short && git log -1 --oneline && echo "=== XCODE ===" && xcodebuild -version && echo "SDK: $(xcrun --sdk iphoneos --show-sdk-version)" && echo "=== DEVICES ===" && xcrun devicectl list devices'
+```
+
+Build/sign/install/launch:
+
+```powershell
+ssh -t mac-dev 'cd ~/Projects/rdc-ai && security unlock-keychain ~/Library/Keychains/login.keychain-db && git fetch origin && git switch sprint-4a3-local-platform-convergence && git pull --ff-only && CROWNKEEP_TEAM_ID=QJ9HLPX482 CROWNKEEP_DEVICE_ID=00008150-001829503E38401C bash scripts/ios-device-build.sh'
+```
+
+No web-search credential is entered on the Mac or iPhone.
+
+Then repeat the same Web OFF → local-only ON → current-information ON → source-read → direct-URL → failure → OFF sequence. Confirm Apple Foundation Models remains the local reasoning provider and native Apple speech remains on-device.
+
+### AVD acceptance
+
+Run the same Windows keyless DuckDuckGo matrix on AVD. Do not create AVD-specific CrownKeep architecture or search configuration.
+
+### Acceptance guardrails
+
+- No silent cloud-model fallback.
+- No CrownKeep Web Gateway.
+- No web-search API key/account requirement.
+- No RDC customer-data connection.
+- Web Access OFF means network tools are blocked at `ToolRegistry`.
+- Web Access ON does not authorize sending conversation history or local content.
+- DuckDuckGo failure does not authorize an alternate search provider.
+- Do not merge, tag, delete the convergence branch, or remove legacy cache data until remaining physical evidence is recorded and explicit approval is given.
+
+---
+
+## Historical and regression procedures
+
+The sections below preserve earlier sprint setup and regression tests. They remain useful for targeted checks, but they are not the current Sprint 4A.4 acceptance authority.
+
 ## What can be tested now
 
 Sprint 0.2 currently provides:
