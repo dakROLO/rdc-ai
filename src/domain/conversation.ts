@@ -14,6 +14,8 @@ export interface MessageToolActivity {
   dataLeftDevice: boolean
   outcome?: 'success' | 'error'
   sources: MessageToolSource[]
+  /** Bounded local copy of tool output retained for future conversation context. */
+  retainedContext?: string
 }
 
 export interface Conversation {
