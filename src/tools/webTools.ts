@@ -55,7 +55,7 @@ export class WebSearchTool
   }
 
   async isAvailable(): Promise<boolean> {
-    return this.client.isSearchConfigured()
+    return this.client.isSearchAvailable()
   }
 
   async execute(input: {
@@ -90,7 +90,7 @@ export class WebSearchTool
         dataLeftDevice: true,
         sources,
         detail:
-          'Sent only the supplied search query directly from this device to the configured search provider.',
+          'Sent only the supplied search query directly from this device to DuckDuckGo Search.',
       },
     }
   }
@@ -112,7 +112,7 @@ export class WebReadTool implements CrownKeepTool<{ url: string }> {
   }
 
   async isAvailable(): Promise<boolean> {
-    return this.client.isReadConfigured()
+    return this.client.isReadAvailable()
   }
 
   async execute(input: {
