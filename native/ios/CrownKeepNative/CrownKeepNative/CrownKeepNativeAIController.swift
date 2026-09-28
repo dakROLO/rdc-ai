@@ -375,7 +375,7 @@ private struct CrownKeepWebSearchTool: Tool {
     let description =
         "Search the public web for current or external information. Send only a minimal search query; never include conversation history, local files, or unrelated private context."
 
-    let gateway: CrownKeepWebGateway
+    let web: CrownKeepNativeWeb
     let log: CrownKeepNativeToolLog
 
     @Generable
@@ -385,7 +385,7 @@ private struct CrownKeepWebSearchTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        let results = try await gateway.search(query: arguments.query)
+        let results = try await web.search(query: arguments.query)
         log.record(
             .init(
                 toolId: "web-search",
@@ -407,7 +407,7 @@ private struct CrownKeepWebReadTool: Tool {
     let description =
         "Read one selected public webpage when search snippets are not enough. Send only the selected URL."
 
-    let gateway: CrownKeepWebGateway
+    let web: CrownKeepNativeWeb
     let log: CrownKeepNativeToolLog
 
     @Generable
@@ -417,7 +417,7 @@ private struct CrownKeepWebReadTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        let page = try await gateway.read(url: arguments.url)
+        let page = try await web.read(url: arguments.url)
         log.record(
             .init(
                 toolId: "web-read",
@@ -646,19 +646,19 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
         }
 
         let webAccess = (request["webAccess"] as? String) == "on"
-        let gatewayURL = (request["webGatewayEndpoint"] as? String).flatMap(URL.init(string:))
         let toolRecords = request["tools"] as? [[String: Any]] ?? []
         let allowedToolIds = Set(toolRecords.compactMap { $0["id"] as? String })
         let toolLog = CrownKeepNativeToolLog()
+        let web = CrownKeepNativeWeb()
         var nativeTools: [any Tool] = []
 
-        if webAccess, let gatewayURL {
-            let gateway = CrownKeepWebGateway(baseURL: gatewayURL)
-            if allowedToolIds.contains("web-search") {
-                nativeTools.append(CrownKeepWebSearchTool(gateway: gateway, log: toolLog))
+        if webAccess {
+            if allowedToolIds.contains("web-search"),
+               (try? CrownKeepWebCredentialStore.load()) != nil {
+                nativeTools.append(CrownKeepWebSearchTool(web: web, log: toolLog))
             }
             if allowedToolIds.contains("web-read") {
-                nativeTools.append(CrownKeepWebReadTool(gateway: gateway, log: toolLog))
+                nativeTools.append(CrownKeepWebReadTool(web: web, log: toolLog))
             }
         }
 
