@@ -4,6 +4,7 @@ use tauri::Emitter;
 mod speech;
 mod device;
 mod system_foundry;
+mod web;
 
 const FOUNDRY_WEB_URL: &str = "http://127.0.0.1:39839";
 static FOUNDRY_LIFECYCLE_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
@@ -1175,7 +1176,12 @@ pub fn run() {
             system_foundry::crownkeep_system_foundry_load_model,
             system_foundry::crownkeep_system_foundry_unload_model,
             system_foundry::crownkeep_system_foundry_remove_cached_model,
-            system_foundry::crownkeep_system_foundry_transcribe
+            system_foundry::crownkeep_system_foundry_transcribe,
+            web::crownkeep_web_status,
+            web::crownkeep_web_save_search_credential,
+            web::crownkeep_web_clear_search_credential,
+            web::crownkeep_web_search,
+            web::crownkeep_web_read
         ])
         .run(tauri::generate_context!())
         .expect("error while running CrownKeep");
