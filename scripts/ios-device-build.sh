@@ -65,18 +65,8 @@ if [[ ! -f "$ROOT/dist/index.html" ]]; then
   exit 5
 fi
 
-ICON_SOURCE="$ROOT/public/brand/crownkeep-facelift/crownkeep-app-icon.png"
-ICON_DIR="$ROOT/native/ios/CrownKeepNative/CrownKeepNative/Assets.xcassets/AppIcon.appiconset"
-ICON_OUTPUT="$ICON_DIR/AppIcon-1024.png"
-
-if [[ ! -f "$ICON_SOURCE" ]]; then
-  echo "CrownKeep facelift icon source was not found."
-  exit 6
-fi
-
-mkdir -p "$ICON_DIR"
 echo "Preparing CrownKeep iOS app icon…"
-sips -z 1024 1024 "$ICON_SOURCE" --out "$ICON_OUTPUT" >/dev/null
+bash "$ROOT/scripts/prepare-ios-icon.sh"
 
 rm -rf "$DERIVED"
 
