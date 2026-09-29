@@ -143,12 +143,20 @@ export async function runAutomaticReadOnlyTools(
     contexts.push(toolContext('Web Search', searchResult))
     activities.push(activityFor(registry, 'web-search', searchResult))
 
-    if (promptNeedsPageRead(prompt) && calls < MAX_TOOL_CALLS) {
+    if (
+      (promptNeedsPageRead(prompt) || promptExplicitlyRequestsWeb(prompt)) &&
+      calls < MAX_TOOL_CALLS
+    ) {
       const data = searchResult.data as WebSearchResponse | undefined
       const urls = data?.results
         ?.map((result) => result.url)
         .filter(Boolean)
-        .slice(0, MAX_TOOL_CALLS - calls) ?? []
+        .slice(
+          0,
+          promptExplicitlyRequestsWeb(prompt)
+            ? Math.min(2, MAX_TOOL_CALLS - calls)
+            : MAX_TOOL_CALLS - calls,
+        ) ?? []
 
       for (const url of urls) {
         const result = await registry.execute('web-read', { url })
