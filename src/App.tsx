@@ -50,6 +50,7 @@ import { IndexedDbConversationRepository } from './storage/IndexedDbConversation
 import { createId } from './utils/id.ts'
 import { nativeWebClient, runToolCommand, toolRegistry } from './tools/defaultTools.ts'
 import {
+  promptExplicitlyRequestsWeb,
   promptNeedsCurrentWeb,
   promptNeedsPageRead,
   runAutomaticReadOnlyTools,
@@ -491,6 +492,19 @@ export default function App() {
     speechBusy,
     toolBusy,
   ])
+
+  const showModelLoader =
+    isLoading ||
+    providerAvailability === null ||
+    isRuntimeActionRunning ||
+    isRuntimeCheckRunning
+  const modelLoaderLabel = isLoading
+    ? 'Opening your Keep…'
+    : isRuntimeActionRunning
+      ? runtimeActionMessage ?? 'Loading local model…'
+      : isRuntimeCheckRunning
+        ? 'Verifying local model…'
+        : 'Loading local model…'
 
   const observedStructuredToolSupport = useMemo(() => {
     if (!fingerprint || !loadedChatCandidate) return undefined
@@ -1504,8 +1518,9 @@ export default function App() {
     let toolContext = ''
     let toolActivity: MessageToolActivity[] = []
     let manualToolUsed = false
+    const explicitWebIntent = promptExplicitlyRequestsWeb(text)
     const webIntent =
-      promptNeedsCurrentWeb(text) || promptNeedsPageRead(text)
+      explicitWebIntent || promptNeedsCurrentWeb(text) || promptNeedsPageRead(text)
     const structuredToolsProven =
       selectedProviderId === 'foundry-local' &&
       (loadedChatCandidate?.supportsToolCalling === true ||
@@ -1535,8 +1550,9 @@ export default function App() {
           traceId,
         )
       } else if (
-        !(structuredToolsProven && webIntent && webAccess === 'on') &&
-        !(appleNativeToolsReady && webIntent && webAccess === 'on')
+        explicitWebIntent ||
+        (!(structuredToolsProven && webIntent && webAccess === 'on') &&
+          !(appleNativeToolsReady && webIntent && webAccess === 'on'))
       ) {
         const automatic = await runAutomaticReadOnlyTools(text)
         toolContext = automatic.context
@@ -1733,8 +1749,24 @@ export default function App() {
         `historyMessages=${contextMessages.length} retainedActivities=${retainedActivityCount} retainedChars=${retainedToolContext.length} webAccess=${webAccess}`,
         traceId,
       )
+      const successfulWebEvidence = toolActivity.some(
+        (activity) =>
+          activity.requiresNetwork &&
+          activity.outcome !== 'error' &&
+          (Boolean(activity.retainedContext?.trim()) || activity.sources.length > 0),
+      )
+      const webGroundingInstruction = successfulWebEvidence
+        ? [
+            'CrownKeep supplied fresh web evidence for this turn.',
+            'Ground current/external factual claims in that supplied evidence.',
+            'If the fresh evidence conflicts with an earlier assistant answer or model training knowledge, correct the earlier answer rather than repeating it.',
+            'Do not invent or alter source URLs, product names, dates, or claims that are not supported by the supplied evidence. If the evidence is insufficient, say so.',
+          ].join(' ')
+        : ''
+
       const systemContext = [
         ANNE_SYSTEM_PROMPT,
+        webGroundingInstruction,
         toolContext,
         buildTemporalContext(conversation, contextMessages, text),
       ]
@@ -1755,11 +1787,17 @@ export default function App() {
         })),
       ]
 
+      const modelToolCallingEligible =
+        !manualToolUsed && toolActivity.length === 0 && !toolContext
+
       const request = {
         modelId: requestModelId,
         messages: requestMessages,
         traceId,
-        ...(appleNativeToolsReady && webAccess === 'on' && webIntent
+        ...(appleNativeToolsReady &&
+        webAccess === 'on' &&
+        webIntent &&
+        modelToolCallingEligible
           ? {
               tools: structuredToolDefinitions(toolRegistry).filter(
                 (tool) => tool.id === 'web-search' || tool.id === 'web-read',
@@ -1768,7 +1806,10 @@ export default function App() {
           : {}),
       }
       const responseStream =
-        structuredToolsProven && webAccess === 'on' && webIntent && !manualToolUsed
+        structuredToolsProven &&
+        webAccess === 'on' &&
+        webIntent &&
+        modelToolCallingEligible
           ? streamStructuredToolLoop({
               provider,
               request,
@@ -2663,9 +2704,24 @@ export default function App() {
           ref={conversationScrollRef}
           onScroll={updateScrollState}
         >
-          {isLoading ? (
-            <p className="loading-copy">Opening your local Keep…</p>
-          ) : (
+          {showModelLoader && (
+            <div
+              className={`crown-model-loader ${isLoading ? 'blocking' : ''}`}
+              role="status"
+              aria-live="polite"
+            >
+              <img
+                src="/brand/crownkeep-facelift/crownkeep-glass-crown-transparent.png"
+                alt=""
+                aria-hidden="true"
+              />
+              <div>
+                <strong>{modelLoaderLabel}</strong>
+                <span>Anne is preparing local AI inside the Keep.</span>
+              </div>
+            </div>
+          )}
+          {!isLoading &&
             messages.map((message) => (
               <article
                 className={`message ${message.role} ${message.excludedFromContext ? 'context-excluded' : ''}`}
@@ -2817,8 +2873,7 @@ export default function App() {
                   <small className="context-state">Excluded from future inference context</small>
                 )}
               </article>
-            ))
-          )}
+            ))}
           {!isNearBottom && (
             <button
               className={`scroll-latest-button ${responseFinishedAway ? 'finished' : ''}`}
@@ -3418,7 +3473,7 @@ export default function App() {
             </div>
             <img
               className="roadmap-image"
-              src="/crownkeep-sprints.svg"
+              src="/crownkeep-sprints.svg?v=20260928-ios-validation-2"
               alt="CrownKeep sprint roadmap showing completed, active, next, and planned phases"
             />
             <p className="roadmap-note">

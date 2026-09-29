@@ -23,6 +23,7 @@
     </filter>
   </defs>
 
+  <rect width="512" height="512" fill="#030916"/>
   <rect width="512" height="512" rx="116" fill="url(#crownkeep-bg)"/>
   <rect x="18" y="18" width="476" height="476" rx="102" fill="none" stroke="#38D8FF" stroke-opacity=".10" stroke-width="2"/>
 

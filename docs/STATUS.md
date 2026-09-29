@@ -4,6 +4,18 @@
 
 ## Current — Sprint 4A.4 local convergence + Web Access foundation
 
+## iPhone validation pass — 2026-09-28
+
+Physical Rolo15 testing of the post-merge facelift exposed three concrete iPhone issues and one visual follow-up:
+
+- **Explicit Web Search did not run:** a prompt such as `Can you search about an iPhone duo?` was not recognized by the shared web-intent detector, so Apple Foundation Models received no web tool and answered from local knowledge. The detector now recognizes plain `search` / `search about` / `search for` / `look up` / `check online` requests. Explicit user search commands execute the bounded provider-neutral native web path before inference, making explicit search deterministic while reasoning remains local.
+- **Apple native tool guidance hardened:** when Apple Foundation Models is given native Web Search/Web Read tools for a current-information turn, the session now explicitly tells Anne to use the available tool rather than claiming browsing is unavailable.
+- **App icon rendering:** the staged raster icon rendered clipped/black on the physical home screen. iOS builds now render the clean `public/crownkeep-mark.svg` facelift mark into the Apple 1024px app-icon asset using macOS Quick Look, instead of resizing the problematic staged PNG.
+- **Model loading motion:** the transparent glass crown now rotates horizontally while local AI/provider preparation, model switching, or local verification is in progress; reduced-motion devices use a pulse instead.
+- **Roadmap facelift:** `public/crownkeep-sprints.svg` now uses the midnight/cobalt/cyan brand and identifies iPhone Web + retained-context testing as the current physical validation target.
+
+These changes require a fresh physical Rolo15 deployment before acceptance. They are isolated on the `ios-validation-polish` branch until that test passes.
+
 ## Windows convergence cutoff — 2026-09-28
 
 The Windows checkpoint is approved to land on `main` and the next physical workstream moves to iPhone.
@@ -15,7 +27,7 @@ The Windows checkpoint is approved to land on `main` and the next physical works
 - **Retained web evidence:** successful tool results are persisted locally in bounded form and reinjected as explicitly untrusted conversation evidence. Physical behavior still varies by small local model, so do not treat perfect follow-up grounding as fully accepted yet.
 - **Observed transient runtime issue:** one Balanced request returned an immediate Foundry/OpenAI stream `TypeError: network error`; a following lightweight request and later normal Balanced chats succeeded. Monitor/retry after iOS rather than blocking this checkpoint.
 - **Benchmark evidence protection:** normal chat timeouts/errors no longer overwrite accepted benchmark qualification records.
-- **Facelift v1:** the shared shell now uses the midnight-navy / cobalt / electric-cyan CrownKeep treatment. A clean geometric C/crown SVG is the runtime browser/PWA/desktop mark; the staged facelift PNG remains the iPhone icon source, and the facelift wordmark is used in the expanded sidebar.
+- **Facelift v1:** the shared shell uses the midnight-navy / cobalt / electric-cyan CrownKeep treatment. A clean geometric C/crown SVG is the runtime browser/PWA/desktop mark and is now also rasterized during iPhone builds; the facelift wordmark is used in the expanded sidebar.
 - **Next:** physical iPhone Web Access + retained-context validation, then return to shared Windows/iOS bug tuning. AVD remains deferred under the same adaptive Windows policy.
 
 - **Primary Windows laptop physically validated for the local baseline:** Quick / `phi-4-mini` startup and normal chat work; Balanced / `mistral-nemo-12b-instruct` CUDA benchmark and normal conversation work; exclusive chat-model switching is physically proven; Windows local dictation works through the installed System Foundry CLI and restores the prior chat role. Laptop microphone transcription quality was mediocre, but the local speech path itself completed successfully.

@@ -6,7 +6,7 @@ Visual summary: `public/crownkeep-sprints.svg`. The same asset is rendered in th
 
 ## Current handoff — Windows checkpoint to iPhone
 
-The Windows local-platform convergence checkpoint is approved for squash merge to `main`.
+The Windows local-platform convergence checkpoint has been squash-merged to `main`. The active physical validation target is now Rolo15.
 
 Accepted for the checkpoint:
 
@@ -23,7 +23,7 @@ Carry-forward, non-blocking items:
 - monitor rare Foundry stream transport errors after model switches;
 - Deep remains unqualified.
 
-**Next active physical work:** iPhone Web Access + retained-context testing on Rolo15. AVD validation can follow the shared Windows/iPhone bug pass.
+**Current active physical work:** iPhone Web Access + retained-context testing on Rolo15, including the vector app icon, rotating crown model-loader, and facelifted roadmap. AVD validation can follow the shared Windows/iPhone bug pass.
 
 ---
 

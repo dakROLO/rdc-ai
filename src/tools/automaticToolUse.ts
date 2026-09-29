@@ -33,16 +33,26 @@ function minimalSearchQuery(prompt: string): string {
       /^\s*(please\s+)?(can|could|would)\s+you\s+(please\s+)?/i,
       '',
     )
-    .replace(/^\s*(search|look up|check|find)\s+(the\s+)?(web|internet|online)\s+(for\s+)?/i, '')
+    .replace(
+      /^\s*(?:search|look up|check|find)(?:\s+(?:the\s+)?(?:web|internet|online))?(?:\s+(?:for|about))?\s*/i,
+      '',
+    )
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 320)
 }
 
-export function promptNeedsCurrentWeb(prompt: string): boolean {
-  return /\b(search (?:the )?(?:web|internet)|look (?:it )?up online|check online|current|currently|latest|today|tonight|this week|recent|recently|news|price|pricing|availability|schedule|release date|updated|weather|score|standings|who is (?:the )?(?:current|president|ceo)|right now)\b/i.test(
+export function promptExplicitlyRequestsWeb(prompt: string): boolean {
+  return /\b(search(?:\s+(?:the\s+)?(?:web|internet|online))?(?:\s+(?:for|about))?|look\s+(?:it\s+)?up(?:\s+online)?|check\s+(?:the\s+)?(?:web|internet|online)|find\s+(?:it\s+)?online|browse\s+(?:the\s+)?(?:web|internet))\b/i.test(
     prompt,
   )
+}
+
+export function promptNeedsCurrentWeb(prompt: string): boolean {
+  return promptExplicitlyRequestsWeb(prompt) ||
+    /\b(current|currently|latest|today|tonight|this week|recent|recently|news|price|pricing|availability|schedule|release date|updated|weather|score|standings|who is (?:the )?(?:current|president|ceo)|right now)\b/i.test(
+      prompt,
+    )
 }
 
 export function promptNeedsPageRead(prompt: string): boolean {
@@ -133,12 +143,20 @@ export async function runAutomaticReadOnlyTools(
     contexts.push(toolContext('Web Search', searchResult))
     activities.push(activityFor(registry, 'web-search', searchResult))
 
-    if (promptNeedsPageRead(prompt) && calls < MAX_TOOL_CALLS) {
+    if (
+      (promptNeedsPageRead(prompt) || promptExplicitlyRequestsWeb(prompt)) &&
+      calls < MAX_TOOL_CALLS
+    ) {
       const data = searchResult.data as WebSearchResponse | undefined
       const urls = data?.results
         ?.map((result) => result.url)
         .filter(Boolean)
-        .slice(0, MAX_TOOL_CALLS - calls) ?? []
+        .slice(
+          0,
+          promptExplicitlyRequestsWeb(prompt)
+            ? Math.min(2, MAX_TOOL_CALLS - calls)
+            : MAX_TOOL_CALLS - calls,
+        ) ?? []
 
       for (const url of urls) {
         const result = await registry.execute('web-read', { url })

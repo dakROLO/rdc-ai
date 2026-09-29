@@ -783,6 +783,14 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
 
         let recentPriorMessages = conversationMessages[..<currentUserIndex].suffix(8)
 
+        func semanticUserText(_ content: String) -> String {
+            let marker = "Current user request:\n"
+            guard let range = content.range(of: marker, options: .backwards) else {
+                return content
+            }
+            return String(content[range.upperBound...])
+        }
+
         let recentUserRequests = recentPriorMessages.compactMap { item -> String? in
             guard
                 let role = item["role"] as? String,
@@ -791,10 +799,11 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
             else {
                 return nil
             }
-            return content
+            return semanticUserText(content)
         }
 
-        let creativeIntentText = (recentUserRequests + [currentPrompt])
+        let semanticCurrentPrompt = semanticUserText(currentPrompt)
+        let creativeIntentText = (recentUserRequests + [semanticCurrentPrompt])
             .joined(separator: " ")
             .lowercased()
 
@@ -858,6 +867,19 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
 
         generationTasks[streamId]?.cancel()
 
+        let nativeWebInstruction =
+            webAccess && !nativeTools.isEmpty
+                ? "CrownKeep has provided Web Search/Web Read tools for this turn. When the current request requires current or external information, use the available web tool before answering. Do not claim web access is unavailable when these tools are present."
+                : ""
+        let sessionInstructions = [
+            instructions.isEmpty
+                ? "You are Anne, the private local assistant inside CrownKeep."
+                : instructions,
+            nativeWebInstruction
+        ]
+        .filter { !$0.isEmpty }
+        .joined(separator: "\n\n")
+
         let task = Task { [weak self] in
             guard let self else { return }
 
@@ -866,9 +888,7 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
                     model: self.model,
                     tools: nativeTools
                 ) {
-                    instructions.isEmpty
-                        ? "You are Anne, the private local assistant inside CrownKeep."
-                        : instructions
+                    sessionInstructions
                 }
 
                 var generationOptions = GenerationOptions()

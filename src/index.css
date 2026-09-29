@@ -3660,3 +3660,86 @@ textarea::placeholder {
   }
 }
 
+/* CrownKeep model preparation loader */
+.crown-model-loader {
+  align-self: center;
+  width: min(360px, calc(100% - 28px));
+  margin: 4px auto 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  border: 1px solid rgba(56, 216, 255, 0.16);
+  border-radius: 18px;
+  padding: 13px 16px;
+  background:
+    radial-gradient(circle at 18% 50%, rgba(56, 216, 255, 0.09), transparent 46%),
+    rgba(6, 20, 39, 0.82);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(16px);
+}
+
+.crown-model-loader.blocking {
+  margin-top: clamp(24px, 12vh, 120px);
+}
+
+.crown-model-loader img {
+  width: 64px;
+  height: 64px;
+  flex: 0 0 auto;
+  object-fit: contain;
+  filter: drop-shadow(0 0 18px rgba(56, 216, 255, 0.30));
+  transform-style: preserve-3d;
+  animation: crownkeep-crown-turn 1.55s linear infinite;
+}
+
+.crown-model-loader > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.crown-model-loader strong {
+  color: var(--stone);
+  font-size: 0.84rem;
+}
+
+.crown-model-loader span {
+  color: var(--muted);
+  font-size: 0.69rem;
+  line-height: 1.35;
+}
+
+@keyframes crownkeep-crown-turn {
+  from {
+    transform: perspective(150px) rotateY(0deg);
+  }
+  to {
+    transform: perspective(150px) rotateY(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crown-model-loader img {
+    animation: crownkeep-crown-pulse 1.8s ease-in-out infinite;
+  }
+
+  @keyframes crownkeep-crown-pulse {
+    0%, 100% { opacity: 0.72; transform: scale(0.98); }
+    50% { opacity: 1; transform: scale(1.04); }
+  }
+}
+
+@media (max-width: 760px) {
+  .crown-model-loader {
+    width: min(320px, calc(100% - 18px));
+    padding: 11px 13px;
+    gap: 11px;
+  }
+
+  .crown-model-loader img {
+    width: 54px;
+    height: 54px;
+  }
+}
+
