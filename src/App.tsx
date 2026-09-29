@@ -493,6 +493,19 @@ export default function App() {
     toolBusy,
   ])
 
+  const showModelLoader =
+    isLoading ||
+    providerAvailability === null ||
+    isRuntimeActionRunning ||
+    isRuntimeCheckRunning
+  const modelLoaderLabel = isLoading
+    ? 'Opening your Keep…'
+    : isRuntimeActionRunning
+      ? runtimeActionMessage ?? 'Loading local model…'
+      : isRuntimeCheckRunning
+        ? 'Verifying local model…'
+        : 'Loading local model…'
+
   const observedStructuredToolSupport = useMemo(() => {
     if (!fingerprint || !loadedChatCandidate) return undefined
     const candidateKey = loadedChatCandidate.id.split(':')[0].toLocaleLowerCase()
@@ -2675,9 +2688,24 @@ export default function App() {
           ref={conversationScrollRef}
           onScroll={updateScrollState}
         >
-          {isLoading ? (
-            <p className="loading-copy">Opening your local Keep…</p>
-          ) : (
+          {showModelLoader && (
+            <div
+              className={`crown-model-loader ${isLoading ? 'blocking' : ''}`}
+              role="status"
+              aria-live="polite"
+            >
+              <img
+                src="/brand/crownkeep-facelift/crownkeep-glass-crown-transparent.png"
+                alt=""
+                aria-hidden="true"
+              />
+              <div>
+                <strong>{modelLoaderLabel}</strong>
+                <span>Anne is preparing local AI inside the Keep.</span>
+              </div>
+            </div>
+          )}
+          {!isLoading &&
             messages.map((message) => (
               <article
                 className={`message ${message.role} ${message.excludedFromContext ? 'context-excluded' : ''}`}
@@ -2829,8 +2857,7 @@ export default function App() {
                   <small className="context-state">Excluded from future inference context</small>
                 )}
               </article>
-            ))
-          )}
+            ))}
           {!isNearBottom && (
             <button
               className={`scroll-latest-button ${responseFinishedAway ? 'finished' : ''}`}
