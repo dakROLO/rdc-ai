@@ -858,6 +858,19 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
 
         generationTasks[streamId]?.cancel()
 
+        let nativeWebInstruction =
+            webAccess && !nativeTools.isEmpty
+                ? "CrownKeep has provided Web Search/Web Read tools for this turn. When the current request requires current or external information, use the available web tool before answering. Do not claim web access is unavailable when these tools are present."
+                : ""
+        let sessionInstructions = [
+            instructions.isEmpty
+                ? "You are Anne, the private local assistant inside CrownKeep."
+                : instructions,
+            nativeWebInstruction
+        ]
+        .filter { !$0.isEmpty }
+        .joined(separator: "\n\n")
+
         let task = Task { [weak self] in
             guard let self else { return }
 
@@ -866,9 +879,7 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
                     model: self.model,
                     tools: nativeTools
                 ) {
-                    instructions.isEmpty
-                        ? "You are Anne, the private local assistant inside CrownKeep."
-                        : instructions
+                    sessionInstructions
                 }
 
                 var generationOptions = GenerationOptions()
