@@ -143,3 +143,19 @@ test('Web Access OFF guidance preserves retained-evidence use', async () => {
   assert.match(result.context, /retained tool\/web evidence/i)
   assert.match(result.context, /do not claim a new web search/i)
 })
+
+
+test('plain explicit search wording triggers a bounded web search', async () => {
+  const { registry, calls } = registryWithWebProof()
+  registry.setPolicy({ webAccess: 'on' })
+
+  const result = await runAutomaticReadOnlyTools(
+    'Can you search about an iPhone Duo?',
+    registry,
+  )
+
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0], 'search:an iPhone Duo?')
+  assert.equal(result.attemptedWeb, true)
+  assert.equal(result.activities[0]?.toolId, 'web-search')
+})
