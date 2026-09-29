@@ -50,6 +50,7 @@ import { IndexedDbConversationRepository } from './storage/IndexedDbConversation
 import { createId } from './utils/id.ts'
 import { nativeWebClient, runToolCommand, toolRegistry } from './tools/defaultTools.ts'
 import {
+  promptExplicitlyRequestsWeb,
   promptNeedsCurrentWeb,
   promptNeedsPageRead,
   runAutomaticReadOnlyTools,
@@ -1504,8 +1505,9 @@ export default function App() {
     let toolContext = ''
     let toolActivity: MessageToolActivity[] = []
     let manualToolUsed = false
+    const explicitWebIntent = promptExplicitlyRequestsWeb(text)
     const webIntent =
-      promptNeedsCurrentWeb(text) || promptNeedsPageRead(text)
+      explicitWebIntent || promptNeedsCurrentWeb(text) || promptNeedsPageRead(text)
     const structuredToolsProven =
       selectedProviderId === 'foundry-local' &&
       (loadedChatCandidate?.supportsToolCalling === true ||
@@ -1535,8 +1537,9 @@ export default function App() {
           traceId,
         )
       } else if (
-        !(structuredToolsProven && webIntent && webAccess === 'on') &&
-        !(appleNativeToolsReady && webIntent && webAccess === 'on')
+        explicitWebIntent ||
+        (!(structuredToolsProven && webIntent && webAccess === 'on') &&
+          !(appleNativeToolsReady && webIntent && webAccess === 'on'))
       ) {
         const automatic = await runAutomaticReadOnlyTools(text)
         toolContext = automatic.context
@@ -1755,11 +1758,17 @@ export default function App() {
         })),
       ]
 
+      const modelToolCallingEligible =
+        !manualToolUsed && toolActivity.length === 0 && !toolContext
+
       const request = {
         modelId: requestModelId,
         messages: requestMessages,
         traceId,
-        ...(appleNativeToolsReady && webAccess === 'on' && webIntent
+        ...(appleNativeToolsReady &&
+        webAccess === 'on' &&
+        webIntent &&
+        modelToolCallingEligible
           ? {
               tools: structuredToolDefinitions(toolRegistry).filter(
                 (tool) => tool.id === 'web-search' || tool.id === 'web-read',
@@ -1768,7 +1777,10 @@ export default function App() {
           : {}),
       }
       const responseStream =
-        structuredToolsProven && webAccess === 'on' && webIntent && !manualToolUsed
+        structuredToolsProven &&
+        webAccess === 'on' &&
+        webIntent &&
+        modelToolCallingEligible
           ? streamStructuredToolLoop({
               provider,
               request,
