@@ -783,6 +783,14 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
 
         let recentPriorMessages = conversationMessages[..<currentUserIndex].suffix(8)
 
+        func semanticUserText(_ content: String) -> String {
+            let marker = "Current user request:\n"
+            guard let range = content.range(of: marker, options: .backwards) else {
+                return content
+            }
+            return String(content[range.upperBound...])
+        }
+
         let recentUserRequests = recentPriorMessages.compactMap { item -> String? in
             guard
                 let role = item["role"] as? String,
@@ -791,10 +799,11 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
             else {
                 return nil
             }
-            return content
+            return semanticUserText(content)
         }
 
-        let creativeIntentText = (recentUserRequests + [currentPrompt])
+        let semanticCurrentPrompt = semanticUserText(currentPrompt)
+        let creativeIntentText = (recentUserRequests + [semanticCurrentPrompt])
             .joined(separator: " ")
             .lowercased()
 
