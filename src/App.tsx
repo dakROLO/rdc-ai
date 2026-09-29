@@ -1749,8 +1749,24 @@ export default function App() {
         `historyMessages=${contextMessages.length} retainedActivities=${retainedActivityCount} retainedChars=${retainedToolContext.length} webAccess=${webAccess}`,
         traceId,
       )
+      const successfulWebEvidence = toolActivity.some(
+        (activity) =>
+          activity.requiresNetwork &&
+          activity.outcome !== 'error' &&
+          (Boolean(activity.retainedContext?.trim()) || activity.sources.length > 0),
+      )
+      const webGroundingInstruction = successfulWebEvidence
+        ? [
+            'CrownKeep supplied fresh web evidence for this turn.',
+            'Ground current/external factual claims in that supplied evidence.',
+            'If the fresh evidence conflicts with an earlier assistant answer or model training knowledge, correct the earlier answer rather than repeating it.',
+            'Do not invent or alter source URLs, product names, dates, or claims that are not supported by the supplied evidence. If the evidence is insufficient, say so.',
+          ].join(' ')
+        : ''
+
       const systemContext = [
         ANNE_SYSTEM_PROMPT,
+        webGroundingInstruction,
         toolContext,
         buildTemporalContext(conversation, contextMessages, text),
       ]
@@ -3457,7 +3473,7 @@ export default function App() {
             </div>
             <img
               className="roadmap-image"
-              src="/crownkeep-sprints.svg"
+              src="/crownkeep-sprints.svg?v=20260928-ios-validation-2"
               alt="CrownKeep sprint roadmap showing completed, active, next, and planned phases"
             />
             <p className="roadmap-note">
