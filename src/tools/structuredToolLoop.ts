@@ -6,7 +6,12 @@ import type {
   ChatToolCall,
   ChatToolDefinition,
 } from '../providers/AIProvider.ts'
-import type { AutomaticToolResult, ToolActivityRecord } from './automaticToolUse.ts'
+import {
+  isGenericWebFollowUp,
+  minimalSearchQuery,
+  type AutomaticToolResult,
+  type ToolActivityRecord,
+} from './automaticToolUse.ts'
 import type {
   CrownKeepToolResult,
   ToolRegistry,
@@ -91,6 +96,7 @@ export interface StructuredToolLoopOptions {
   onToolActivity?: (activity: ToolActivityRecord) => void
   onModelActivity?: () => void
   fallback?: () => Promise<AutomaticToolResult>
+  webSearchContext?: string
 }
 
 /**
@@ -105,6 +111,7 @@ export async function* streamStructuredToolLoop({
   onToolActivity,
   onModelActivity,
   fallback,
+  webSearchContext,
 }: StructuredToolLoopOptions): AsyncIterable<ChatChunk> {
   const available = new Set((await registry.availableDefinitions()).map((tool) => tool.id))
   const toolDefinitions = structuredToolDefinitions(registry).filter((tool) => available.has(tool.id))
@@ -202,7 +209,20 @@ export async function* streamStructuredToolLoop({
       let result: CrownKeepToolResult
       let toolOutcome: 'success' | 'error' = 'success'
       try {
-        const args = parseArguments(pending.arguments)
+        let args = parseArguments(pending.arguments)
+        if (
+          definition.id === 'web.search' &&
+          webSearchContext &&
+          args &&
+          !Array.isArray(args) &&
+          typeof args === 'object'
+        ) {
+          const query = (args as { query?: unknown }).query
+          if (typeof query === 'string' && isGenericWebFollowUp(query)) {
+            const resolved = minimalSearchQuery(webSearchContext)
+            if (resolved) args = { ...(args as Record<string, unknown>), query: resolved }
+          }
+        }
         if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
         result = await registry.execute(definition.id, args)
       } catch (error) {
