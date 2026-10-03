@@ -68,7 +68,7 @@ export class AppleFoundationModelsProvider implements AIProvider {
     }
 
     const nativeTools = (request.tools ?? [])
-      .filter((tool) => ['web.search', 'web.read', 'keep.search', 'image.read'].includes(tool.id))
+      .filter((tool) => ['web.search', 'web.read', 'keep.search', 'image.read', 'image.generate'].includes(tool.id))
       .map((tool) => ({
         id: tool.id,
         name: tool.functionName,
