@@ -44,6 +44,7 @@ import { installMockNativeAIHostFromQuery } from './native/MockNativeAIHost.ts'
 import { FoundryLocalProvider } from './providers/FoundryLocalProvider.ts'
 import { IOSBrowserLocalUnavailableProvider } from './providers/IOSBrowserLocalUnavailableProvider.ts'
 import { MockProvider } from './providers/MockProvider.ts'
+import { localProviderId } from './providers/localProviderPolicy.ts'
 import { ProviderRegistry } from './providers/ProviderRegistry.ts'
 import { getMobileCapabilitySnapshot } from './mobile/MobileCapability.ts'
 import { localRuntimeManager } from './runtime/runtimeManager.ts'
@@ -399,7 +400,14 @@ export default function App() {
   const [storageError, setStorageError] = useState<string | null>(null)
   const [selectedProviderId] = useState(() => {
     const stored = localStorage.getItem(PROVIDER_STORAGE_KEY)
-    return appleFoundationModelsProvider?.id ?? (stored && providerRegistry.get(stored) ? stored : defaultProviderId)
+    return localProviderId({
+      appleId: appleFoundationModelsProvider?.id,
+      nativeWindows: !appleFoundationModelsProvider && localRuntimeManager.mode === 'embedded',
+      browserUnavailableId: iosBrowserUnavailableProvider?.id,
+      configuredId: configuredDefault && providerRegistry.get(configuredDefault) ? configuredDefault : undefined,
+      storedId: stored && providerRegistry.get(stored) ? stored : undefined,
+      defaultId: defaultProviderId,
+    })
   })
   const [models, setModels] = useState<AIModel[]>([])
   const [selectedModelId, setSelectedModelId] = useState('')
