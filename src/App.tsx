@@ -412,13 +412,19 @@ export default function App() {
     toolRegistry.setPolicy({ allowImageGeneration: localImagesEnabled })
     if (localImagesEnabled) void localImageRuntime().status().then(setImageRuntimeStatus).catch(() => {})
   }, [localImagesEnabled])
+  useEffect(() => {
+    void localImageRuntime().status().then(setImageRuntimeStatus).catch(() => {})
+  }, [])
 
   async function installJuliaCapability() {
     setCapabilityAction('Downloading and preparing Julia Decision Assist…')
     try {
       const status = await installDecisionModel()
       setDecisionStatus(status)
-      setDecisionEnabled(status.available)
+      // Installing native Julia proves the runtime/row parity gate only.
+      // Semantic jobs stay OFF until the committed CrownKeep qualification
+      // policy actually lists one or more jobs.
+      setDecisionEnabled(status.available && status.qualifiedJobs.length > 0)
       setCapabilityAction(status.detail)
     } catch (error) {
       setCapabilityAction(`Julia install failed: ${String(error)}`)
@@ -3057,17 +3063,31 @@ ${image.extractedText}
 
                 <div className="web-access-setting">
                   <div>
-                    <strong>Decision Assist · {decisionStatus?.available ? (decisionEnabled ? 'ON' : 'OFF') : 'NOT INSTALLED'}</strong>
-                    <span>{decisionStatus?.available ? 'Julia runs locally and can help Auto routing and tool judgment.' : 'Optional Julia-1 local decision model. Auto uses Quick until it is installed and qualified.'}</span>
+                    <strong>Decision Assist · {
+                      !decisionStatus?.available
+                        ? 'NOT INSTALLED'
+                        : decisionStatus.qualifiedJobs.length === 0
+                          ? 'INSTALLED · SHADOW'
+                          : decisionEnabled ? 'ON' : 'OFF'
+                    }</strong>
+                    <span>{
+                      decisionStatus?.available && decisionStatus.qualifiedJobs.length > 0
+                        ? 'Julia runs locally and can help Auto routing and tool judgment.'
+                        : decisionStatus?.available
+                          ? 'Julia is installed and native parity passed. CrownKeep keeps it in shadow mode until semantic jobs are qualified.'
+                          : 'Optional Julia-1 local decision model. Auto uses Quick until it is installed and qualified.'
+                    }</span>
                   </div>
                   <div className="capability-actions">
                     {decisionStatus?.available ? (
                       <>
-                        <button type="button" aria-pressed={decisionEnabled} disabled={isGenerating || toolBusy || Boolean(capabilityAction?.startsWith('Downloading'))} onClick={() => setDecisionEnabled(value => !value)}>{decisionEnabled ? 'Turn OFF' : 'Turn ON'}</button>
+                        {decisionStatus.qualifiedJobs.length > 0
+                          ? <button type="button" aria-pressed={decisionEnabled} disabled={isGenerating || toolBusy} onClick={() => setDecisionEnabled(value => !value)}>{decisionEnabled ? 'Turn OFF' : 'Turn ON'}</button>
+                          : <button type="button" disabled>Shadow only</button>}
                         {decisionModelInstallable() && <button type="button" disabled={isGenerating || toolBusy} onClick={() => void removeJuliaCapability()}>Remove</button>}
                       </>
                     ) : decisionModelInstallable() ? (
-                      <button type="button" disabled={isGenerating || toolBusy} onClick={() => void installJuliaCapability()}>Download Julia</button>
+                      <button type="button" disabled={isGenerating || toolBusy} onClick={() => void installJuliaCapability()}>Download Julia (~624 MB)</button>
                     ) : (
                       <button type="button" disabled>Unavailable</button>
                     )}
@@ -3075,17 +3095,31 @@ ${image.extractedText}
                 </div>
                 <div className="web-access-setting">
                   <div>
-                    <strong>Local Image Generation · {imageRuntimeStatus?.state === 'ready' ? (localImagesEnabled ? 'ON' : 'OFF') : 'NOT INSTALLED'}</strong>
-                    <span>{imageRuntimeStatus?.state === 'ready' ? 'Anne may create images entirely on this device.' : 'Optional on-device image model. The download is large and happens only when you choose it.'}</span>
+                    <strong>Local Image Generation · {
+                      localImageRuntime().install
+                        ? (imageRuntimeStatus?.state === 'ready' ? (localImagesEnabled ? 'ON' : 'OFF') : 'NOT INSTALLED')
+                        : (localImagesEnabled ? 'ON' : 'OFF')
+                    }</strong>
+                    <span>{
+                      localImageRuntime().install
+                        ? (imageRuntimeStatus?.state === 'ready'
+                            ? 'Anne may create images entirely on this device.'
+                            : 'Optional on-device image model. The download is large and happens only when you choose it.')
+                        : 'Uses the configured local desktop image runtime when it is running.'
+                    }</span>
                   </div>
                   <div className="capability-actions">
-                    {imageRuntimeStatus?.state === 'ready' ? (
-                      <>
-                        <button type="button" aria-pressed={localImagesEnabled} disabled={isGenerating || toolBusy} onClick={() => setLocalImagesEnabled(value => !value)}>{localImagesEnabled ? 'Turn OFF' : 'Turn ON'}</button>
-                        <button type="button" disabled={isGenerating || toolBusy} onClick={() => void removeImageCapability()}>Remove</button>
-                      </>
+                    {localImageRuntime().install ? (
+                      imageRuntimeStatus?.state === 'ready' ? (
+                        <>
+                          <button type="button" aria-pressed={localImagesEnabled} disabled={isGenerating || toolBusy} onClick={() => setLocalImagesEnabled(value => !value)}>{localImagesEnabled ? 'Turn OFF' : 'Turn ON'}</button>
+                          <button type="button" disabled={isGenerating || toolBusy} onClick={() => void removeImageCapability()}>Remove</button>
+                        </>
+                      ) : (
+                        <button type="button" disabled={isGenerating || toolBusy} onClick={() => void installImageCapability()}>Download image model (~1.57 GB)</button>
+                      )
                     ) : (
-                      <button type="button" disabled={isGenerating || toolBusy} onClick={() => void installImageCapability()}>Download image model</button>
+                      <button type="button" aria-pressed={localImagesEnabled} disabled={isGenerating || toolBusy} onClick={() => setLocalImagesEnabled(value => !value)}>{localImagesEnabled ? 'Turn OFF' : 'Turn ON'}</button>
                     )}
                   </div>
                 </div>
