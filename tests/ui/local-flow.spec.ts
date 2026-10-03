@@ -203,15 +203,17 @@ test('native image understanding is separate from OCR and optional generation st
 })
 
 
-test('local decision and image switches persist; Auto remains safe with unavailable engine', async ({ page }) => {
+test('unavailable Decision Assist is honest; image permission persists; Auto remains safe', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('button', {name:'Auto',exact:true})).toHaveAttribute('aria-pressed','true')
   await page.locator('details.local-ai-menu > summary').click()
   const decision=page.locator('.web-access-setting').filter({hasText:'Decision Assist'})
   const images=page.locator('.web-access-setting').filter({hasText:'Local Image Generation'})
-  await decision.getByRole('button').click(); await images.getByRole('button').click()
+  await expect(decision).toContainText('NOT INSTALLED')
+  await expect(decision.getByRole('button', { name: 'Unavailable' })).toBeDisabled()
+  await images.getByRole('button').click()
   await page.reload();await page.locator('details.local-ai-menu > summary').click()
-  await expect(decision.getByRole('button')).toHaveAttribute('aria-pressed','true')
+  await expect(decision).toContainText('NOT INSTALLED')
   await expect(images.getByRole('button')).toHaveAttribute('aria-pressed','true')
   await page.locator('.diagnostics-disclosure > summary').click()
   await expect(page.getByText(/No qualified native Julia runtime is installed/)).toBeVisible()
