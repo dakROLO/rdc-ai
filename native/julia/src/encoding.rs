@@ -78,4 +78,3 @@ impl JuliaEncoder {
         serde_json::to_string(&build(&self.tokenizer, row, max_length, head_length, strict)?).map_err(|e| e.to_string())
     }
 }
-
