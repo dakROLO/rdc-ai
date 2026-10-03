@@ -1,4 +1,9 @@
-import { decisionAssist } from './decision/NativeDecisionEngine.ts'
+import {
+  decisionAssist,
+  decisionModelInstallable,
+  installDecisionModel,
+  removeDecisionModel,
+} from './decision/NativeDecisionEngine.ts'
 import type { DecisionStatus, ChatRole } from './decision/DecisionEngine.ts'
 import { IMAGE_PERMISSION_KEY, localImageRuntime, type ImageRuntimeStatus } from './images/LocalImageRuntime.ts'
 import { invoke } from '@tauri-apps/api/core'
@@ -394,6 +399,7 @@ export default function App() {
   const [localImagesEnabled, setLocalImagesEnabled] = useState(() => localStorage.getItem(IMAGE_PERMISSION_KEY) === 'on')
   const [decisionStatus, setDecisionStatus] = useState<DecisionStatus>()
   const [imageRuntimeStatus, setImageRuntimeStatus] = useState<ImageRuntimeStatus>()
+  const [capabilityAction, setCapabilityAction] = useState<string | null>(null)
   useEffect(() => {
     localStorage.setItem('crownkeep.modelMode', modelMode)
   }, [modelMode])
@@ -406,6 +412,59 @@ export default function App() {
     toolRegistry.setPolicy({ allowImageGeneration: localImagesEnabled })
     if (localImagesEnabled) void localImageRuntime().status().then(setImageRuntimeStatus).catch(() => {})
   }, [localImagesEnabled])
+
+  async function installJuliaCapability() {
+    setCapabilityAction('Downloading and preparing Julia Decision Assist…')
+    try {
+      const status = await installDecisionModel()
+      setDecisionStatus(status)
+      setDecisionEnabled(status.available)
+      setCapabilityAction(status.detail)
+    } catch (error) {
+      setCapabilityAction(`Julia install failed: ${String(error)}`)
+    }
+  }
+
+  async function removeJuliaCapability() {
+    setCapabilityAction('Removing Julia Decision Assist model…')
+    try {
+      await decisionAssist.setEnabled(false)
+      setDecisionEnabled(false)
+      const status = await removeDecisionModel()
+      setDecisionStatus(status)
+      setCapabilityAction(status.detail)
+    } catch (error) {
+      setCapabilityAction(`Julia removal failed: ${String(error)}`)
+    }
+  }
+
+  async function installImageCapability() {
+    setCapabilityAction('Downloading and preparing the local image model…')
+    try {
+      const runtime = localImageRuntime()
+      if (!runtime.install) throw new Error('Image-model installation is not supported on this device.')
+      const status = await runtime.install()
+      setImageRuntimeStatus(status)
+      setLocalImagesEnabled(status.state === 'ready')
+      setCapabilityAction(status.detail)
+    } catch (error) {
+      setCapabilityAction(`Image model install failed: ${String(error)}`)
+    }
+  }
+
+  async function removeImageCapability() {
+    setCapabilityAction('Removing the local image model…')
+    try {
+      const runtime = localImageRuntime()
+      if (!runtime.remove) throw new Error('Image-model removal is not supported on this device.')
+      setLocalImagesEnabled(false)
+      const status = await runtime.remove()
+      setImageRuntimeStatus(status)
+      setCapabilityAction(status.detail)
+    } catch (error) {
+      setCapabilityAction(`Image model removal failed: ${String(error)}`)
+    }
+  }
   const [webAccess, setWebAccess] = useState(() => {
     const mode = readWebAccessMode(localStorage)
     toolRegistry.setPolicy({ webAccess: mode })
@@ -2996,8 +3055,41 @@ ${image.extractedText}
                   </button>
                 </div>
 
-                <div className="web-access-setting"><div><strong>Decision Assist · {decisionEnabled ? 'ON' : 'OFF'}</strong><span>Optional local model and tool advice. Auto uses Quick when advice is unavailable.</span></div><button type="button" aria-pressed={decisionEnabled} disabled={isGenerating || toolBusy} onClick={() => setDecisionEnabled(value => !value)}>{decisionEnabled ? 'Turn OFF' : 'Turn ON'}</button></div>
-                <div className="web-access-setting"><div><strong>Local Image Generation · {localImagesEnabled ? 'ON' : 'OFF'}</strong><span>Anne may create images when an installed local image app is ready.</span></div><button type="button" aria-pressed={localImagesEnabled} disabled={isGenerating || toolBusy} onClick={() => setLocalImagesEnabled(value => !value)}>{localImagesEnabled ? 'Turn OFF' : 'Turn ON'}</button></div>
+                <div className="web-access-setting">
+                  <div>
+                    <strong>Decision Assist · {decisionStatus?.available ? (decisionEnabled ? 'ON' : 'OFF') : 'NOT INSTALLED'}</strong>
+                    <span>{decisionStatus?.available ? 'Julia runs locally and can help Auto routing and tool judgment.' : 'Optional Julia-1 local decision model. Auto uses Quick until it is installed and qualified.'}</span>
+                  </div>
+                  <div className="capability-actions">
+                    {decisionStatus?.available ? (
+                      <>
+                        <button type="button" aria-pressed={decisionEnabled} disabled={isGenerating || toolBusy || Boolean(capabilityAction?.startsWith('Downloading'))} onClick={() => setDecisionEnabled(value => !value)}>{decisionEnabled ? 'Turn OFF' : 'Turn ON'}</button>
+                        {decisionModelInstallable() && <button type="button" disabled={isGenerating || toolBusy} onClick={() => void removeJuliaCapability()}>Remove</button>}
+                      </>
+                    ) : decisionModelInstallable() ? (
+                      <button type="button" disabled={isGenerating || toolBusy} onClick={() => void installJuliaCapability()}>Download Julia</button>
+                    ) : (
+                      <button type="button" disabled>Unavailable</button>
+                    )}
+                  </div>
+                </div>
+                <div className="web-access-setting">
+                  <div>
+                    <strong>Local Image Generation · {imageRuntimeStatus?.state === 'ready' ? (localImagesEnabled ? 'ON' : 'OFF') : 'NOT INSTALLED'}</strong>
+                    <span>{imageRuntimeStatus?.state === 'ready' ? 'Anne may create images entirely on this device.' : 'Optional on-device image model. The download is large and happens only when you choose it.'}</span>
+                  </div>
+                  <div className="capability-actions">
+                    {imageRuntimeStatus?.state === 'ready' ? (
+                      <>
+                        <button type="button" aria-pressed={localImagesEnabled} disabled={isGenerating || toolBusy} onClick={() => setLocalImagesEnabled(value => !value)}>{localImagesEnabled ? 'Turn OFF' : 'Turn ON'}</button>
+                        <button type="button" disabled={isGenerating || toolBusy} onClick={() => void removeImageCapability()}>Remove</button>
+                      </>
+                    ) : (
+                      <button type="button" disabled={isGenerating || toolBusy} onClick={() => void installImageCapability()}>Download image model</button>
+                    )}
+                  </div>
+                </div>
+                {capabilityAction && <p className="capability-action-status" role="status">{capabilityAction}</p>}
                 <div className="web-access-setting">
                   <div>
                     <strong>Web Access · {webAccess.toUpperCase()}</strong>
