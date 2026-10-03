@@ -18,7 +18,6 @@
 		AA0000000000000000000009 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000021 /* Assets.xcassets */; };
 		AB0000000000000000000001 /* JuliaDecisions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000000011 /* JuliaDecisions.swift */; };
 		AB0000000000000000000002 /* CrownKeepOptionalModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000000012 /* CrownKeepOptionalModels.swift */; };
-		AB0000000000000000000003 /* CoreAI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AB0000000000000000000013 /* CoreAI.framework */; };
 		AB0000000000000000000004 /* StableDiffusion in Frameworks */ = {isa = PBXBuildFile; productRef = AB0000000000000000000110 /* StableDiffusion */; };
 		AB0000000000000000000005 /* Tokenizers in Frameworks */ = {isa = PBXBuildFile; productRef = AB0000000000000000000111 /* Tokenizers */; };
 		AB0000000000000000000006 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = AB0000000000000000000112 /* ZIPFoundation */; };
@@ -37,7 +36,6 @@
 		AA0000000000000000000021 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AB0000000000000000000011 /* JuliaDecisions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JuliaDecisions.swift; sourceTree = "<group>"; };
 		AB0000000000000000000012 /* CrownKeepOptionalModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrownKeepOptionalModels.swift; sourceTree = "<group>"; };
-		AB0000000000000000000013 /* CoreAI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAI.framework; path = System/Library/Frameworks/CoreAI.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -47,7 +45,6 @@
 			files = (
 				AA0000000000000000000003 /* FoundationModels.framework in Frameworks */,
 				AA0000000000000000000008 /* WebKit.framework in Frameworks */,
-				AB0000000000000000000003 /* CoreAI.framework in Frameworks */,
 				AB0000000000000000000004 /* StableDiffusion in Frameworks */,
 				AB0000000000000000000005 /* Tokenizers in Frameworks */,
 				AB0000000000000000000006 /* ZIPFoundation in Frameworks */,
@@ -87,7 +84,6 @@
 			children = (
 				AA0000000000000000000014 /* FoundationModels.framework */,
 				AA0000000000000000000019 /* WebKit.framework */,
-				AB0000000000000000000013 /* CoreAI.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
