@@ -1,3 +1,4 @@
+#if CROWNKEEP_IOS27_SDK
 // Vendored reference host for Julia-1 Core AI.
 // Source: john-rocky/coreai-model-zoo, conversion/julia/swift/JuliaDecisions.swift
 // Julia-1 and this host are used under their published open-source terms.
@@ -194,3 +195,5 @@ public final class JuliaDecisions: @unchecked Sendable {
         return answers
     }
 }
+
+#endif
