@@ -1,4 +1,3 @@
-import CoreAI
 import CoreML
 import CryptoKit
 import Foundation
@@ -14,8 +13,10 @@ final class CrownKeepOptionalModels {
     static let shared = CrownKeepOptionalModels()
 
     private let fm = FileManager.default
+    #if CROWNKEEP_IOS27_SDK
     private var juliaRuntime: JuliaDecisions?
     private var juliaTokenizer: (any Tokenizer)?
+    #endif
     private var imagePipeline: StableDiffusionPipeline?
 
     private let juliaRevision = "d1e943545c64e20e73a88ae1f890227c349e22ba"
@@ -151,33 +152,34 @@ final class CrownKeepOptionalModels {
     // MARK: - Julia
 
     func juliaStatus() -> [String: Any] {
-        guard #available(iOS 27.0, *) else {
+        #if CROWNKEEP_IOS27_SDK
+        if #available(iOS 27.0, *) {
+            let installed = juliaFilesPresent()
+            if juliaRuntime != nil {
+                return decisionStatus(
+                    available: true,
+                    loadState: "loaded",
+                    detail: "Julia-1 is installed and its Core AI runtime passed CrownKeep's native parity smoke check. Production semantic categories remain gated until CrownKeep-specific qualification is approved."
+                )
+            }
+            if installed {
+                return decisionStatus(
+                    available: true,
+                    loadState: "unloaded",
+                    detail: "Julia-1 is installed locally. It will load only when Decision Assist evaluates a qualified category."
+                )
+            }
             return decisionStatus(
                 available: false,
                 loadState: "unavailable",
-                detail: "Julia Decision Assist requires iOS 27 and CrownKeep's Core AI host."
+                detail: "Julia-1 is not installed. Download is optional and stays on this device after installation."
             )
         }
-
-        let installed = juliaFilesPresent()
-        if juliaRuntime != nil {
-            return decisionStatus(
-                available: true,
-                loadState: "loaded",
-                detail: "Julia-1 is installed and its Core AI runtime passed CrownKeep's native parity smoke check. Production semantic categories remain gated until CrownKeep-specific qualification is approved."
-            )
-        }
-        if installed {
-            return decisionStatus(
-                available: true,
-                loadState: "unloaded",
-                detail: "Julia-1 is installed locally. It will load only when Decision Assist evaluates a qualified category."
-            )
-        }
+        #endif
         return decisionStatus(
             available: false,
             loadState: "unavailable",
-            detail: "Julia-1 is not installed. Download is optional and stays on this device after installation."
+            detail: "Julia Decision Assist requires iOS 27 and CrownKeep's Core AI host."
         )
     }
 
@@ -202,6 +204,7 @@ final class CrownKeepOptionalModels {
         fm.fileExists(atPath: juliaFolder.appending(path: "tokenizer/tokenizer_config.json").path())
     }
 
+    #if CROWNKEEP_IOS27_SDK
     func installJulia() async throws -> [String: Any] {
         guard #available(iOS 27.0, *) else {
             throw NSError(domain: "CrownKeepJulia", code: 1, userInfo: [NSLocalizedDescriptionKey: "Julia requires iOS 27."])
@@ -393,6 +396,33 @@ final class CrownKeepOptionalModels {
             "latencyMs": latencyMs,
         ]
     }
+
+    #else
+    func installJulia() async throws -> [String: Any] {
+        throw NSError(
+            domain: "CrownKeepJulia",
+            code: 1,
+            userInfo: [NSLocalizedDescriptionKey: "Julia Decision Assist requires an iOS 27 / Xcode 27 CrownKeep build."]
+        )
+    }
+
+    func removeJulia() async throws -> [String: Any] {
+        if fm.fileExists(atPath: juliaFolder.path()) { try fm.removeItem(at: juliaFolder) }
+        return juliaStatus()
+    }
+
+    func releaseJulia() {}
+
+    func decide(_ request: [String: Any]) async throws -> [String: Any] {
+        _ = request
+        throw NSError(
+            domain: "CrownKeepJulia",
+            code: 7,
+            userInfo: [NSLocalizedDescriptionKey: "Julia Decision Assist requires an iOS 27 / Xcode 27 CrownKeep build."]
+        )
+    }
+
+    #endif
 
     // MARK: - Image generation
 
