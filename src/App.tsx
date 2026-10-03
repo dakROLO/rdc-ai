@@ -422,9 +422,9 @@ export default function App() {
       const status = await installDecisionModel()
       setDecisionStatus(status)
       // Installing native Julia proves the runtime/row parity gate only.
-      // Semantic jobs stay OFF until the committed CrownKeep qualification
-      // policy actually lists one or more jobs.
-      setDecisionEnabled(status.available && status.qualifiedJobs.length > 0)
+      // Keep Decision Assist enabled in shadow mode so CrownKeep can record
+      // device-local decisions without applying unqualified categories.
+      setDecisionEnabled(status.available)
       setCapabilityAction(status.detail)
     } catch (error) {
       setCapabilityAction(`Julia install failed: ${String(error)}`)
@@ -3067,23 +3067,21 @@ ${image.extractedText}
                       !decisionStatus?.available
                         ? 'NOT INSTALLED'
                         : decisionStatus.qualifiedJobs.length === 0
-                          ? 'INSTALLED · SHADOW'
+                          ? (decisionEnabled ? 'ON · SHADOW' : 'OFF · SHADOW')
                           : decisionEnabled ? 'ON' : 'OFF'
                     }</strong>
                     <span>{
                       decisionStatus?.available && decisionStatus.qualifiedJobs.length > 0
                         ? 'Julia runs locally and can help Auto routing and tool judgment.'
                         : decisionStatus?.available
-                          ? 'Julia is installed and native parity passed. CrownKeep keeps it in shadow mode until semantic jobs are qualified.'
+                          ? 'Julia is installed and native parity passed. Shadow judgments are recorded locally but cannot steer Anne until a category is qualified.'
                           : 'Optional Julia-1 local decision model. Auto uses Quick until it is installed and qualified.'
                     }</span>
                   </div>
                   <div className="capability-actions">
                     {decisionStatus?.available ? (
                       <>
-                        {decisionStatus.qualifiedJobs.length > 0
-                          ? <button type="button" aria-pressed={decisionEnabled} disabled={isGenerating || toolBusy} onClick={() => setDecisionEnabled(value => !value)}>{decisionEnabled ? 'Turn OFF' : 'Turn ON'}</button>
-                          : <button type="button" disabled>Shadow only</button>}
+                        <button type="button" aria-pressed={decisionEnabled} disabled={isGenerating || toolBusy} onClick={() => setDecisionEnabled(value => !value)}>{decisionEnabled ? 'Turn OFF' : 'Turn ON'}</button>
                         {decisionModelInstallable() && <button type="button" disabled={isGenerating || toolBusy} onClick={() => void removeJuliaCapability()}>Remove</button>}
                       </>
                     ) : decisionModelInstallable() ? (
