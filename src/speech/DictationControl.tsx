@@ -20,12 +20,14 @@ export function DictationControl({
   onText,
   onBusy,
   refreshKey,
+  compact = false,
 }: {
   disabled: boolean
   conversationId?: string
   onText(text: string): void
   onBusy(busy: boolean): void
   refreshKey: number
+  compact?: boolean
 }) {
   const provider = useMemo(createSpeechProvider, [])
   const [capability, setCapability] = useState<SpeechCapability>({
@@ -198,10 +200,10 @@ export function DictationControl({
               : 'Transcribing…'
           : phase === 'cancelling'
             ? 'Releasing…'
-            : '🎙 Dictate'
+            : 'Dictate'
 
   return (
-    <div className="dictation-control">
+    <div className={`dictation-control${compact ? ' compact' : ''}`}>
       <button
         type="button"
         className="secondary-button"
@@ -232,9 +234,11 @@ export function DictationControl({
         </button>
       )}
 
-      <span role="status" aria-live="polite">
-        {message || (!capability.available ? capability.detail : '')}
-      </span>
+      {(!compact || phase !== 'ready') && (
+        <span className="dictation-status" role="status" aria-live="polite">
+          {message || (!capability.available ? capability.detail : '')}
+        </span>
+      )}
 
       {nativeProgress?.percent !== undefined && phase !== 'ready' && (
         <span className="dictation-progress">
