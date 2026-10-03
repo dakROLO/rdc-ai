@@ -49,10 +49,19 @@ export class DecisionAssist {
     if (!this.enabled) return fallback('disabled')
     try {
       const status = await this.engine.status()
-      if (!status.available || !status.qualifiedJobs.includes(request.job)) return fallback(status.available ? 'category not qualified' : 'unavailable')
+      if (!status.available) return fallback('unavailable')
+      const qualified = status.qualifiedJobs.includes(request.job)
       const result = await this.engine.decide(request)
       // Recheck opt-in after asynchronous loading/inference.
       if (!this.enabled) return fallback('disabled during evaluation')
+      if (!qualified) {
+        this.record({
+          job: request.job,
+          result,
+          reason: 'shadow local judgment; category not qualified and result was not applied',
+        })
+        return undefined
+      }
       if (!Number.isFinite(result.confidence) || result.confidence < DECISION_THRESHOLD || result.confidence > 1 || !request.options.some(x => x.id === result.selected)) { this.record({ job: request.job, result, reason: 'low confidence or invalid choice; deterministic fallback' }); return undefined }
       this.record({ job: request.job, result, reason: 'qualified local judgment' })
       return result
