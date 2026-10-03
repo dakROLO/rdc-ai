@@ -13,8 +13,8 @@ test('local knowledge source searches and fetches without a product-specific dep
 
 test('registered local and web tools keep their network boundary explicit', async () => {
   assert.equal(knowledgeRegistry.list().length, 1)
-  assert.equal(toolRegistry.get('web-search')?.requiresNetwork, true)
-  assert.equal(toolRegistry.get('web-read')?.requiresNetwork, true)
+  assert.equal(toolRegistry.get('web.search')?.requiresNetwork, true)
+  assert.equal(toolRegistry.get('web.read')?.requiresNetwork, true)
   assert.equal(toolRegistry.getPolicy().webAccess, 'off')
 
   const result = await runToolCommand('/search local-first')

@@ -6,6 +6,22 @@ The system view includes planned components. `AuthProvider` and `SyncProvider` r
 
 [Daily-use completion plan](DAILY-USE-COMPLETION-PLAN.md) now prioritizes iOS tool reliability before native account adapters and encrypted continuity. Native Apple automatic-tool evidence must reach the shared message contract with bounded text, outcomes and prompt activity; shared policy/TypeScript loop limits alone do not prove native enforcement. Account, sync consent, local inference and Web Access remain independent states. Synced data needs account isolation, durable outbox/tombstones and a completed key/enrollment ADR before production implementation.
 
+## Assistant tool loop — 2026-10-03
+
+Canonical logical tool IDs are `web.search`, `web.read`, `keep.search`, `image.read`, and `image.generate`. Registry aliases preserve diagnostic access to old web/local-search IDs; persisted activity is interpreted by its saved metadata, so old evidence does not need migration. Availability is capability checked after permission filtering. No Web OFF availability probe can touch a network tool. Local image generation requires its own permission rather than authorizing arbitrary write tools.
+
+Normal proven Windows function calling exposes the available registry to the model on every turn. Apple maps local keep/image and permitted web definitions to native `Tool` objects. The shared loop bounds OpenAI-compatible execution to three tools/three planning rounds plus a final answer; the native log reserves at most three tool operations in the framework-owned loop. Both remain under the existing finite chat watchdog. Tool outputs are bounded untrusted data with source URLs, and return to the same local provider. Neither a tool nor sign-in changes the reasoning provider.
+
+A model that skips a needed structured/native web call gets one deterministic fallback over the explicit user query (or the immediately previous user request for an unambiguous pronoun follow-up). Attachments/OCR, assistant guesses, and retained private evidence never supply fallback search terms. Unsupported Windows tool callers use the same bounded prefetch fallback. Diagnostic `/web` and `/url` remain available. There is no web-query dialog.
+
+The answer guard buffers tool-grounded drafts. After a successful sourced web result, browsing/cutoff boilerplate triggers one corrective reasoning pass with the actual evidence and no tools. If it fails again, the app displays an explicit model-grounding failure with the retrieved evidence instead of saving the false disclaimer. This guard does not prove semantic correctness: physical relevance/citation tests remain required. Model activity still starts the watchdog timer when received, before buffered answer display.
+
+Retained source metadata and bounded excerpts remain in assistant `toolActivity`, persisted locally and included in later eligible turns even with Web OFF. Prompt snapshots are session-local and reflect reasoning rounds; retrieved content never becomes trusted instructions.
+
+Images are scoped to the current attachment ID. Apple image data goes only over the in-process native bridge to on-device Foundation Models; no cloud image path exists. Direct input uses SDK/runtime-gated iOS 27 `Attachment`, while OCR stays a separate Vision/Tesseract capability. Optional Core ML generation has no shipped weights/runtime yet and reports not installed; see [local image capability](LOCAL-IMAGE-CAPABILITY.md). Windows manual generation keeps its existing bounded loopback adapter.
+
+Normal UI exposes modes and permissions. Actual provider/model, runtime state, hardware, tool support, timings and setup/analyst controls belong to Diagnostics. System Prompt / Prompt & Context is reached through Inside the Keep.
+
 ## System view
 
 ```mermaid

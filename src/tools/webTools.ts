@@ -40,7 +40,7 @@ const readSchema = {
 export class WebSearchTool
   implements CrownKeepTool<{ query: string; maxResults?: number }>
 {
-  readonly id = 'web-search'
+  readonly id = 'web.search'
   readonly name = 'Web Search'
   readonly description =
     'Search the public web directly from the native CrownKeep app. Sends only the supplied search query.'
@@ -97,7 +97,7 @@ export class WebSearchTool
 }
 
 export class WebReadTool implements CrownKeepTool<{ url: string }> {
-  readonly id = 'web-read'
+  readonly id = 'web.read'
   readonly name = 'Web Read'
   readonly description =
     'Read one selected public webpage directly from the native CrownKeep app. Sends only the selected URL.'

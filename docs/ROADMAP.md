@@ -8,8 +8,8 @@ Visual summary: `public/crownkeep-sprints.svg`. The same asset is rendered in th
 
 Detailed assessment, implementation packages and physical exit gates: [Daily-use completion plan](DAILY-USE-COMPLETION-PLAN.md).
 
-1. **4A.4N — ACTIVE ACCEPTANCE:** verify repaired iOS web grounding and retained evidence on-device. Prompt inspector, reviewed image OCR/generation, icon source repair and Balanced safeguards join this immediate slice; implementation is local, physical acceptance pending. See [repair matrix](IOS-WINDOWS-REPAIR-VALIDATION.md).
-2. **4A.4O — NEXT:** small daily-use pass: actual opt-in project conversation recall, backup/restore, draft resilience and build/icon/map freshness.
+1. **4A.4N — ACTIVE IMPLEMENTATION / ACCEPTANCE:** test the repaired assistant tool loop on Windows, then iPhone. No query confirmation; model-directed permitted tools, bounded fallback/result reasoning, retained evidence, composer images and inspector under Inside the Keep. Windows automatic web orchestration is not accepted: the tested Quick build retrieves sources with `/web` but answers from its April 2023 cutoff. See [assistant matrix](ASSISTANT-TOOLS-VALIDATION.md).
+2. **4A.4O — NEXT:** optional downloadable Core ML generation runtime/install slice after memory/license/device benchmarking; iOS 27 native image-input validation (iOS 26 remains OCR-only). Then small daily-use pass: actual opt-in project conversation recall, backup/restore, draft resilience and build/icon/map freshness.
 3. **4B.1–4B.2 — NEXT AFTER PHONE TOOLS:** same-account native Entra sign-in and protected API. Authentication is currently a contract only.
 4. **5.1–5.3 — PLANNED, PRIORITIZED:** key/enrollment ADR, encrypted iPhone/Windows continuity, offline conflicts/deletion/recovery, seven-day personal pilot. Sync is currently a contract only.
 

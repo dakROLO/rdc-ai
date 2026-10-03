@@ -1,3 +1,4 @@
+import type { ImageCapabilities } from '../images/imageCapabilities.ts'
 import type { NativeSpeechBridge } from '../speech/SpeechInputProvider.ts'
 import type {
   ChatMessageInput,
@@ -57,6 +58,7 @@ export interface NativeChatRequest {
   messages: ChatMessageInput[]
   webAccess?: 'off' | 'on'
   tools?: NativeToolDefinition[]
+  images?: Array<{ id: string; dataUrl: string }>
 }
 
 export interface NativeChatChunk {
@@ -69,7 +71,8 @@ export interface NativeChatChunk {
 
 export interface NativeAIHost {
   readonly images?: {
-    status(): Promise<{ ocrAvailable: boolean; generationAvailable: boolean }>
+    status(): Promise<Partial<ImageCapabilities>>
+    understand?(dataUrl: string, prompt: string): Promise<string>
     recognize(dataUrl: string): Promise<string>
     generate(prompt: string): Promise<string>
   }

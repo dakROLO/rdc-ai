@@ -1,5 +1,6 @@
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { createWorker } from 'tesseract.js'
+import { imageCapabilities } from './imageCapabilities.ts'
 import { getNativeAIHost } from '../native/NativeAIHost.ts'
 
 export function localGeneratorEndpoint(value: string): string {
@@ -44,11 +45,22 @@ export async function recognizeImage(dataUrl: string): Promise<string> {
 export async function generateImage(prompt: string, endpoint: string): Promise<string> {
   if (!prompt.trim() || prompt.length > 2000) throw new Error('Use a prompt between 1 and 2,000 characters.')
   const native = getNativeAIHost()?.images
-  if (native) return native.generate(prompt)
+  if (native) {
+    if (!imageCapabilities(await native.status()).generationAvailable) throw new Error('The optional local image model is not installed. No image was uploaded.')
+    return native.generate(prompt)
+  }
   const origin = localGeneratorEndpoint(endpoint)
   if (!isTauri()) throw new Error('Windows image generation requires the native CrownKeep app and a local Stable Diffusion WebUI started with --api.')
   const dataUrl = await invoke<string>('crownkeep_generate_image', { endpoint: origin, prompt })
   if (!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(dataUrl)) throw new Error('The image app returned an invalid image.')
   const response = await fetch(dataUrl)
   return imageDataUrl(await response.blob())
+}
+
+export async function understandImage(dataUrl: string, prompt: string): Promise<string> {
+  const native = getNativeAIHost()?.images
+  if (!native?.understand || !imageCapabilities(await native.status()).understandingAvailable) {
+    throw new Error('Direct image understanding requires a compatible iOS 27 build and available on-device model. Use Extract text for OCR.')
+  }
+  return native.understand(dataUrl, prompt.trim().slice(0, 2000) || 'Describe the contents of this image.')
 }

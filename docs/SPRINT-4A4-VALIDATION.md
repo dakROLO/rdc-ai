@@ -1,5 +1,7 @@
 # Sprint 4A.4 — System Foundry Convergence Validation
 
+**Current October 3 package:** [Assistant tools validation](ASSISTANT-TOOLS-VALIDATION.md). Windows automatic web orchestration remains unaccepted after Quick ignored `/web` evidence and answered from its April 2023 cutoff. Repaired Windows and iOS physical tests remain open. The dated entries below preserve prior evidence.
+
 **Branch:** `sprint-4a3-local-platform-convergence`  
 **Status:** Recorded Windows and basic Rolo15 chat/dictation/persistence baseline accepted; Windows web retrieval recorded functional in STATUS; iPhone web grounding and AVD acceptance remain open. Current priority: [4A.4N daily-use tool matrix](DAILY-USE-COMPLETION-PLAN.md#package-1--4a4n-ios-tools-that-can-be-trusted). Historical entries below are dated evidence, not current blockers/order.
 

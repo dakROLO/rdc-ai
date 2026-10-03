@@ -68,20 +68,21 @@ export class AppleFoundationModelsProvider implements AIProvider {
     }
 
     const nativeTools = (request.tools ?? [])
-      .filter((tool) => tool.id === 'web-search' || tool.id === 'web-read')
+      .filter((tool) => ['web.search', 'web.read', 'keep.search', 'image.read'].includes(tool.id))
       .map((tool) => ({
         id: tool.id,
         name: tool.functionName,
         description: tool.description,
       }))
-    const nativeWebEnabled = Boolean(this.host.web && nativeTools.length)
+    const nativeWebEnabled = Boolean(this.host.web && nativeTools.some((tool) => tool.id.startsWith('web.')))
 
     const handle = await this.host.streamChat(
       {
         modelId: request.modelId,
         messages: request.messages,
         webAccess: nativeWebEnabled ? 'on' : 'off',
-        tools: nativeWebEnabled ? nativeTools : [],
+        tools: nativeTools,
+        images: ((request.context as { images?: Array<{ id: string; dataUrl: string }> } | undefined)?.images ?? []).map((image) => ({ id: image.id, dataUrl: image.dataUrl })),
       },
       (chunk) => {
         queue.push({

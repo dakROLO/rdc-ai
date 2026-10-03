@@ -6,6 +6,12 @@ This guide is the executable test plan for the current sprint. It should evolve 
 
 Sprint 4A.4 is the active validation target. The authoritative implementation/status records are `docs/STATUS.md`, `docs/ROADMAP.md`, `docs/ARCHITECTURE.md`, `docs/DECISIONS.md`, and `docs/SPRINT-4A4-VALIDATION.md`.
 
+### Current assistant-tools package
+
+Use [ASSISTANT-TOOLS-VALIDATION.md](ASSISTANT-TOOLS-VALIDATION.md) for the current device matrix and [LOCAL-IMAGE-CAPABILITY.md](LOCAL-IMAGE-CAPABILITY.md) for SDK/runtime boundaries. Windows `/web` retrieves/displays sources, but Quick ignored them and answered from its April 2023 cutoff; automatic Windows web orchestration is not accepted. iOS physical validation follows the repaired build. Prior baseline qualification below does not accept this package.
+
+The main UI now keeps only mode/runtime state and privacy status; actual model/device/provider/setup details are in **Inside the Keep → Diagnostics**. Web permission and **System Prompt / Prompt & Context** are in Inside the Keep. Images are reached beside Dictate/Send. No provider/model selector, web-provider card, query review or Image Playground remains. Older numbered steps below should use these new locations.
+
 ### Already physically accepted
 
 - Primary Windows laptop: Quick / `phi-4-mini` startup + normal chat; Balanced / `mistral-nemo-12b-instruct` CUDA benchmark + normal chat; exclusive model switching; local dictation through installed System Foundry.
@@ -55,11 +61,11 @@ npm run desktop:dev
 
 Then:
 
-1. Confirm the compact status bar shows role/model/execution, **Inside the Keep**, runtime state, and **Web OFF**.
+1. Confirm the compact status bar shows mode/runtime/privacy state. Inspect the actual model/execution under **Inside the Keep → Diagnostics** and confirm **Web OFF**.
 2. Confirm normal Quick local chat still works.
 3. With Web Access **OFF**, ask: `What is the latest stable Node.js release right now? Verify it using current web information.`
 4. Confirm no Web Search/Web Read executes and Anne does not claim current verification.
-5. Open Local AI / Web Access. Confirm it identifies **DuckDuckGo** and explicitly says no account/API key is required.
+5. Open **Inside the Keep → Web Access**. Confirm the concise query/URL-only privacy explanation; no search-provider card or query dialog is present.
 6. Turn **Web ON**.
 7. Ask a local-only question such as `Explain the difference between Quick and Balanced in CrownKeep.` Confirm no unnecessary search occurs.
 8. Ask: `What is the latest stable Node.js release right now? Verify it using current sources.`

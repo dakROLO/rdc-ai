@@ -16,7 +16,7 @@ test('retained web evidence becomes explicit current-turn conversation evidence'
       createdAt: '2026-09-28T12:00:00.000Z',
       toolActivity: [
         {
-          toolId: 'web-search',
+          toolId: 'web.search',
           label: 'Web Search',
           requiresNetwork: true,
           dataLeftDevice: true,
@@ -60,7 +60,7 @@ test('source-only legacy web activity is still retained', () => {
       createdAt: '2026-09-28T12:00:00.000Z',
       toolActivity: [
         {
-          toolId: 'web-search',
+          toolId: 'web.search',
           label: 'Web Search',
           requiresNetwork: true,
           dataLeftDevice: true,

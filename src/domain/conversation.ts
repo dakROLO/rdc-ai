@@ -32,6 +32,7 @@ export interface ImageAttachment {
   id: string
   name: string
   dataUrl: string
+  understanding?: string
   extractedText: string
   kind: 'selected' | 'generated'
 }

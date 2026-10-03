@@ -10,7 +10,7 @@ test('structured loop executes ToolRegistry result and returns to the same provi
   let executions = 0
 
   const search: CrownKeepTool<{ query: string }> = {
-    id: 'web-search',
+    id: 'web.search',
     name: 'Web Search',
     description: 'Search current public information.',
     requiresNetwork: true,
@@ -96,7 +96,7 @@ test('structured loop executes ToolRegistry result and returns to the same provi
   assert.ok(modelActivities >= 2)
   assert.deepEqual(activities, [
     {
-      toolId: 'web-search',
+      toolId: 'web.search',
       retainedContext: 'Fresh result for current release',
     },
   ])
@@ -107,7 +107,7 @@ test('structured loop returns ordinary local text without using web for a local 
   registry.setPolicy({ webAccess: 'on' })
   let webExecutions = 0
   registry.register({
-    id: 'web-search',
+    id: 'web.search',
     name: 'Web Search',
     description: 'Search current public information.',
     requiresNetwork: true,

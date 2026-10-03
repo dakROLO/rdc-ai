@@ -1,6 +1,14 @@
 # iOS / Windows context and image repair — 2026-10-03
 
-## Implemented in the current local checkout
+## Current assistant-tools package
+
+The [assistant tool validation matrix](ASSISTANT-TOOLS-VALIDATION.md) supersedes the earlier editable-query review, default Apple prefetch, standalone Images/Prompt controls and Image Playground direction. Those older implementation notes are preserved below as history.
+
+Physical findings: Windows `/web` retrieves/displays sources, but Quick ignores evidence and answers from its April 2023 cutoff. Automatic Windows web orchestration is **not accepted**. Retest this repaired build on Windows, then physically validate iOS. No automated result claims device acceptance.
+
+Build/install over the existing app using the procedures below, preserving history. No merge or branch deletion is authorized by this package. Native iOS 26 builds expose OCR only; iOS 27 SDK/runtime builds expose the direct image path. Optional Core ML generation is not installed/implemented yet.
+
+## Previous repair implementation (historical)
 
 - **Prompt & context:** device-local inspector shows CrownKeep's base instructions, assembled system message, included history/evidence and omitted-history count. On Apple, the host emits its exact flattened prompt/instructions to the inspector. Foundry updates the inspector for structured-loop request rounds. Provider-owned internal prompts are outside this view. Snapshots are session-only and are not written to routine logs or uploaded.
 - **Context bounds:** protect system/current request, then keep newest history within a conservative character budget (14,000 Apple / 32,000 Windows). Excluded/error history remains excluded. Oversize current requests fail visibly rather than silently truncating the user's message.

@@ -40,6 +40,8 @@ export interface ToolExecutionPolicy {
   webAccess: WebAccessMode
   /** Write tools require a future explicit approval flow. Read-only is the default. */
   allowWriteTools: boolean
+  /** Separately opt in to local image generation; never authorizes other writes. */
+  allowImageGeneration?: boolean
 }
 
 const DEFAULT_POLICY: ToolExecutionPolicy = {
@@ -65,7 +67,7 @@ export class ToolRegistry {
   }
 
   get(id: string): CrownKeepTool | undefined {
-    return this.tools.get(id)
+    return this.tools.get(({ 'web-search': 'web.search', 'web-read': 'web.read', 'local-crownkeep-search': 'keep.search' } as Record<string, string>)[id] ?? id)
   }
 
   list(): CrownKeepTool[] {
@@ -91,6 +93,17 @@ export class ToolRegistry {
     return { ...this.policy }
   }
 
+  async availableDefinitions(): Promise<CrownKeepToolDefinition[]> {
+    const allowed = this.list().filter((tool) =>
+      (!tool.requiresNetwork || this.policy.webAccess === 'on') &&
+      (tool.access === 'read' || (tool.id === 'image.generate' ? this.policy.allowImageGeneration : this.policy.allowWriteTools)),
+    )
+    const available = await Promise.all(allowed.map(async (tool) => {
+      try { return await tool.isAvailable() ? tool : undefined } catch { return undefined }
+    }))
+    return available.filter((tool): tool is CrownKeepTool => Boolean(tool))
+  }
+
   async execute(id: string, input: unknown): Promise<CrownKeepToolResult> {
     const tool = this.get(id)
     if (!tool) throw new Error(`Tool '${id}' is not registered.`)
@@ -103,7 +116,7 @@ export class ToolRegistry {
       )
     }
 
-    if (tool.access === 'write' && !this.policy.allowWriteTools) {
+    if (tool.access === 'write' && !(tool.id === 'image.generate' ? this.policy.allowImageGeneration : this.policy.allowWriteTools)) {
       throw new ToolPolicyError(
         `Write tool '${tool.name}' requires an explicit approval flow.`,
       )

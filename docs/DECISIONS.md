@@ -707,3 +707,24 @@ Sync key hierarchy, enrollment/recovery and persistence remain design decisions 
 - Image reading is reviewed local OCR, not pixel-aware reasoning. Bundle English browser OCR assets. Apple generation is an explicit capability-gated Image Playground sheet; Windows generation is an explicit loopback-only WebUI adapter. No implicit cloud fallback or whole-chat upload.
 - Canonical full vector mark generates opaque 1024px iOS and PWA PNGs. Normal update installation preserves history. Browser local Foundry is the first Apple Silicon Mac path; native Mac packaging is separate.
 - These repairs do not implement login/sync or prove physical acceptance. See repair matrix and Mac quickstart.
+
+
+## ADR-0032 — Assistant chooses tools within user boundaries
+
+**Status:** Implemented; native build and physical acceptance remain gates
+**Date:** 2026-10-03
+
+Web Access ON authorizes automatic search/read without a query confirmation. Permitted tools are offered on ordinary tool-capable turns; keyword detection only supports the invisible deterministic fallback. Tool results require a bounded same-provider reasoning continuation and local source/evidence retention. A corrective pass/evidence view prevents saving false browsing/cutoff boilerplate after successful sourced retrieval. Web OFF still rejects network tools before availability/execution and never selects cloud reasoning. Canonical provider-neutral IDs use dotted names; old diagnostic IDs remain aliases.
+
+Normal users select Quick/Balanced/Deep and permissions. Provider/raw model selection is removed from normal settings; runtime details and advanced setup remain in Diagnostics. Composer images replace the standalone Images button. Prompt/context inspection lives inside the Keep.
+
+This supersedes the October 3 pronoun-query review and default Apple prefetch decision above. It preserves the physical failure: Quick ignored successful Windows `/web` evidence and answered from its April 2023 cutoff. Automatic Windows orchestration and repaired iOS tools are not physically accepted.
+
+## ADR-0033 — Native image input and optional local diffusion
+
+**Status:** SDK/runtime-gated image input implemented; optional generation runtime deferred
+**Date:** 2026-10-03
+
+Apple documentation identifies Foundation Models `Attachment` as introduced in iOS 27. Keep deployment target 26.0; compile that API only with the existing `CROWNKEEP_IOS27_SDK` condition and check iOS 27/model availability at runtime. Older SDK builds expose local OCR and accurately report direct understanding unavailable. Use `SystemLanguageModel.default` only; never use Private Cloud Compute for image analysis implicitly.
+
+Remove Image Playground from CrownKeep. Define an optional downloadable Core ML generation capability, with no bundled weights, automatic downloads, or pretend-ready status. Windows retains its localhost WebUI adapter. The next implementation step is the model package/install/runtime slice in [LOCAL-IMAGE-CAPABILITY.md](LOCAL-IMAGE-CAPABILITY.md), with licensing, memory, cancellation and offline validation before enabling generation. Image generation permission is separate from Web Access and other writes.

@@ -13,7 +13,7 @@ knowledgeRegistry.register(new LocalKnowledgeSource('inside-the-keep', 'Inside t
 export const toolRegistry = new ToolRegistry()
 
 const localSearch: CrownKeepTool<{ query: string }> = {
-  id: 'local-crownkeep-search',
+  id: 'keep.search',
   name: 'Search Inside the Keep',
   description: 'Read-only search across configured local knowledge.',
   requiresNetwork: false,

@@ -8,7 +8,7 @@ function registryWithWebProof() {
   const calls: string[] = []
 
   const search: CrownKeepTool<{ query: string }> = {
-    id: 'web-search',
+    id: 'web.search',
     name: 'Web Search',
     description: 'Test search.',
     requiresNetwork: true,
@@ -35,7 +35,7 @@ function registryWithWebProof() {
   }
 
   const read: CrownKeepTool<{ url: string }> = {
-    id: 'web-read',
+    id: 'web.read',
     name: 'Web Read',
     description: 'Test read.',
     requiresNetwork: true,
@@ -95,7 +95,7 @@ test('current information triggers search but not unnecessary page reads', async
 
   assert.equal(calls.length, 1)
   assert.match(calls[0], /^search:/)
-  assert.equal(result.activities[0]?.toolId, 'web-search')
+  assert.equal(result.activities[0]?.toolId, 'web.search')
 })
 
 test('source-detail request is bounded to one search plus two webpage reads', async () => {
@@ -112,7 +112,7 @@ test('source-detail request is bounded to one search plus two webpage reads', as
   assert.match(calls[1], /^read:/)
   assert.match(calls[2], /^read:/)
   assert.equal(
-    result.activities.filter((activity) => activity.toolId === 'web-read').length,
+    result.activities.filter((activity) => activity.toolId === 'web.read').length,
     2,
   )
 })

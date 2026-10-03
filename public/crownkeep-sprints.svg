@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1140" viewBox="0 0 1600 1140" role="img" aria-labelledby="title desc">
 <title id="title">CrownKeep daily-use completion roadmap</title>
-<desc id="desc">Assessment October 3, 2026. Local Windows and basic iPhone chat are recorded as validated. Active priority: reliable iOS tools. Next: daily workflow and account login. Planned: encryption design, cross-device sync and recovery pilot. Authentication and sync are not implemented. Prompt, icon, image OCR/generation and Balanced repairs are implemented locally; physical acceptance is pending.</desc>
+<desc id="desc">Assessment October 3, 2026. Local Windows and basic iPhone chat are recorded as validated. Active priority: reliable iOS tools. Next: daily workflow and account login. Planned: encryption design, cross-device sync and recovery pilot. Authentication and sync are not implemented. Assistant tool loop and composer repair implemented. Windows Quick ignored retrieved evidence in physical testing; orchestration is not accepted. iOS 27 native image input is gated; optional Core ML generation is not installed.</desc>
 <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#030916"/><stop offset="1" stop-color="#0B213B"/></linearGradient>
 <style>
 .title{font:700 44px 'Segoe UI',Arial,sans-serif;fill:#EEF6FF}.sub{font:400 21px 'Segoe UI',Arial,sans-serif;fill:#AAC0DA}.label{font:700 15px 'Segoe UI',Arial,sans-serif;letter-spacing:1px}.head{font:700 25px 'Segoe UI',Arial,sans-serif;fill:#EEF6FF}.body{font:400 18px 'Segoe UI',Arial,sans-serif;fill:#BDD0E5}.gate{font:600 16px 'Segoe UI',Arial,sans-serif;fill:#EEF6FF}.foot{font:400 16px 'Segoe UI',Arial,sans-serif;fill:#AAC0DA}
@@ -16,14 +16,14 @@
 <g transform="translate(60 338)"><rect width="470" height="280" rx="22" fill="#071426" stroke="#D49467" stroke-width="2"/>
 <text x="24" y="35" class="label" fill="#D49467">01 · ACTIVE / 4A.4N</text><text x="24" y="76" class="head">Trust phone context + tools</text><path d="M24 94 H446" stroke="#224063"/>
 <circle cx="28" cy="123" r="3" fill="#D49467"/><text x="42" y="129" class="body">Inspect system prompt + exact request</text>
-<circle cx="28" cy="152" r="3" fill="#D49467"/><text x="42" y="158" class="body">Search evidence before iOS generation</text>
+<circle cx="28" cy="152" r="3" fill="#D49467"/><text x="42" y="158" class="body">Tool result → bounded reasoning round</text>
 <circle cx="28" cy="181" r="3" fill="#D49467"/><text x="42" y="187" class="body">Retain evidence across turns/restarts</text>
 <circle cx="28" cy="210" r="3" fill="#D49467"/><text x="42" y="216" class="body">Bounded calls; physical tests pending</text>
 <text x="24" y="255" class="gate">Gate: physical iPhone tool matrix passes</text></g>
 <g transform="translate(565 338)"><rect width="470" height="280" rx="22" fill="#071426" stroke="#38D8FF" stroke-width="2"/>
 <text x="24" y="35" class="label" fill="#38D8FF">02 · NEXT / 4A.4O</text><text x="24" y="76" class="head">Daily repairs + images</text><path d="M24 94 H446" stroke="#224063"/>
-<circle cx="28" cy="123" r="3" fill="#38D8FF"/><text x="42" y="129" class="body">Reviewed local image OCR + previews</text>
-<circle cx="28" cy="152" r="3" fill="#38D8FF"/><text x="42" y="158" class="body">Explicit iOS / Windows image generation</text>
+<circle cx="28" cy="123" r="3" fill="#38D8FF"/><text x="42" y="129" class="body">Composer images + local OCR / analysis</text>
+<circle cx="28" cy="152" r="3" fill="#38D8FF"/><text x="42" y="158" class="body">Optional Core ML model + Windows WebUI</text>
 <circle cx="28" cy="181" r="3" fill="#38D8FF"/><text x="42" y="187" class="body">Full icon + bounded Balanced requests</text>
 <circle cx="28" cy="210" r="3" fill="#38D8FF"/><text x="42" y="216" class="body">Then recall, draft resilience + backup</text>
 <text x="24" y="255" class="gate">Gate: device repair matrix + safe history</text></g>
@@ -58,6 +58,6 @@
 <rect x="60" y="970" width="1480" height="85" rx="18" fill="#0B1A2C"/>
 <text x="84" y="1002" class="label" fill="#819AB7">LATER · DOES NOT BLOCK PERSONAL TWO-DEVICE USE</text>
 <text x="84" y="1033" class="body">AVD · Deep qualification · public installer release · general visual reasoning · cloud reasoning · optional RDC source</text>
-<text x="60" y="1100" class="foot">Repairs implemented locally; device acceptance pending. Login + sync are planned.</text>
+<text x="60" y="1100" class="foot">Tool-loop repair implemented; Windows / iOS acceptance pending. Login + sync planned.</text>
 <text x="1540" y="1100" text-anchor="end" class="foot">Detailed gates: docs/DAILY-USE-COMPLETION-PLAN.md</text>
 </svg>
