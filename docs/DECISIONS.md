@@ -738,3 +738,25 @@ This supersedes the October 3 pronoun-query review and default Apple prefetch de
 Apple documentation identifies Foundation Models `Attachment` as introduced in iOS 27. Keep deployment target 26.0; compile that API only with the existing `CROWNKEEP_IOS27_SDK` condition and check iOS 27/model availability at runtime. Older SDK builds expose local OCR and accurately report direct understanding unavailable. Use `SystemLanguageModel.default` only; never use Private Cloud Compute for image analysis implicitly.
 
 Remove Image Playground from CrownKeep. Define an optional downloadable Core ML generation capability, with no bundled weights, automatic downloads, or pretend-ready status. Windows retains its localhost WebUI adapter. The next implementation step is the model package/install/runtime slice in [LOCAL-IMAGE-CAPABILITY.md](LOCAL-IMAGE-CAPABILITY.md), with licensing, memory, cancellation and offline validation before enabling generation. Image generation permission is separate from Web Access and other writes.
+
+## ADR-0034 — iPhone optional local models are explicit downloads with local runtime gates
+
+**Status:** Implemented; physical acceptance pending  
+**Date:** 2026-10-03
+
+### Decision
+
+CrownKeep may install large optional local models on iPhone only after an explicit user download action. Installing a model does not grant network/tool permissions, upload conversation data, or authorize cloud inference. Optional model files live under CrownKeep Application Support, can be removed independently of conversations, and are never downloaded merely because CrownKeep starts or an Auto/tool permission is selected.
+
+For Julia Decision Assist, CrownKeep pins a Core AI Julia-1 artifact/tokenizer by revision and validates a publisher parity row plus native inference smoke case on the device before reporting the runtime installed. Native compatibility does not equal semantic qualification. Until a CrownKeep decision category passes the explicit held-out/error-rate/resource gate, Julia decisions run only in optional local shadow mode and cannot change model routing or tool execution. Hard privacy/tool policy remains deterministic code.
+
+For iPhone image generation, CrownKeep pins a compiled palettized Core ML Stable Diffusion artifact by revision, expected compressed size and SHA-256, stages/extracts it locally, validates that Apple's Stable Diffusion pipeline can load the resources, and exposes `image.generate` only when the runtime is Ready and Local Image Generation is ON. Generation uses the local Core ML pipeline; there is no Image Playground or hidden cloud image fallback.
+
+Web-search/page-read failures remain separate from model-provider health. In particular, an HTTP 403 from one selected webpage is a tool/source failure and must not be reported as Apple local-model failure when the model itself remains healthy.
+
+### Consequences
+
+- iPhone base-install size stays smaller; Julia (~624 MB model/tokenizer package) and image generation (~1.57 GB compressed archive plus staging/on-disk overhead) are opt-in.
+- The device needs network access only for the explicit model download; installed inference/generation is designed to work locally/offline.
+- Downloads and physical runtime behavior still require actual iPhone acceptance. Do not claim background/resumable downloads, production Julia semantic quality, or acceptable image memory/thermal behavior until measured.
+- After this physical acceptance package, the next repository milestone is the branch-flattening/squash review before account/login/sync work.
