@@ -1,4 +1,5 @@
 import type { ImageCapabilities } from '../images/imageCapabilities.ts'
+import type { DecisionRequest, DecisionResult, DecisionStatus } from '../decision/DecisionEngine.ts'
 import type { NativeSpeechBridge } from '../speech/SpeechInputProvider.ts'
 import type {
   ChatMessageInput,
@@ -72,9 +73,19 @@ export interface NativeChatChunk {
 export interface NativeAIHost {
   readonly images?: {
     status(): Promise<Partial<ImageCapabilities>>
+    install?(): Promise<Partial<ImageCapabilities>>
+    remove?(): Promise<Partial<ImageCapabilities>>
     understand?(dataUrl: string, prompt: string): Promise<string>
     recognize(dataUrl: string): Promise<string>
     generate(prompt: string): Promise<string>
+  }
+
+  readonly decision?: {
+    status(): Promise<DecisionStatus>
+    install?(): Promise<DecisionStatus>
+    remove?(): Promise<DecisionStatus>
+    decide(request: DecisionRequest): Promise<DecisionResult>
+    release(): Promise<void>
   }
 
   readonly speech?: NativeSpeechBridge
