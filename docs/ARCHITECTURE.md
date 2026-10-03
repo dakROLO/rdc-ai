@@ -1,5 +1,11 @@
 # CrownKeep — Architecture
 
+## Current implementation boundary — 2026-09-30
+
+The system view includes planned components. `AuthProvider` and `SyncProvider` remain contracts, with no working sign-in/sync backend. Windows chat uses installed System Foundry; iPhone chat uses the native Apple Foundation Models host. Older SDK/PWA descriptions below describe earlier milestones.
+
+[Daily-use completion plan](DAILY-USE-COMPLETION-PLAN.md) now prioritizes iOS tool reliability before native account adapters and encrypted continuity. Native Apple automatic-tool evidence must reach the shared message contract with bounded text, outcomes and prompt activity; shared policy/TypeScript loop limits alone do not prove native enforcement. Account, sync consent, local inference and Web Access remain independent states. Synced data needs account isolation, durable outbox/tombstones and a completed key/enrollment ADR before production implementation.
+
 ## System view
 
 ```mermaid

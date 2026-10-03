@@ -4,26 +4,18 @@ This roadmap is outcome-based. A sprint ends when its exit criteria are met, not
 
 Visual summary: `public/crownkeep-sprints.svg`. The same asset is rendered in the repository README and inside CrownKeep.
 
-## Current handoff — Windows checkpoint to iPhone
+## Current execution order — 2026-09-30
 
-The Windows local-platform convergence checkpoint is approved for squash merge to `main`.
+Detailed assessment, implementation packages and physical exit gates: [Daily-use completion plan](DAILY-USE-COMPLETION-PLAN.md).
 
-Accepted for the checkpoint:
+1. **4A.4N — ACTIVE:** finish iOS Web Search/Web Read, intent resolution, visible activity/errors, bounded native execution and retained evidence/citations.
+2. **4A.4O — NEXT:** small daily-use pass: actual opt-in project conversation recall, backup/restore, draft resilience and build/icon/map freshness.
+3. **4B.1–4B.2 — NEXT AFTER PHONE TOOLS:** same-account native Entra sign-in and protected API. Authentication is currently a contract only.
+4. **5.1–5.3 — PLANNED, PRIORITIZED:** key/enrollment ADR, encrypted iPhone/Windows continuity, offline conflicts/deletion/recovery, seven-day personal pilot. Sync is currently a contract only.
 
-- Quick and Balanced local-role operation on the primary Windows laptop;
-- role-aware watchdogs and recovery;
-- native direct keyless Web Search/Web Read privacy boundary;
-- compact unified runtime/status UI;
-- CrownKeep facelift v1.
+Preserve existing sprint identifiers; this order supersedes older sequential “next” labels below. Bring essential storage/update/backup checks forward from 4A.5/7.x. AVD, Deep, public installer release, cloud escalation and broad image/MCP/RAG work remain later and do not gate personal two-device daily use. Local chat remains usable without login/Azure; sign-in is separate from sync consent and cloud reasoning.
 
-Carry-forward, non-blocking items:
-
-- tune natural-language web-intent detection so Web Access ON better matches user expectations without forcing every local question onto the network;
-- continue physical validation of retained web evidence across Quick, Balanced, and Apple Foundation Models;
-- monitor rare Foundry stream transport errors after model switches;
-- Deep remains unqualified.
-
-**Next active physical work:** iPhone Web Access + retained-context testing on Rolo15. AVD validation can follow the shared Windows/iPhone bug pass.
+Windows Quick/Balanced and basic Rolo15 chat/dictation/persistence have recorded physical evidence. iPhone web-tool quality and cross-device continuity are not accepted. The Windows checkpoint has prior merge approval, but this planning change does not merge, tag or delete anything. Dated history below is retained for scope/evidence; current ordering is above.
 
 ---
 
@@ -385,7 +377,7 @@ Remaining acceptance:
 
 ---
 
-### Sprint 4A.5 — Stable desktop storage + installer proof — **NEXT**
+### Sprint 4A.5 — Stable desktop storage + installer proof — **LATER; ESSENTIAL DATA CHECKS PULLED FORWARD**
 
 **Outcome:** CrownKeep behaves like an installed Windows product rather than a development web origin.
 
@@ -614,6 +606,8 @@ Exit criteria:
 - no customer portal, Blueprint, dashboard, customer, or operational data is connected.
 
 ## Later / deliberately unscheduled
+
+The current priority section and daily-use plan supersede older exclusions for implemented read-only web tools, dictation and the explicitly scheduled local conversation-recall slice. Broad document ingestion, autonomous agents and production RDC data remain deferred.
 
 - real RDC Context API integration;
 - RAG/vector search;

@@ -1,8 +1,18 @@
 # CrownKeep — Current Status
 
-**Updated:** 2026-09-28
+**Updated:** 2026-09-30
 
-## Current — Sprint 4A.4 local convergence + Web Access foundation
+## Current — daily-use completion priority
+
+Authoritative next-work order: [Daily-use completion plan](DAILY-USE-COMPLETION-PLAN.md).
+
+- **Active: 4A.4N — reliable iOS tools.** Native web tools are implemented; iPhone retrieval, sources, retained evidence and failure/cancellation acceptance remain open. Swift automatic-tool activity stores source links without retained text and emits activity after generation; close this gap first.
+- **Then: 4A.4O — focused daily workflow.** Real opt-in project-scoped local recall, backup/restore, draft resilience and installed build/icon/map freshness.
+- **Next: 4B.1–4B.2 account login/API, then 5.1–5.3 encrypted iPhone/Windows sync.** AuthProvider and SyncProvider are currently interfaces only. Login and sync are planned, not implemented.
+- **Daily-use gate:** dependable phone tools and same-account encrypted two-device handoff with offline/conflict/recovery behavior, followed by a seven-day personal pilot.
+- AVD, Deep, public installer distribution, cloud reasoning and broad multimodal work do not block this personal milestone. RDC remains an optional future configured source; no production data connection.
+- Planning-change verification: 42/42 existing unit tests, lint and TypeScript/production build passed after installing locked dependencies; SVG XML parsed and rendered for visual review; `git diff --check` passed. Native iOS/Windows compilation and physical acceptance were not run.
+- This assessment changed docs and the bundled SVG only. It did not physically test either user device, merge main or delete branches. Historical implementation/acceptance entries below are retained as dated evidence and do not supersede this priority.
 
 ## Windows convergence cutoff — 2026-09-28
 
@@ -70,7 +80,7 @@ The Windows checkpoint is approved to land on `main` and the next physical works
 - Windows dictation now follows the installed System Foundry alias/service path and restores the chat alias after transcription. The old Rust SDK dictation command is no longer exposed to the webview.
 - Registered local-search and URL-read tools provide a small local-agent proof while preserving the selected Apple Foundation Models provider. Image analysis and native Foundation Models automatic tool-calling remain physical/iOS follow-up evidence, not claimed complete.
 
-## Active phase
+## Historical phase snapshot (superseded by current priority above)
 
 Phase 4A — Windows Product Host
 
@@ -116,9 +126,9 @@ Close Sprint 2.1 after confirming:
 - refreshing preserves the correct user/assistant message order;
 - stopping or failing a Foundry response does not corrupt the conversation.
 
-## Current blockers
+## Historical blockers snapshot
 
-None identified.
+No blockers were identified at that earlier checkpoint; current daily-use blockers are listed above.
 
 ## Validation evidence
 

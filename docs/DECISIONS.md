@@ -686,3 +686,15 @@ CrownKeep does not send whole conversations, local knowledge bases, files, attac
 - Direct URL reading remains independent of search discovery.
 - The provider-neutral `WebSearchTool` contract remains replaceable later without changing conversation/model architecture.
 
+
+
+## ADR-0031 — Prioritize iOS tools and encrypted daily continuity
+
+**Status:** Accepted sequencing; implementation/physical acceptance pending
+**Date:** 2026-09-30
+
+The user prioritizes dependable iOS tools, then account login and iPhone/Windows synchronization. Execute 4A.4N and a narrow 4A.4O daily-use pass, then 4B.1–4B.2 and 5.1–5.3 as specified in [the daily-use plan](DAILY-USE-COMPLETION-PLAN.md).
+
+Bring essential backup/update-storage checks forward. AVD, Deep qualification, broad multimodal work, public installer release and cloud reasoning do not block the personal two-device milestone. Preserve local operation without Azure, explicit sync opt-in, client-side encryption and a provider-neutral conversation. Sign-in does not enable web tools, upload old history or select cloud inference. Native auth adapters must fit the actual WKWebView/Tauri hosts.
+
+Sync key hierarchy, enrollment/recovery and persistence remain design decisions for 5.1; this ADR does not select a cryptographic protocol or claim sync exists. Real RDC data stays disconnected and any later RDC integration is one configured knowledge source.

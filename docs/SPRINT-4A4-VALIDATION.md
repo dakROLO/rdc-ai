@@ -1,7 +1,7 @@
 # Sprint 4A.4 — System Foundry Convergence Validation
 
 **Branch:** `sprint-4a3-local-platform-convergence`  
-**Status:** Local Windows/Rolo15 convergence baseline physically proven as recorded below; native direct Web Access implemented and automated-validated; Windows/Rolo15/AVD Web physical acceptance still required.
+**Status:** Recorded Windows and basic Rolo15 chat/dictation/persistence baseline accepted; Windows web retrieval recorded functional in STATUS; iPhone web grounding and AVD acceptance remain open. Current priority: [4A.4N daily-use tool matrix](DAILY-USE-COMPLETION-PLAN.md#package-1--4a4n-ios-tools-that-can-be-trusted). Historical entries below are dated evidence, not current blockers/order.
 
 
 ## 4A.4K–4M — provider-neutral Web Access + keyless DuckDuckGo transport — 2026-09-28

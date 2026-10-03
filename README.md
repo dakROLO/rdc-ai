@@ -10,6 +10,8 @@ The product is designed around one durable conversation experience that can use 
 
 ![CrownKeep Sprint Roadmap](public/crownkeep-sprints.svg)
 
+Current completion path: [iOS tools → account sign-in → encrypted iPhone/Windows sync](docs/DAILY-USE-COMPLETION-PLAN.md). The map distinguishes validated foundations from capabilities still awaiting implementation or device acceptance.
+
 The visual above is shared with the CrownKeep app. Detailed sprint definitions and exit criteria live in [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Current status
