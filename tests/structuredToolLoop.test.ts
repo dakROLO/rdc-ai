@@ -152,3 +152,75 @@ test('structured loop returns ordinary local text without using web for a local 
   assert.equal(webExecutions, 0)
 })
 
+
+
+test('structured loop rewrites a generic model web query to the resolved conversation topic', async () => {
+  const registry = new ToolRegistry()
+  registry.setPolicy({ webAccess: 'on' })
+  let executedQuery = ''
+
+  registry.register({
+    id: 'web.search',
+    name: 'Web Search',
+    description: 'Search current public information.',
+    requiresNetwork: true,
+    access: 'read',
+    inputSchema: {
+      type: 'object',
+      properties: { query: { type: 'string' } },
+      required: ['query'],
+    },
+    isAvailable: async () => true,
+    execute: async ({ query }: { query: string }) => {
+      executedQuery = query
+      return {
+        text: 'Current iPhone result',
+        metadata: {
+          dataLeftDevice: true,
+          sources: [{ url: 'https://example.com/iphone' }],
+        },
+      }
+    },
+  })
+
+  const provider: AIProvider = {
+    id: 'local-query-proof',
+    displayName: 'Local query proof',
+    location: 'local',
+    getAvailability: async () => ({ available: true }),
+    listModels: async () => [{ id: 'proof', displayName: 'Proof' }],
+    async *streamChat(request: ChatRequest) {
+      const hasToolOutput = request.messages.some((message) => message.role === 'tool')
+      if (!hasToolOutput) {
+        yield {
+          text: '',
+          toolCallDeltas: [{
+            index: 0,
+            id: 'call-context',
+            name: 'crownkeep_web_search',
+            arguments: '{"query":"can you check online?"}',
+          }],
+        }
+        return
+      }
+      yield { text: 'Grounded answer.', done: true }
+    },
+  }
+
+  let output = ''
+  for await (const chunk of streamStructuredToolLoop({
+    provider,
+    request: {
+      modelId: 'proof',
+      messages: [{ role: 'user', content: 'can you check online?' }],
+    },
+    registry,
+    webSearchContext: 'search the web for Tell me what you know about the newest iPhone announced by Apple.',
+  })) {
+    output += chunk.text
+  }
+
+  assert.match(executedQuery, /newest iPhone announced by Apple/i)
+  assert.doesNotMatch(executedQuery, /check online/i)
+  assert.equal(output, 'Grounded answer.')
+})
