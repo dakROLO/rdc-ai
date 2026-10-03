@@ -19,7 +19,7 @@
 		AB0000000000000000000001 /* JuliaDecisions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000000011 /* JuliaDecisions.swift */; };
 		AB0000000000000000000002 /* CrownKeepOptionalModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000000012 /* CrownKeepOptionalModels.swift */; };
 		AB0000000000000000000004 /* StableDiffusion in Frameworks */ = {isa = PBXBuildFile; productRef = AB0000000000000000000110 /* StableDiffusion */; };
-		AB0000000000000000000005 /* Tokenizers in Frameworks */ = {isa = PBXBuildFile; productRef = AB0000000000000000000111 /* Tokenizers */; };
+		AB0000000000000000000005 /* Transformers in Frameworks */ = {isa = PBXBuildFile; productRef = AB0000000000000000000111 /* Transformers */; };
 		AB0000000000000000000006 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = AB0000000000000000000112 /* ZIPFoundation */; };
 /* End PBXBuildFile section */
 
@@ -46,7 +46,7 @@
 				AA0000000000000000000003 /* FoundationModels.framework in Frameworks */,
 				AA0000000000000000000008 /* WebKit.framework in Frameworks */,
 				AB0000000000000000000004 /* StableDiffusion in Frameworks */,
-				AB0000000000000000000005 /* Tokenizers in Frameworks */,
+				AB0000000000000000000005 /* Transformers in Frameworks */,
 				AB0000000000000000000006 /* ZIPFoundation in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -114,7 +114,7 @@
 			name = CrownKeepNative;
 			packageProductDependencies = (
 				AB0000000000000000000110 /* StableDiffusion */,
-				AB0000000000000000000111 /* Tokenizers */,
+				AB0000000000000000000111 /* Transformers */,
 				AB0000000000000000000112 /* ZIPFoundation */,
 			);
 			productName = CrownKeepNative;
@@ -221,10 +221,10 @@
 			package = AB0000000000000000000100 /* XCRemoteSwiftPackageReference "ml-stable-diffusion" */;
 			productName = StableDiffusion;
 		};
-		AB0000000000000000000111 /* Tokenizers */ = {
+		AB0000000000000000000111 /* Transformers */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = AB0000000000000000000101 /* XCRemoteSwiftPackageReference "swift-transformers" */;
-			productName = Tokenizers;
+			productName = Transformers;
 		};
 		AB0000000000000000000112 /* ZIPFoundation */ = {
 			isa = XCSwiftPackageProductDependency;
