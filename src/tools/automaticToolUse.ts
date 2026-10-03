@@ -25,7 +25,7 @@ export interface AutomaticToolResult {
 const MAX_TOOL_CALLS = 3
 const URL_PATTERN = /https?:\/\/[^\s<>()]+/i
 
-function minimalSearchQuery(prompt: string): string {
+export function minimalSearchQuery(prompt: string): string {
   return prompt
     .replace(URL_PATTERN, ' ')
     .replace(
@@ -36,6 +36,21 @@ function minimalSearchQuery(prompt: string): string {
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 320)
+}
+
+export function isGenericWebFollowUp(prompt: string): boolean {
+  const normalized = prompt
+    .trim()
+    .toLowerCase()
+    .replace(/[.!?]+$/g, '')
+    .replace(/^please\s+/, '')
+    .replace(/^(?:can|could|would)\s+you\s+(?:please\s+)?/, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  return /^(?:look\s+(?:(?:it|that)\s+)?up(?:\s+online)?|search(?:\s+(?:the\s+)?(?:web|internet|online))?(?:\s+for)?\s*(?:it|that)?|check(?:\s+(?:it|that))?(?:\s+(?:online|the\s+web|internet))?|find\s+(?:it|that)(?:\s+online)?)$/.test(
+    normalized,
+  )
 }
 
 export function promptNeedsCurrentWeb(prompt: string): boolean {
@@ -187,8 +202,9 @@ export async function runAutomaticReadOnlyTools(
 /** Resolve only the immediately preceding explicit user request. Never use
  * assistant guesses, OCR, attached files, or retained evidence as a web query. */
 export function resolveWebPrompt(prompt: string, messages: Array<{ role: string; content: string; excludedFromContext?: boolean; attachments?: unknown[] }>): string {
-  if (!/^(?:please\s+)?(?:look (?:it|that) up(?: online)?|search (?:for )?(?:it|that)|check (?:it|that) online)[.!?]*$/i.test(prompt)) return prompt
+  if (!isGenericWebFollowUp(prompt)) return prompt
   const previous = [...messages].reverse().find((item) => item.role === 'user' && !item.excludedFromContext)
   if (!previous || previous.attachments?.length || previous.content.includes('BEGIN IMAGE TEXT')) return prompt
-  return `search the web for ${minimalSearchQuery(previous.content)}`
+  const subject = minimalSearchQuery(previous.content)
+  return subject ? `search the web for ${subject}` : prompt
 }
