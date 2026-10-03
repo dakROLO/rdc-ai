@@ -2652,9 +2652,49 @@ ${image.extractedText}
             <span className="status-dot" aria-hidden="true" />
             <strong>{glanceState}</strong>
           </div>
-          <div className="keep-status-item">
-            <span>Role</span>
-            <strong>{glanceRole ?? '—'}</strong>
+          <div className="keep-status-mode" role="group" aria-label="Model mode">
+            {selectedProviderId === 'foundry-local' && localRuntimeManager.mode === 'embedded'
+              ? (['Quick', 'Balanced', 'Deep'] as ChatModelRole[]).map((role) => {
+                  const winner = modelRoleTarget(role)
+                  const active = activeChatRole === role
+                  return (
+                    <button
+                      type="button"
+                      key={role}
+                      className={active ? 'active' : ''}
+                      aria-pressed={active}
+                      disabled={
+                        !winner ||
+                        isGenerating ||
+                        speechBusy ||
+                        isRuntimeActionRunning ||
+                        isRuntimeCheckRunning
+                      }
+                      title={
+                        winner
+                          ? `${role} · ${winner.alias} · ${winner.executionProvider ?? winner.device ?? 'Default'}`
+                          : role === 'Quick'
+                            ? 'Cached Quick model is not available'
+                            : `Benchmark ${CHAT_ROLE_LABELS[role]} first`
+                      }
+                      onClick={() => void switchModelRole(role)}
+                    >
+                      {CHAT_ROLE_LABELS[role]}
+                    </button>
+                  )
+                })
+              : (['Quick', 'Balanced', 'Deep'] as ChatModelRole[]).map((role) => (
+                  <button
+                    type="button"
+                    key={role}
+                    className={role === 'Quick' ? 'active' : ''}
+                    aria-pressed={role === 'Quick'}
+                    disabled
+                    title={role === 'Quick' ? 'Current device model mode' : 'Not available on this device'}
+                  >
+                    {CHAT_ROLE_LABELS[role]}
+                  </button>
+                ))}
           </div>
           <div className="keep-status-boundary">
             <span>{selectedProvider.location === 'local' ? 'Inside the Keep' : 'Cloud model'}</span>
@@ -2910,47 +2950,6 @@ ${image.extractedText}
                   </button>
                 </div>
 
-                {selectedProviderId === 'foundry-local' &&
-                  localRuntimeManager.mode === 'embedded' && (
-                    <div className="model-mode-control" aria-label="Measured model mode">
-                      <div className="model-mode-copy">
-                        <strong>Model mode</strong>
-                        <span>Quick starts by default. Balanced and Deep use their measured winners.</span>
-                      </div>
-                      <div className="model-mode-segments" role="group" aria-label="Model mode">
-                        {(['Quick', 'Balanced', 'Deep'] as ChatModelRole[]).map((role) => {
-                          const winner = modelRoleTarget(role)
-                          const active = activeChatRole === role
-                          return (
-                            <button
-                              type="button"
-                              key={role}
-                              className={active ? 'active' : ''}
-                              aria-pressed={active}
-                              disabled={
-                                !winner ||
-                                isGenerating ||
-                                speechBusy ||
-                                isRuntimeActionRunning ||
-                                isRuntimeCheckRunning
-                              }
-                              title={
-                                winner
-                                  ? `${winner.alias} · ${winner.executionProvider ?? winner.device ?? 'Default'}`
-                                  : role === 'Quick'
-                                    ? 'Cached Quick model is not available'
-                                    : `Benchmark ${CHAT_ROLE_LABELS[role]} first`
-                              }
-                              onClick={() => void switchModelRole(role)}
-                            >
-                              {CHAT_ROLE_LABELS[role]}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-
                 <div className="web-access-setting">
                   <div>
                     <strong>Web Access · {webAccess.toUpperCase()}</strong>
@@ -2974,13 +2973,6 @@ ${image.extractedText}
                   </button>
                 </div>
 
-                {(selectedProviderId !== 'foundry-local' || localRuntimeManager.mode !== 'embedded') && <div className="model-mode-control" aria-label="Model mode">
-                  <strong>Model mode</strong><div className="model-mode-segments">
-                    <button type="button" aria-pressed="true" disabled>Quick</button>
-                    <button type="button" disabled title="Not available on this device">Balanced</button>
-                    <button type="button" disabled title="Not available on this device">Deep</button>
-                  </div>
-                </div>}
                 <button type="button" className="secondary-button" onClick={() => setShowPromptInspector(true)}>System Prompt / Prompt &amp; Context</button>
                 <details><summary>Knowledge</summary><p>Local knowledge stays on this device. Current search includes CrownKeep reference notes only; personal file ingestion is not enabled.</p></details>
                 <details className="diagnostics-disclosure">
@@ -3331,7 +3323,7 @@ ${image.extractedText}
               </span>
               <div className="composer-actions">
                 <button type="button" className="secondary-button" aria-label="Attach or create image" onClick={() => setShowImages(true)} disabled={isGenerating || toolBusy || speechBusy}>＋ Image</button>
-                <DictationControl disabled={isGenerating || isRuntimeActionRunning || isRuntimeCheckRunning || !activeConversation}
+                <DictationControl compact disabled={isGenerating || isRuntimeActionRunning || isRuntimeCheckRunning || !activeConversation}
                   conversationId={activeConversation?.id} refreshKey={providerRefreshNonce}
                   onBusy={setSpeechBusy} onText={(text) => setPrompt((value) => value ? `${value} ${text}` : text)} />
                 {isGenerating ? (
