@@ -532,3 +532,11 @@ The next capability layer should reuse this same ToolRegistry/policy/result-meta
 - image generation remains a provider-neutral tool;
 - any cloud image generation must expose an explicit visible boundary;
 - images/prompts must not be silently uploaded.
+
+## October 3 — Request diagnostics and image adapters
+
+`PromptInspector` holds a session-only request snapshot; provider callbacks capture structured-loop rounds and the Apple host reports flattened instructions/prompt. `requestBudget.ts` preserves current/system messages, bounds newest history and reports omissions. Apple web prefetch uses shared registry/native transport before generation; bounded evidence persists in tool activity.
+
+`ImageWorkbench` prepares a bounded preview, invokes native Vision or bundled Tesseract OCR and requires editable review before attaching text to a user message. `Message.attachments` persists previews/text in existing IndexedDB records. Models receive extracted text, not image pixels. Native generation uses explicit Image Playground presentation or `crownkeep_generate_image` with loopback-only URL validation, no proxy/redirect, finite timeout and bounded response. No image data or chat context is automatically sent to web search. Image payload sync/encryption limits must be designed before account sync ships.
+
+Mac browser development selects the existing Foundry provider and loopback Vite proxy; it does not imply native Mac feature parity.

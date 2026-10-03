@@ -698,3 +698,12 @@ The user prioritizes dependable iOS tools, then account login and iPhone/Windows
 Bring essential backup/update-storage checks forward. AVD, Deep qualification, broad multimodal work, public installer release and cloud reasoning do not block the personal two-device milestone. Preserve local operation without Azure, explicit sync opt-in, client-side encryption and a provider-neutral conversation. Sign-in does not enable web tools, upload old history or select cloud inference. Native auth adapters must fit the actual WKWebView/Tauri hosts.
 
 Sync key hierarchy, enrollment/recovery and persistence remain design decisions for 5.1; this ADR does not select a cryptographic protocol or claim sync exists. Real RDC data stays disconnected and any later RDC integration is one configured knowledge source.
+
+## 2026-10-03 — Prompt transparency, deterministic Apple grounding and scoped images
+
+- Expose the last CrownKeep request locally, including exact Apple flattened instructions/prompt. Session-only snapshots; no routine content logging or uploads; provider-owned hidden instructions are outside this view.
+- Default Apple web grounding uses the existing bounded shared prefetch path, supplying retrieval text before generation and retaining it for later turns. Web OFF prohibits new retrieval, not use of saved evidence. Pronoun queries require editable review; OCR text does not drive automatic searches.
+- Preserve instructions/current request under conservative character budgets, keeping newest eligible history. Bound output and reconcile actual loaded chat state rather than inferring it from API model listings.
+- Image reading is reviewed local OCR, not pixel-aware reasoning. Bundle English browser OCR assets. Apple generation is an explicit capability-gated Image Playground sheet; Windows generation is an explicit loopback-only WebUI adapter. No implicit cloud fallback or whole-chat upload.
+- Canonical full vector mark generates opaque 1024px iOS and PWA PNGs. Normal update installation preserves history. Browser local Foundry is the first Apple Silicon Mac path; native Mac packaging is separate.
+- These repairs do not implement login/sync or prove physical acceptance. See repair matrix and Mac quickstart.

@@ -56,7 +56,7 @@ async fn mutation(args:Vec<String>,detail:String)->Result<ActionResult,String>{t
 #[tauri::command] pub async fn crownkeep_system_foundry_stop()->Result<ActionResult,String>{mutation(vec!["server".into(),"stop".into()],"Stopped System Foundry.".into()).await}
 #[tauri::command] pub async fn crownkeep_system_foundry_install_model(model_id:String)->Result<ActionResult,String>{mutation(vec!["model".into(),"download".into(),model_id.clone()],format!("System Foundry downloaded alias '{model_id}'.")).await}
 async fn unload_other_loaded_models(target:&str)->Result<(),String>{
-    let loaded=variants(vec!["model","list","--loaded","--variants","--output","json"]).await.unwrap_or_default();
+    let loaded=variants(vec!["model","list","--loaded","--variants","--output","json"]).await?;
     let mut aliases=loaded.into_iter().filter_map(|v|{
         if v.alias.eq_ignore_ascii_case(target) || v.variant_id.eq_ignore_ascii_case(target) || v.variant_name.eq_ignore_ascii_case(target) { None } else { Some(v.alias) }
     }).collect::<Vec<_>>();

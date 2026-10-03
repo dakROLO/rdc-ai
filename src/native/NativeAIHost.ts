@@ -60,6 +60,7 @@ export interface NativeChatRequest {
 }
 
 export interface NativeChatChunk {
+  promptSnapshot?: { instructions: string; prompt: string }
   text: string
   done?: boolean
   usage?: TokenUsage
@@ -67,6 +68,12 @@ export interface NativeChatChunk {
 }
 
 export interface NativeAIHost {
+  readonly images?: {
+    status(): Promise<{ ocrAvailable: boolean; generationAvailable: boolean }>
+    recognize(dataUrl: string): Promise<string>
+    generate(prompt: string): Promise<string>
+  }
+
   readonly speech?: NativeSpeechBridge
   readonly web?: NativeWebBridge
   readonly platform: 'ios'

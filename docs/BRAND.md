@@ -54,3 +54,7 @@ Runtime V1 assets live under `public/brand/crownkeep-facelift/`.
 - `crownkeep-knowledge-mark.png` — future knowledge-source/onboarding accent.
 
 A final clean SVG redraw of the selected geometric C/crown mark remains desirable, but is not required for the current cross-platform testing checkpoint.
+
+## October 3 icon source correction
+
+`public/icons/crownkeep-ios-1024.png` is the opaque full-square iOS icon rendered from the canonical `public/crownkeep-mark.svg`. Device build and CI copy this file into the generated asset catalog. The earlier facelift app-icon PNG is no longer the iPhone build source. PWA 192/512 PNGs use the same mark; desktop preparation still renders the canonical vector. Verify the installed icon/build without deleting app data.

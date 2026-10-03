@@ -28,7 +28,16 @@ export interface Conversation {
   projectId?: string
 }
 
+export interface ImageAttachment {
+  id: string
+  name: string
+  dataUrl: string
+  extractedText: string
+  kind: 'selected' | 'generated'
+}
+
 export interface Message {
+  attachments?: ImageAttachment[]
   id: string
   conversationId: string
   role: MessageRole

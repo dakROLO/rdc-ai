@@ -87,6 +87,7 @@ export class AppleFoundationModelsProvider implements AIProvider {
         queue.push({
           value: {
             text: chunk.text,
+            promptSnapshot: chunk.promptSnapshot,
             done: chunk.done,
             usage: chunk.usage,
             toolActivities: chunk.toolActivities,

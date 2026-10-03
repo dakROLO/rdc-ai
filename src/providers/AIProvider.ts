@@ -54,6 +54,8 @@ export interface ChatMessageInput {
 }
 
 export interface ChatRequest {
+  /** Device-local diagnostic callback; never serialized or sent to the service. */
+  onRequestSnapshot?: (messages: ChatMessageInput[]) => void
   modelId: string
   messages: ChatMessageInput[]
   maxTokens?: number
@@ -70,6 +72,7 @@ export interface TokenUsage {
 }
 
 export interface ChatChunk {
+  promptSnapshot?: { instructions: string; prompt: string }
   text: string
   done?: boolean
   usage?: TokenUsage

@@ -141,3 +141,7 @@ foundry model unload phi-4-mini
 ```
 
 Downloaded model files remain in the Foundry cache, so unloading or stopping the server does not require re-downloading the model next time.
+
+### Current daily-use repair handoff
+
+See [iOS/Windows repair validation](docs/IOS-WINDOWS-REPAIR-VALIDATION.md) for prompt inspection, web context, icon, images and Balanced acceptance. [Apple Silicon Mac quickstart](docs/MAC-QUICKSTART.md) provides the local browser/Foundry path. Account login and encrypted device sync remain planned.

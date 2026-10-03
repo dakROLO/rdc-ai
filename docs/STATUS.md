@@ -1,18 +1,18 @@
 # CrownKeep — Current Status
 
-**Updated:** 2026-09-30
+**Updated:** 2026-10-03
 
-## Current — daily-use completion priority
+## Current — daily-use repairs and completion priority
 
-Authoritative next-work order: [Daily-use completion plan](DAILY-USE-COMPLETION-PLAN.md).
+Authoritative order: [Daily-use completion plan](DAILY-USE-COMPLETION-PLAN.md). Implementation and device acceptance matrix: [iOS/Windows repair validation](IOS-WINDOWS-REPAIR-VALIDATION.md).
 
-- **Active: 4A.4N — reliable iOS tools.** Native web tools are implemented; iPhone retrieval, sources, retained evidence and failure/cancellation acceptance remain open. Swift automatic-tool activity stores source links without retained text and emits activity after generation; close this gap first.
-- **Then: 4A.4O — focused daily workflow.** Real opt-in project-scoped local recall, backup/restore, draft resilience and installed build/icon/map freshness.
-- **Next: 4B.1–4B.2 account login/API, then 5.1–5.3 encrypted iPhone/Windows sync.** AuthProvider and SyncProvider are currently interfaces only. Login and sync are planned, not implemented.
-- **Daily-use gate:** dependable phone tools and same-account encrypted two-device handoff with offline/conflict/recovery behavior, followed by a seven-day personal pilot.
-- AVD, Deep, public installer distribution, cloud reasoning and broad multimodal work do not block this personal milestone. RDC remains an optional future configured source; no production data connection.
-- Planning-change verification: 42/42 existing unit tests, lint and TypeScript/production build passed after installing locked dependencies; SVG XML parsed and rendered for visual review; `git diff --check` passed. Native iOS/Windows compilation and physical acceptance were not run.
-- This assessment changed docs and the bundled SVG only. It did not physically test either user device, merge main or delete branches. Historical implementation/acceptance entries below are retained as dated evidence and do not supersede this priority.
+- **Active: 4A.4N / focused 4A.4O repairs.** Prompt & context inspector, Apple deterministic web prefetch with retained evidence, bounded requests, canonical opaque icon, reviewed local image OCR, explicit image generation adapters, and safer Balanced limits are implemented locally. Physical iOS/Windows acceptance remains open; the Windows screenshot establishes a ~45s pre-response timeout, not its root cause.
+- **Images:** Apple Vision / bundled Tesseract OCR plus preview persistence; Apple Image Playground sheet / Windows loopback WebUI generation. General image understanding is not implemented. Platform sheet generation is not universally guaranteed device-local.
+- **Mac:** [Apple Silicon browser quickstart](MAC-QUICKSTART.md) and local Foundry launcher added. Native Mac packaging and cross-device sync remain separate work.
+- **Then: complete daily workflow acceptance:** actual opt-in local recall, backup/restore, draft resilience and physical repair matrix.
+- **Next: 4B.1–4B.2 account login/API, then 5.1–5.3 encrypted iPhone/Windows sync.** AuthProvider and SyncProvider remain interfaces only. Neither login nor sync is implemented.
+- **Daily-use gate:** dependable phone tools and same-account encrypted two-device handoff with offline/conflict/recovery behavior, followed by a seven-day pilot.
+- Shared production build, lint, 45 unit tests and 5 browser flows pass (alternate local Chromium runtime). Browser flows cover mobile dictation/layout, retained web evidence and editable query review, image review/persistence, and real OCR using bundled assets with no CDN requests. Offline English OCR smoke test also passed. Native compilation and device acceptance cannot run in this Linux environment. These local changes have not been published, merged or installed on the user's devices.
 
 ## Windows convergence cutoff — 2026-09-28
 

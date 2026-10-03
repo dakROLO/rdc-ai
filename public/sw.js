@@ -1,4 +1,4 @@
-const CACHE_NAME = 'crownkeep-shell-v3'
+const CACHE_NAME = 'crownkeep-shell-v4'
 const CORE_SHELL = [
   '/',
   '/index.html',
@@ -6,6 +6,9 @@ const CORE_SHELL = [
   '/crownkeep-mark.svg',
   '/icons/crownkeep-192.png',
   '/icons/crownkeep-512.png',
+  '/ocr/worker.min.js',
+  '/ocr/eng.traineddata',
+  ...['', '-simd', '-lstm', '-simd-lstm'].flatMap((variant) => [`/ocr/tesseract-core${variant}.wasm.js`, `/ocr/tesseract-core${variant}.wasm`]),
 ]
 
 async function precacheApplicationShell() {

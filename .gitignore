@@ -29,3 +29,7 @@ src-tauri/gen/
 # Local browser test output
 test-results/
 playwright-report/
+
+# OCR runtime copied from pinned npm dependencies; language data is committed.
+public/ocr/*.js
+public/ocr/*.wasm

@@ -81,6 +81,8 @@ final class CrownKeepBundleSchemeHandler: NSObject, WKURLSchemeHandler {
             return "application/manifest+json"
         case "svg":
             return "image/svg+xml"
+        case "wasm":
+            return "application/wasm"
         case "png":
             return "image/png"
         case "jpg", "jpeg":

@@ -65,7 +65,7 @@ if [[ ! -f "$ROOT/dist/index.html" ]]; then
   exit 5
 fi
 
-ICON_SOURCE="$ROOT/public/brand/crownkeep-facelift/crownkeep-app-icon.png"
+ICON_SOURCE="$ROOT/public/icons/crownkeep-ios-1024.png"
 ICON_DIR="$ROOT/native/ios/CrownKeepNative/CrownKeepNative/Assets.xcassets/AppIcon.appiconset"
 ICON_OUTPUT="$ICON_DIR/AppIcon-1024.png"
 

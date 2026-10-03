@@ -12,7 +12,7 @@ export interface ChatWatchdogLimits {
 export function chatWatchdogForRole(role?: ModelRole): ChatWatchdogLimits {
   switch (role) {
     case 'Balanced':
-      return { firstTokenMs: 45_000, totalMs: 180_000 }
+      return { firstTokenMs: 90_000, totalMs: 240_000 }
     case 'Deep':
       return { firstTokenMs: 60_000, totalMs: 240_000 }
     case 'Voice':

@@ -4,7 +4,17 @@
 **Assessed branch:** `sprint-4a3-local-platform-convergence` at `59fb748`  
 **Outcome:** Use CrownKeep daily on iPhone, then continue the same work on Windows through account-based encrypted sync.
 
-## Evaluation
+## October 3 repair update — current authority
+
+The original September 30 assessment below is retained as a dated baseline. The user has moved prompt transparency, icon repair, iOS web grounding, Windows Balanced timeout and image access/generation into the immediate daily-use slice. These repairs are now implemented locally; see [implementation/device matrix](IOS-WINDOWS-REPAIR-VALIDATION.md). They are not physically accepted yet.
+
+1. Build/install the repaired iPhone and Windows apps over the existing installs. Verify build identity, full icon, exact prompt/evidence, search → restart → Web OFF follow-up, reviewed image persistence and generation boundaries.
+2. Measure Windows Balanced cold/warm behavior with actual CLI load state. The screenshot's 45s no-response abort motivated bounded 90s/240s limits and preflight reconciliation; do not declare the root cause fixed until measured.
+3. Finish useful local recall, backup/restore and draft resilience. Current image reading extracts text; general visual reasoning is separate future work.
+4. Implement account login/protected API, then encrypted enrollment/sync/recovery as the previously specified vertical slices. Keep local chat usable signed out/offline.
+5. Run the seven-day personal pilot. Wife's Apple Silicon Mac can use the [local browser launcher](MAC-QUICKSTART.md); Mac native packaging and account continuity are still pending.
+
+## September 30 baseline evaluation
 
 CrownKeep is a useful local-chat prototype with a sound shared architecture, but it is not yet a dependable two-device daily assistant. Finish the existing iPhone tool path before adding another runtime or broad agent framework. Then implement identity and encrypted continuity as small vertical slices.
 
@@ -25,7 +35,7 @@ Repository evidence and previously recorded physical acceptance are distinct fro
 
 No open GitHub issues were returned by the repository issue search during this assessment. That does not erase defects recorded in docs or reported by the user. Main and the working branch point at different commits; this plan does not merge or delete branches.
 
-## Order of work
+## Baseline order of work
 
 | Order | Existing roadmap slot | Deliverable | Exit gate |
 | --- | --- | --- | --- |

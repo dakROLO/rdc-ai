@@ -4,16 +4,16 @@ This roadmap is outcome-based. A sprint ends when its exit criteria are met, not
 
 Visual summary: `public/crownkeep-sprints.svg`. The same asset is rendered in the repository README and inside CrownKeep.
 
-## Current execution order — 2026-09-30
+## Current execution order — 2026-10-03
 
 Detailed assessment, implementation packages and physical exit gates: [Daily-use completion plan](DAILY-USE-COMPLETION-PLAN.md).
 
-1. **4A.4N — ACTIVE:** finish iOS Web Search/Web Read, intent resolution, visible activity/errors, bounded native execution and retained evidence/citations.
+1. **4A.4N — ACTIVE ACCEPTANCE:** verify repaired iOS web grounding and retained evidence on-device. Prompt inspector, reviewed image OCR/generation, icon source repair and Balanced safeguards join this immediate slice; implementation is local, physical acceptance pending. See [repair matrix](IOS-WINDOWS-REPAIR-VALIDATION.md).
 2. **4A.4O — NEXT:** small daily-use pass: actual opt-in project conversation recall, backup/restore, draft resilience and build/icon/map freshness.
 3. **4B.1–4B.2 — NEXT AFTER PHONE TOOLS:** same-account native Entra sign-in and protected API. Authentication is currently a contract only.
 4. **5.1–5.3 — PLANNED, PRIORITIZED:** key/enrollment ADR, encrypted iPhone/Windows continuity, offline conflicts/deletion/recovery, seven-day personal pilot. Sync is currently a contract only.
 
-Preserve existing sprint identifiers; this order supersedes older sequential “next” labels below. Bring essential storage/update/backup checks forward from 4A.5/7.x. AVD, Deep, public installer release, cloud escalation and broad image/MCP/RAG work remain later and do not gate personal two-device daily use. Local chat remains usable without login/Azure; sign-in is separate from sync consent and cloud reasoning.
+Preserve existing sprint identifiers; this order supersedes older sequential “next” labels below. Bring essential storage/update/backup checks forward from 4A.5/7.x. AVD, Deep, public installer release, cloud escalation and general visual reasoning/MCP/RAG work remain later and do not gate personal two-device daily use. Local chat remains usable without login/Azure; sign-in is separate from sync consent and cloud reasoning.
 
 Windows Quick/Balanced and basic Rolo15 chat/dictation/persistence have recorded physical evidence. iPhone web-tool quality and cross-device continuity are not accepted. The Windows checkpoint has prior merge approval, but this planning change does not merge, tag or delete anything. Dated history below is retained for scope/evidence; current ordering is above.
 

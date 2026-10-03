@@ -8,8 +8,8 @@ test('Balanced gets more first-token time than Quick', () => {
 
   assert.equal(quick.firstTokenMs, 20_000)
   assert.equal(quick.totalMs, 120_000)
-  assert.equal(balanced.firstTokenMs, 45_000)
-  assert.equal(balanced.totalMs, 180_000)
+  assert.equal(balanced.firstTokenMs, 90_000)
+  assert.equal(balanced.totalMs, 240_000)
   assert.ok(balanced.firstTokenMs > quick.firstTokenMs)
 })
 

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1140" viewBox="0 0 1600 1140" role="img" aria-labelledby="title desc">
 <title id="title">CrownKeep daily-use completion roadmap</title>
-<desc id="desc">Assessment September 30, 2026. Local Windows and basic iPhone chat are recorded as validated. Active priority: reliable iOS tools. Next: daily workflow and account login. Planned: encryption design, cross-device sync and recovery pilot. Authentication and sync are not implemented. AVD, Deep and broad cloud or image work come later.</desc>
+<desc id="desc">Assessment October 3, 2026. Local Windows and basic iPhone chat are recorded as validated. Active priority: reliable iOS tools. Next: daily workflow and account login. Planned: encryption design, cross-device sync and recovery pilot. Authentication and sync are not implemented. Prompt, icon, image OCR/generation and Balanced repairs are implemented locally; physical acceptance is pending.</desc>
 <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#030916"/><stop offset="1" stop-color="#0B213B"/></linearGradient>
 <style>
 .title{font:700 44px 'Segoe UI',Arial,sans-serif;fill:#EEF6FF}.sub{font:400 21px 'Segoe UI',Arial,sans-serif;fill:#AAC0DA}.label{font:700 15px 'Segoe UI',Arial,sans-serif;letter-spacing:1px}.head{font:700 25px 'Segoe UI',Arial,sans-serif;fill:#EEF6FF}.body{font:400 18px 'Segoe UI',Arial,sans-serif;fill:#BDD0E5}.gate{font:600 16px 'Segoe UI',Arial,sans-serif;fill:#EEF6FF}.foot{font:400 16px 'Segoe UI',Arial,sans-serif;fill:#AAC0DA}
@@ -8,25 +8,25 @@
 <rect width="1600" height="1140" rx="32" fill="url(#bg)"/>
 <g transform="translate(60 47)"><rect width="86" height="86" rx="23" fill="#071426" stroke="#1558D6" stroke-width="3"/><path d="M21 31 L28 18 L43 29 L57 18 L65 31 L62 42 H24 Z" fill="#38D8FF"/><path d="M61 54 A24 24 0 1 0 61 73" fill="none" stroke="#EEF6FF" stroke-width="9"/></g>
 <text x="172" y="83" class="title">CrownKeep · The path to daily use</text>
-<text x="172" y="122" class="sub">Private by default. Powerful by choice. · Assessment: September 30, 2026</text>
+<text x="172" y="122" class="sub">Private by default. Powerful by choice. · Assessment: October 3, 2026</text>
 <rect x="60" y="166" width="1480" height="100" rx="20" fill="#071426" stroke="#1558D6"/>
 <text x="84" y="198" class="label" fill="#38D8FF">VALIDATED FOUNDATION · RECORDED DEVICE EVIDENCE</text>
-<text x="84" y="231" class="body">Windows Quick + Balanced · iPhone local chat + dictation · shared projects + device-local history</text>
+<text x="84" y="231" class="body">Recorded: Windows Quick / Balanced · iPhone chat / dictation · new repair acceptance pending</text>
 <text x="60" y="306" class="sub">Finish phone tools first. Then sign in and continue the same work across both devices.</text>
 <g transform="translate(60 338)"><rect width="470" height="280" rx="22" fill="#071426" stroke="#D49467" stroke-width="2"/>
-<text x="24" y="35" class="label" fill="#D49467">01 · ACTIVE / 4A.4N</text><text x="24" y="76" class="head">Reliable iOS tools</text><path d="M24 94 H446" stroke="#224063"/>
-<circle cx="28" cy="123" r="3" fill="#D49467"/><text x="42" y="129" class="body">Search + read with actual sources</text>
-<circle cx="28" cy="152" r="3" fill="#D49467"/><text x="42" y="158" class="body">Resolve “look it up” follow-ups</text>
+<text x="24" y="35" class="label" fill="#D49467">01 · ACTIVE / 4A.4N</text><text x="24" y="76" class="head">Trust phone context + tools</text><path d="M24 94 H446" stroke="#224063"/>
+<circle cx="28" cy="123" r="3" fill="#D49467"/><text x="42" y="129" class="body">Inspect system prompt + exact request</text>
+<circle cx="28" cy="152" r="3" fill="#D49467"/><text x="42" y="158" class="body">Search evidence before iOS generation</text>
 <circle cx="28" cy="181" r="3" fill="#D49467"/><text x="42" y="187" class="body">Retain evidence across turns/restarts</text>
-<circle cx="28" cy="210" r="3" fill="#D49467"/><text x="42" y="216" class="body">Visible errors, progress and cancellation</text>
+<circle cx="28" cy="210" r="3" fill="#D49467"/><text x="42" y="216" class="body">Bounded calls; physical tests pending</text>
 <text x="24" y="255" class="gate">Gate: physical iPhone tool matrix passes</text></g>
 <g transform="translate(565 338)"><rect width="470" height="280" rx="22" fill="#071426" stroke="#38D8FF" stroke-width="2"/>
-<text x="24" y="35" class="label" fill="#38D8FF">02 · NEXT / 4A.4O</text><text x="24" y="76" class="head">Useful daily workflow</text><path d="M24 94 H446" stroke="#224063"/>
-<circle cx="28" cy="123" r="3" fill="#38D8FF"/><text x="42" y="129" class="body">Real opt-in project conversation recall</text>
-<circle cx="28" cy="152" r="3" fill="#38D8FF"/><text x="42" y="158" class="body">Dictate, review, draft and reopen</text>
-<circle cx="28" cy="181" r="3" fill="#38D8FF"/><text x="42" y="187" class="body">Backup / restore before data changes</text>
-<circle cx="28" cy="210" r="3" fill="#38D8FF"/><text x="42" y="216" class="body">Verify installed build, icon and map</text>
-<text x="24" y="255" class="gate">Gate: useful phone workflow + safe history</text></g>
+<text x="24" y="35" class="label" fill="#38D8FF">02 · NEXT / 4A.4O</text><text x="24" y="76" class="head">Daily repairs + images</text><path d="M24 94 H446" stroke="#224063"/>
+<circle cx="28" cy="123" r="3" fill="#38D8FF"/><text x="42" y="129" class="body">Reviewed local image OCR + previews</text>
+<circle cx="28" cy="152" r="3" fill="#38D8FF"/><text x="42" y="158" class="body">Explicit iOS / Windows image generation</text>
+<circle cx="28" cy="181" r="3" fill="#38D8FF"/><text x="42" y="187" class="body">Full icon + bounded Balanced requests</text>
+<circle cx="28" cy="210" r="3" fill="#38D8FF"/><text x="42" y="216" class="body">Then recall, draft resilience + backup</text>
+<text x="24" y="255" class="gate">Gate: device repair matrix + safe history</text></g>
 <g transform="translate(1070 338)"><rect width="470" height="280" rx="22" fill="#071426" stroke="#38D8FF" stroke-width="2"/>
 <text x="24" y="35" class="label" fill="#38D8FF">03 · NEXT / 4B.1–4B.2</text><text x="24" y="76" class="head">One account, two devices</text><path d="M24 94 H446" stroke="#224063"/>
 <circle cx="28" cy="123" r="3" fill="#38D8FF"/><text x="42" y="129" class="body">Native Entra sign-in on iOS + Windows</text>
@@ -57,7 +57,7 @@
 <text x="24" y="255" class="gate">Gate: predictable recovery; no data loss</text></g>
 <rect x="60" y="970" width="1480" height="85" rx="18" fill="#0B1A2C"/>
 <text x="84" y="1002" class="label" fill="#819AB7">LATER · DOES NOT BLOCK PERSONAL TWO-DEVICE USE</text>
-<text x="84" y="1033" class="body">AVD · Deep qualification · public installer release · OCR / images · cloud reasoning · optional RDC source</text>
-<text x="60" y="1100" class="foot">Login + sync are planned, not implemented. Local inference remains independent of Azure.</text>
+<text x="84" y="1033" class="body">AVD · Deep qualification · public installer release · general visual reasoning · cloud reasoning · optional RDC source</text>
+<text x="60" y="1100" class="foot">Repairs implemented locally; device acceptance pending. Login + sync are planned.</text>
 <text x="1540" y="1100" text-anchor="end" class="foot">Detailed gates: docs/DAILY-USE-COMPLETION-PLAN.md</text>
 </svg>

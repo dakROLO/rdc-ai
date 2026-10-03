@@ -445,6 +445,7 @@ export class FoundryLocalProvider implements AIProvider {
       throw error
     }
 
+    request.onRequestSnapshot?.(request.messages)
     let response!: Response
     const fetchStarted = performance.now()
     try {
