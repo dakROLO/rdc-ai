@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { ToolRegistry, type CrownKeepTool } from '../src/tools/ToolRegistry.ts'
-import { runAutomaticReadOnlyTools } from '../src/tools/automaticToolUse.ts'
+import { resolveWebPrompt, runAutomaticReadOnlyTools } from '../src/tools/automaticToolUse.ts'
 
 function registryWithWebProof() {
   const registry = new ToolRegistry()
@@ -142,4 +142,28 @@ test('Web Access OFF guidance preserves retained-evidence use', async () => {
   assert.equal(calls.length, 0)
   assert.match(result.context, /retained tool\/web evidence/i)
   assert.match(result.context, /do not claim a new web search/i)
+})
+
+
+test('generic online follow-up resolves to the previous substantive user request', () => {
+  const resolved = resolveWebPrompt('can you check online?', [
+    { role: 'assistant', content: 'My local knowledge may be stale.' },
+    { role: 'user', content: 'Tell me what you know about the newest iPhone announced by Apple.' },
+    { role: 'assistant', content: 'I cannot verify that locally.' },
+  ])
+
+  assert.match(resolved, /newest iPhone announced by Apple/i)
+  assert.doesNotMatch(resolved, /check online/i)
+})
+
+test('generic online follow-up does not reuse image/OCR-bearing user content', () => {
+  const resolved = resolveWebPrompt('can you check online?', [
+    {
+      role: 'user',
+      content: 'BEGIN IMAGE TEXT\nprivate screenshot text',
+      attachments: [{}],
+    },
+  ])
+
+  assert.equal(resolved, 'can you check online?')
 })
