@@ -1,3 +1,6 @@
+import { decisionAssist } from './decision/NativeDecisionEngine.ts'
+import type { DecisionStatus, ChatRole } from './decision/DecisionEngine.ts'
+import { IMAGE_PERMISSION_KEY, localImageRuntime, type ImageRuntimeStatus } from './images/LocalImageRuntime.ts'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { ModelAnalyst } from './runtime/ModelAnalyst.tsx'
@@ -383,6 +386,26 @@ export default function App() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [speechBusy, setSpeechBusy] = useState(false)
   const [toolBusy, setToolBusy] = useState(false)
+  const [modelMode, setModelMode] = useState<'Auto' | ChatRole>(() => {
+    const value = localStorage.getItem('crownkeep.modelMode')
+    return value === 'Quick' || value === 'Balanced' || value === 'Deep' ? value : 'Auto'
+  })
+  const [decisionEnabled, setDecisionEnabled] = useState(() => localStorage.getItem('crownkeep.decisionAssist') === 'on')
+  const [localImagesEnabled, setLocalImagesEnabled] = useState(() => localStorage.getItem(IMAGE_PERMISSION_KEY) === 'on')
+  const [decisionStatus, setDecisionStatus] = useState<DecisionStatus>()
+  const [imageRuntimeStatus, setImageRuntimeStatus] = useState<ImageRuntimeStatus>()
+  useEffect(() => {
+    localStorage.setItem('crownkeep.modelMode', modelMode)
+  }, [modelMode])
+  useEffect(() => {
+    localStorage.setItem('crownkeep.decisionAssist', decisionEnabled ? 'on' : 'off')
+    void decisionAssist.setEnabled(decisionEnabled).then(() => decisionAssist.engine.status()).then(setDecisionStatus).catch(() => {})
+  }, [decisionEnabled])
+  useEffect(() => {
+    localStorage.setItem(IMAGE_PERMISSION_KEY, localImagesEnabled ? 'on' : 'off')
+    toolRegistry.setPolicy({ allowImageGeneration: localImagesEnabled })
+    if (localImagesEnabled) void localImageRuntime().status().then(setImageRuntimeStatus).catch(() => {})
+  }, [localImagesEnabled])
   const [webAccess, setWebAccess] = useState(() => {
     const mode = readWebAccessMode(localStorage)
     toolRegistry.setPolicy({ webAccess: mode })
@@ -1524,13 +1547,35 @@ ${image.extractedText}
     let toolContext = ''
     let toolActivity: MessageToolActivity[] = []
     let manualToolUsed = false
-    const structuredToolsProven =
+    let structuredToolsProven =
       selectedProviderId === 'foundry-local' &&
       (loadedChatCandidate?.supportsToolCalling === true ||
         observedStructuredToolSupport === true)
     const webPrompt = resolveWebPrompt(prompt.trim(), messages)
+    requestTools.setSteward(decisionAssist, webPrompt)
     setToolBusy(true)
     try {
+      if (modelMode === 'Auto' && provider.location === 'local') {
+        const roles = (['Quick', 'Balanced', 'Deep'] as ChatRole[]).filter(role => {
+          const target = modelRoleTarget(role)
+          return target && modelCandidates.some(candidate => candidate.cached && (candidate.id === target.variantId || candidate.alias === target.alias))
+        })
+        const role = await decisionAssist.route('Auto', prompt, roles)
+        if (selectedProviderId === 'foundry-local' && localRuntimeManager.mode === 'embedded') {
+          const target = modelRoleTarget(role)
+          if (!target) throw new Error('Auto needs an available cached Quick model. Select Quick or prepare local AI in Diagnostics.')
+          const current = await localRuntimeManager.listModelCandidates()
+          if (!current.some(candidate => candidate.cached && (candidate.id === target.variantId || candidate.alias === target.alias))) throw new Error('Auto target is no longer cached. No download was started.')
+          if (!current.some(candidate => candidate.loaded && candidate.alias === target.alias)) {
+            await localRuntimeManager.activateModel(target.alias)
+            await syncSelectedModelToNative(target.alias)
+            structuredToolsProven = false // use safe fallback until new model support is refreshed
+          }
+        }
+      }
+      const choice = await decisionAssist.toolChoice(webPrompt)
+      if (choice) toolContext = `Local decision advice: ${choice}. Use only permitted available tools; this advice never grants permission.`
+      void decisionAssist.engine.status().then(setDecisionStatus).catch(() => {})
       const manualTool = await runToolCommand(webPrompt)
       if (manualTool) {
         manualToolUsed = true
@@ -1552,7 +1597,7 @@ ${image.extractedText}
       } else if (
         !structuredToolsProven && selectedProviderId !== 'apple-foundation-models'
       ) {
-        const automatic = await runAutomaticReadOnlyTools(webPrompt, toolRegistry)
+        const automatic = await runAutomaticReadOnlyTools(webPrompt, requestTools)
         toolContext = automatic.context
         toolActivity = automatic.activities
         for (const activity of automatic.activities) {
@@ -1797,7 +1842,7 @@ ${image.extractedText}
               request,
               registry: requestTools,
               signal: generationSignal,
-              fallback: () => runAutomaticReadOnlyTools(webPrompt, toolRegistry),
+              fallback: () => runAutomaticReadOnlyTools(webPrompt, requestTools),
               webSearchContext: webPrompt,
               onModelActivity: () => {
                 if (firstTokenAt !== undefined) return
@@ -2651,10 +2696,11 @@ ${image.extractedText}
             <strong>{glanceState}</strong>
           </div>
           <div className="keep-status-mode" role="group" aria-label="Model mode">
+            <button type="button" className={modelMode === 'Auto' ? 'active' : ''} aria-pressed={modelMode === 'Auto'} disabled={isGenerating || toolBusy || speechBusy || isRuntimeActionRunning} onClick={() => setModelMode('Auto')}>Auto</button>
             {selectedProviderId === 'foundry-local' && localRuntimeManager.mode === 'embedded'
               ? (['Quick', 'Balanced', 'Deep'] as ChatModelRole[]).map((role) => {
                   const winner = modelRoleTarget(role)
-                  const active = activeChatRole === role
+                  const active = modelMode !== 'Auto' && activeChatRole === role
                   return (
                     <button
                       type="button"
@@ -2675,7 +2721,7 @@ ${image.extractedText}
                             ? 'Cached Quick model is not available'
                             : `Benchmark ${CHAT_ROLE_LABELS[role]} first`
                       }
-                      onClick={() => void switchModelRole(role)}
+                      onClick={() => { setModelMode(role); void switchModelRole(role) }}
                     >
                       {CHAT_ROLE_LABELS[role]}
                     </button>
@@ -2685,9 +2731,10 @@ ${image.extractedText}
                   <button
                     type="button"
                     key={role}
-                    className={role === 'Quick' ? 'active' : ''}
-                    aria-pressed={role === 'Quick'}
-                    disabled
+                    className={modelMode === 'Quick' && role === 'Quick' ? 'active' : ''}
+                    aria-pressed={modelMode === 'Quick' && role === 'Quick'}
+                    onClick={() => setModelMode('Quick')}
+                    disabled={role !== 'Quick' || isGenerating || toolBusy}
                     title={role === 'Quick' ? 'Current device model mode' : 'Not available on this device'}
                   >
                     {CHAT_ROLE_LABELS[role]}
@@ -2720,6 +2767,7 @@ ${image.extractedText}
                 className={`message ${message.role} ${message.excludedFromContext ? 'context-excluded' : ''}`}
                 key={message.id}
               >
+                {message.toolActivity?.filter(activity => activity.generatedImageDataUrl).map((activity, index) => <div key={`generated-${index}`}><img className="message-image" src={activity.generatedImageDataUrl} alt="Generated locally" /><a href={activity.generatedImageDataUrl} download="crownkeep-image.jpg">Save image</a></div>)}
                 {message.attachments?.map((image) => <img className="message-image" key={image.id} src={image.dataUrl} alt={image.name} />)}
                 <div className="message-meta">
                   <strong>{message.role === 'user' ? 'You' : 'Anne'}</strong>
@@ -2948,6 +2996,8 @@ ${image.extractedText}
                   </button>
                 </div>
 
+                <div className="web-access-setting"><div><strong>Decision Assist · {decisionEnabled ? 'ON' : 'OFF'}</strong><span>Optional local model and tool advice. Auto uses Quick when advice is unavailable.</span></div><button type="button" aria-pressed={decisionEnabled} disabled={isGenerating || toolBusy} onClick={() => setDecisionEnabled(value => !value)}>{decisionEnabled ? 'Turn OFF' : 'Turn ON'}</button></div>
+                <div className="web-access-setting"><div><strong>Local Image Generation · {localImagesEnabled ? 'ON' : 'OFF'}</strong><span>Anne may create images when an installed local image app is ready.</span></div><button type="button" aria-pressed={localImagesEnabled} disabled={isGenerating || toolBusy} onClick={() => setLocalImagesEnabled(value => !value)}>{localImagesEnabled ? 'Turn OFF' : 'Turn ON'}</button></div>
                 <div className="web-access-setting">
                   <div>
                     <strong>Web Access · {webAccess.toUpperCase()}</strong>
@@ -2976,6 +3026,11 @@ ${image.extractedText}
                 <details className="diagnostics-disclosure">
                   <summary>Diagnostics</summary>
                   <div className="diagnostics-panel">
+                    <p>Julia: {decisionStatus?.version ?? 'Julia-1'} · {decisionStatus?.backend ?? 'checking'} · {decisionStatus?.loadState ?? 'unavailable'}</p>
+                    <p>{decisionStatus?.detail}</p>
+                    <p>Last decision: {decisionAssist.last ? JSON.stringify(decisionAssist.last) : 'None'} · Mode: {modelMode}</p>
+                    <p>Image runtime: {imageRuntimeStatus?.backend ?? 'not probed'} · {imageRuntimeStatus?.state ?? 'unknown'} · {imageRuntimeStatus?.detail}</p>
+                    <button type="button" disabled={toolBusy || isGenerating} onClick={() => { void localImageRuntime().status().then(setImageRuntimeStatus); void decisionAssist.engine.status().then(setDecisionStatus) }}>Refresh local capability diagnostics</button>
                     <p>Provider: {selectedProvider.displayName} · Model: {selectedModelId}</p>
                     <p>Tool calling: {(loadedChatCandidate?.supportsToolCalling === true || observedStructuredToolSupport === true) ? 'Observed structured support' : 'Bounded fallback / native tools'}</p>
                 <div className="runtime-grid" aria-label="Local AI runtime status">

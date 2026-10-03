@@ -1,5 +1,15 @@
 # RDC AI — Decision Log
 
+## 2026-10-03 — Julia advisory qualification and shared local image runtime
+
+- Own the decision engine separately from Anne inference: native Rust ONNX Runtime CPU on Windows; Apple-native conversion required for iOS. No hosted Julia/Jev, product Python or hidden cloud fallback.
+- Do not confuse publisher parity with CrownKeep accuracy: CPU FP32 matches 100/100 publisher cases but only 9/16 initial CrownKeep fixtures. All production Julia categories remain disabled; Auto uses Quick until held-out/native/device qualification. INT8 parity loss and FP16 graph failure are retained, not promoted.
+- Model routing selects only already qualified/available cached role winners; explicit roles override Auto, Deep is never invented, downloads/cloud are never initiated by routing.
+- Julia semantics stay advisory after deterministic privacy/security/tool limits. Confidence ≥0.80 is an initial abstention threshold, not calibrated certainty. Event-driven only.
+- Unify manual/assistant image generation behind one persisted loopback runtime and permission switch. Probe readiness when the workbench opens; no silent generator launch or install.
+- Preserve all physical failures and distinguish automated implementation from physical acceptance. Details: [engine/evals](JULIA-DECISION-ENGINE.md), [validation](DECISION-IMAGE-VALIDATION.md).
+
+
 This file records project decisions that must survive beyond chat history.
 
 ## ADR-0001 — Public application repository

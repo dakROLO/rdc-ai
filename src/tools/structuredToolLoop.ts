@@ -56,9 +56,10 @@ function activity(
     label: tool?.name ?? toolId,
     requiresNetwork: tool?.requiresNetwork ?? false,
     dataLeftDevice: result.metadata?.dataLeftDevice === true,
-    outcome,
+    outcome: result.metadata?.detail === 'irrelevant-result' ? 'error' : outcome,
     sources: result.metadata?.sources ?? [],
     retainedContext: result.text.slice(0, 6000),
+    generatedImageDataUrl: toolId === 'image.generate' && outcome === 'success' ? (result.data as { dataUrl?: string } | undefined)?.dataUrl : undefined,
   }
 }
 

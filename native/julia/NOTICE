@@ -1,0 +1,13 @@
+Julia-1 model and ONNX export: Supersonic Labs / SupersonicLabs.
+Source: https://huggingface.co/SupersonicLabs/Julia-1
+ONNX/tokenizer source revision: 82a2fadf8fccfccdc5fd4e1009ba8f1a265eb7a8
+https://huggingface.co/SupersonicLabs/Julia-1-ONNX
+Apache License, Version 2.0. LICENSE contains the applicable license text.
+encoding.rs adapts the publisher's strict Rust tokenizer serializer; wrapper,
+CPU inference, lifecycle and application integration are CrownKeep changes.
+No model weights or ONNX Runtime binaries are redistributed by this commit.
+Any binary/model redistribution must include this license, preserve upstream
+notices (including future NOTICE files), identify modifications, and include
+applicable ONNX Runtime/tokenizers/dependency licenses. Do not imply endorsement.
+Julia retains the jhu-clsp/mmBERT-small encoder/tokenizer foundation; preserve
+its applicable notices and license metadata when shipping those artifacts.

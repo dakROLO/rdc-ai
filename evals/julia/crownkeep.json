@@ -1,0 +1,446 @@
+[
+  {
+    "id": "current-info",
+    "request": {
+      "job": "tool-choice",
+      "state": "What is the newest Apple iPhone available today?",
+      "question": "Which tool is needed for this request?",
+      "options": [
+        {
+          "id": "NONE",
+          "description": "Answer using local knowledge or retained evidence without a tool"
+        },
+        {
+          "id": "WEB_SEARCH",
+          "description": "Find current public information online"
+        },
+        {
+          "id": "WEB_READ",
+          "description": "Read a specified public webpage"
+        },
+        {
+          "id": "KEEP_SEARCH",
+          "description": "Search local Keep knowledge"
+        },
+        {
+          "id": "IMAGE_READ",
+          "description": "Understand a currently attached image"
+        },
+        {
+          "id": "IMAGE_GENERATE",
+          "description": "Create a new image locally"
+        }
+      ]
+    },
+    "expected": "WEB_SEARCH"
+  },
+  {
+    "id": "ordinary-local",
+    "request": {
+      "job": "tool-choice",
+      "state": "Explain why the sky is blue.",
+      "question": "Which tool is needed for this request?",
+      "options": [
+        {
+          "id": "NONE",
+          "description": "Answer using local knowledge or retained evidence without a tool"
+        },
+        {
+          "id": "WEB_SEARCH",
+          "description": "Find current public information online"
+        },
+        {
+          "id": "WEB_READ",
+          "description": "Read a specified public webpage"
+        },
+        {
+          "id": "KEEP_SEARCH",
+          "description": "Search local Keep knowledge"
+        },
+        {
+          "id": "IMAGE_READ",
+          "description": "Understand a currently attached image"
+        },
+        {
+          "id": "IMAGE_GENERATE",
+          "description": "Create a new image locally"
+        }
+      ]
+    },
+    "expected": "NONE"
+  },
+  {
+    "id": "generic-follow-up",
+    "request": {
+      "job": "tool-choice",
+      "state": "Previous topic: newest Apple iPhone. User: can you check online?",
+      "question": "Which tool is needed for this request?",
+      "options": [
+        {
+          "id": "NONE",
+          "description": "Answer using local knowledge or retained evidence without a tool"
+        },
+        {
+          "id": "WEB_SEARCH",
+          "description": "Find current public information online"
+        },
+        {
+          "id": "WEB_READ",
+          "description": "Read a specified public webpage"
+        },
+        {
+          "id": "KEEP_SEARCH",
+          "description": "Search local Keep knowledge"
+        },
+        {
+          "id": "IMAGE_READ",
+          "description": "Understand a currently attached image"
+        },
+        {
+          "id": "IMAGE_GENERATE",
+          "description": "Create a new image locally"
+        }
+      ]
+    },
+    "expected": "WEB_SEARCH"
+  },
+  {
+    "id": "image-generate",
+    "request": {
+      "job": "tool-choice",
+      "state": "Create an image of a glass blue crown.",
+      "question": "Which tool is needed for this request?",
+      "options": [
+        {
+          "id": "NONE",
+          "description": "Answer using local knowledge or retained evidence without a tool"
+        },
+        {
+          "id": "WEB_SEARCH",
+          "description": "Find current public information online"
+        },
+        {
+          "id": "WEB_READ",
+          "description": "Read a specified public webpage"
+        },
+        {
+          "id": "KEEP_SEARCH",
+          "description": "Search local Keep knowledge"
+        },
+        {
+          "id": "IMAGE_READ",
+          "description": "Understand a currently attached image"
+        },
+        {
+          "id": "IMAGE_GENERATE",
+          "description": "Create a new image locally"
+        }
+      ]
+    },
+    "expected": "IMAGE_GENERATE"
+  },
+  {
+    "id": "image-read",
+    "request": {
+      "job": "tool-choice",
+      "state": "Describe the attached image; image ID image-1 is in this request.",
+      "question": "Which tool is needed for this request?",
+      "options": [
+        {
+          "id": "NONE",
+          "description": "Answer using local knowledge or retained evidence without a tool"
+        },
+        {
+          "id": "WEB_SEARCH",
+          "description": "Find current public information online"
+        },
+        {
+          "id": "WEB_READ",
+          "description": "Read a specified public webpage"
+        },
+        {
+          "id": "KEEP_SEARCH",
+          "description": "Search local Keep knowledge"
+        },
+        {
+          "id": "IMAGE_READ",
+          "description": "Understand a currently attached image"
+        },
+        {
+          "id": "IMAGE_GENERATE",
+          "description": "Create a new image locally"
+        }
+      ]
+    },
+    "expected": "IMAGE_READ"
+  },
+  {
+    "id": "retained-evidence",
+    "request": {
+      "job": "tool-choice",
+      "state": "Using the iPhone sources already retrieved and retained, summarize their comparison without new retrieval.",
+      "question": "Which tool is needed for this request?",
+      "options": [
+        {
+          "id": "NONE",
+          "description": "Answer using local knowledge or retained evidence without a tool"
+        },
+        {
+          "id": "WEB_SEARCH",
+          "description": "Find current public information online"
+        },
+        {
+          "id": "WEB_READ",
+          "description": "Read a specified public webpage"
+        },
+        {
+          "id": "KEEP_SEARCH",
+          "description": "Search local Keep knowledge"
+        },
+        {
+          "id": "IMAGE_READ",
+          "description": "Understand a currently attached image"
+        },
+        {
+          "id": "IMAGE_GENERATE",
+          "description": "Create a new image locally"
+        }
+      ]
+    },
+    "expected": "NONE"
+  },
+  {
+    "id": "keep-search",
+    "request": {
+      "job": "tool-choice",
+      "state": "Search my local Keep reference notes for the privacy policy.",
+      "question": "Which tool is needed for this request?",
+      "options": [
+        {
+          "id": "NONE",
+          "description": "Answer using local knowledge or retained evidence without a tool"
+        },
+        {
+          "id": "WEB_SEARCH",
+          "description": "Find current public information online"
+        },
+        {
+          "id": "WEB_READ",
+          "description": "Read a specified public webpage"
+        },
+        {
+          "id": "KEEP_SEARCH",
+          "description": "Search local Keep knowledge"
+        },
+        {
+          "id": "IMAGE_READ",
+          "description": "Understand a currently attached image"
+        },
+        {
+          "id": "IMAGE_GENERATE",
+          "description": "Create a new image locally"
+        }
+      ]
+    },
+    "expected": "KEEP_SEARCH"
+  },
+  {
+    "id": "read-url",
+    "request": {
+      "job": "tool-choice",
+      "state": "Read the public page at https://example.com/news.",
+      "question": "Which tool is needed for this request?",
+      "options": [
+        {
+          "id": "NONE",
+          "description": "Answer using local knowledge or retained evidence without a tool"
+        },
+        {
+          "id": "WEB_SEARCH",
+          "description": "Find current public information online"
+        },
+        {
+          "id": "WEB_READ",
+          "description": "Read a specified public webpage"
+        },
+        {
+          "id": "KEEP_SEARCH",
+          "description": "Search local Keep knowledge"
+        },
+        {
+          "id": "IMAGE_READ",
+          "description": "Understand a currently attached image"
+        },
+        {
+          "id": "IMAGE_GENERATE",
+          "description": "Create a new image locally"
+        }
+      ]
+    },
+    "expected": "WEB_READ"
+  },
+  {
+    "id": "bad-query",
+    "request": {
+      "job": "tool-arguments",
+      "state": "Request/topic: newest Apple iPhone. Follow-up: can you check online? Tool: web.search. Proposed query: can you check online?",
+      "question": "Does the proposed tool argument preserve the actual user request and prior topic?",
+      "options": [
+        {
+          "id": "RELEVANT",
+          "description": "Relevant to the request and resolved topic"
+        },
+        {
+          "id": "IRRELEVANT",
+          "description": "Wrong topic, generic unresolved follow-up, or irrelevant evidence"
+        }
+      ]
+    },
+    "expected": "IRRELEVANT"
+  },
+  {
+    "id": "recovered-query",
+    "request": {
+      "job": "tool-arguments",
+      "state": "Request/topic: newest Apple iPhone. Follow-up: can you check online? Proposed query: newest Apple iPhone",
+      "question": "Does the proposed tool argument preserve the actual user request and prior topic?",
+      "options": [
+        {
+          "id": "RELEVANT",
+          "description": "Relevant to the request and resolved topic"
+        },
+        {
+          "id": "IRRELEVANT",
+          "description": "Wrong topic, generic unresolved follow-up, or irrelevant evidence"
+        }
+      ]
+    },
+    "expected": "RELEVANT"
+  },
+  {
+    "id": "personal-checks-result",
+    "request": {
+      "job": "tool-result",
+      "state": "Request/topic: newest Apple iPhone. Evidence: Personal checks and checkers. Order printed bank checks online.",
+      "question": "Is the tool evidence relevant to the actual user request and prior topic?",
+      "options": [
+        {
+          "id": "RELEVANT",
+          "description": "Relevant to the request and resolved topic"
+        },
+        {
+          "id": "IRRELEVANT",
+          "description": "Wrong topic, generic unresolved follow-up, or irrelevant evidence"
+        }
+      ]
+    },
+    "expected": "IRRELEVANT"
+  },
+  {
+    "id": "iphone-result",
+    "request": {
+      "job": "tool-result",
+      "state": "Request/topic: newest Apple iPhone. Evidence: Apple announces its newest iPhone models and availability.",
+      "question": "Is the tool evidence relevant to the actual user request and prior topic?",
+      "options": [
+        {
+          "id": "RELEVANT",
+          "description": "Relevant to the request and resolved topic"
+        },
+        {
+          "id": "IRRELEVANT",
+          "description": "Wrong topic, generic unresolved follow-up, or irrelevant evidence"
+        }
+      ]
+    },
+    "expected": "RELEVANT"
+  },
+  {
+    "id": "stale-after-evidence",
+    "request": {
+      "job": "tool-result",
+      "state": "Request: newest Apple iPhone, web evidence retrieved. Proposed answer: I cannot browse and my training cutoff is April 2023.",
+      "question": "Is the tool evidence relevant to the actual user request and prior topic?",
+      "options": [
+        {
+          "id": "RELEVANT",
+          "description": "Relevant to the request and resolved topic"
+        },
+        {
+          "id": "IRRELEVANT",
+          "description": "Wrong topic, generic unresolved follow-up, or irrelevant evidence"
+        }
+      ]
+    },
+    "expected": "IRRELEVANT"
+  },
+  {
+    "id": "simple",
+    "request": {
+      "job": "model-route",
+      "state": "Say hello in Spanish.",
+      "question": "Which available reasoning role is appropriate for this request?",
+      "options": [
+        {
+          "id": "Quick",
+          "description": "Simple everyday questions and concise answers"
+        },
+        {
+          "id": "Balanced",
+          "description": "Moderate analysis, planning and multi-part explanations"
+        },
+        {
+          "id": "Deep",
+          "description": "Difficult reasoning, complex tradeoffs and detailed technical analysis"
+        }
+      ]
+    },
+    "expected": "Quick"
+  },
+  {
+    "id": "moderate",
+    "request": {
+      "job": "model-route",
+      "state": "Compare three project planning methods and explain the tradeoffs for a small team.",
+      "question": "Which available reasoning role is appropriate for this request?",
+      "options": [
+        {
+          "id": "Quick",
+          "description": "Simple everyday questions and concise answers"
+        },
+        {
+          "id": "Balanced",
+          "description": "Moderate analysis, planning and multi-part explanations"
+        },
+        {
+          "id": "Deep",
+          "description": "Difficult reasoning, complex tradeoffs and detailed technical analysis"
+        }
+      ]
+    },
+    "expected": "Balanced"
+  },
+  {
+    "id": "difficult",
+    "request": {
+      "job": "model-route",
+      "state": "Analyze a distributed synchronization protocol with conflicting offline edits, deletion tombstones, key rotation and failure recovery; reason through the consistency guarantees.",
+      "question": "Which available reasoning role is appropriate for this request?",
+      "options": [
+        {
+          "id": "Quick",
+          "description": "Simple everyday questions and concise answers"
+        },
+        {
+          "id": "Balanced",
+          "description": "Moderate analysis, planning and multi-part explanations"
+        },
+        {
+          "id": "Deep",
+          "description": "Difficult reasoning, complex tradeoffs and detailed technical analysis"
+        }
+      ]
+    },
+    "expected": "Deep"
+  }
+]

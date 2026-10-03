@@ -1,0 +1,8 @@
+{
+  "precision": "fp16",
+  "platform": "Linux-6.18.44-x86_64-with-glibc2.39",
+  "ort": "1.30.0",
+  "threads": 4,
+  "productionQualifiedJobs": [],
+  "error": "[ONNXRuntimeError] : 1 : FAIL : Load model from /tmp/julia-research/model.fp16.onnx failed:Type Error: Type (tensor(float16)) of output arg (_to_copy_22) of node (node__to_copy_22) does not match expected type (tensor(float))."
+}

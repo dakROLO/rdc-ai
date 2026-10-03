@@ -6,6 +6,7 @@ mod device;
 mod system_foundry;
 mod web;
 mod images;
+mod decision;
 
 const FOUNDRY_WEB_URL: &str = "http://127.0.0.1:39839";
 static FOUNDRY_LIFECYCLE_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
@@ -1181,7 +1182,11 @@ pub fn run() {
             web::crownkeep_web_status,
             web::crownkeep_web_search,
             web::crownkeep_web_read,
-            images::crownkeep_generate_image
+            images::crownkeep_generate_image,
+            images::crownkeep_image_status,
+            decision::crownkeep_decision_status,
+            decision::crownkeep_decide,
+            decision::crownkeep_decision_release
         ])
         .run(tauri::generate_context!())
         .expect("error while running CrownKeep");

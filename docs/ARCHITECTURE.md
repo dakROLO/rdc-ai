@@ -1,5 +1,12 @@
 # CrownKeep — Architecture
 
+## Independent local DecisionEngine and image runtime — October 3
+
+`DecisionEngine` is independent of `AIProvider`/Foundry/Apple reasoning. `DecisionAssist` owns opt-in, qualified-category and confidence checks; Auto sees only existing role winners/cached candidates and falls back to Quick. Manual selection overrides routing. The Rust CPU adapter owns Julia tokenization/session and releases them on OFF; no hosted API or product Python dependency. No semantic category is enabled before measured CrownKeep evidence. iOS has the shared interface and honest unavailable state. [Exact contracts, reports and conversion steps](JULIA-DECISION-ENGINE.md).
+
+`LocalImageRuntime` chooses WindowsWebUIImageRuntime or AppleLocalImageRuntime. Manual workbench and image.generate use the same persisted endpoint, explicit permission and readiness. WebUI probe is bounded and loopback-only; no proxy/redirect/start/install/download. Deterministic ToolRegistry privacy/write/attachment bounds remain authoritative before advisory evaluation. Generated image bytes stay local and are stored/displayed as tool activity, not text-model/web evidence. Technical details stay in Diagnostics.
+
+
 ## Current implementation boundary — 2026-09-30
 
 The system view includes planned components. `AuthProvider` and `SyncProvider` remain contracts, with no working sign-in/sync backend. Windows chat uses installed System Foundry; iPhone chat uses the native Apple Foundation Models host. Older SDK/PWA descriptions below describe earlier milestones.

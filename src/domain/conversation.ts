@@ -15,6 +15,7 @@ export interface MessageToolActivity {
   outcome?: 'success' | 'error'
   sources: MessageToolSource[]
   /** Bounded local copy of tool output retained for future conversation context. */
+  generatedImageDataUrl?: string
   retainedContext?: string
 }
 

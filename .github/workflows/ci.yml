@@ -63,6 +63,12 @@ jobs:
       - name: Check CrownKeep Tauri host
         run: cargo check --manifest-path src-tauri/Cargo.toml
 
+      - name: Test Windows loopback image runtime status
+        run: cargo test --manifest-path src-tauri/Cargo.toml --lib images::
+
+      - name: Check independent Julia native CPU adapter
+        run: cargo check --manifest-path native/julia/Cargo.toml --locked
+
       - name: Verify committed Cargo lockfile is current
         shell: pwsh
         run: |

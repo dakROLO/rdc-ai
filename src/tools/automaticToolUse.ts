@@ -12,6 +12,7 @@ export interface ToolActivityRecord {
   dataLeftDevice: boolean
   outcome?: 'success' | 'error'
   sources: ToolResultSource[]
+  generatedImageDataUrl?: string
   retainedContext?: string
 }
 
@@ -78,7 +79,7 @@ function activityFor(
     requiresNetwork: tool?.requiresNetwork ?? false,
     dataLeftDevice: result.metadata?.dataLeftDevice === true,
     sources: result.metadata?.sources ?? [],
-    outcome: 'success',
+    outcome: result.metadata?.detail === 'irrelevant-result' ? 'error' : 'success',
     retainedContext: result.text.slice(0, 6000),
   }
 }

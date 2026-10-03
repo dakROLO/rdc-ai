@@ -1,8 +1,9 @@
+import { localImageRuntime, imageGenerationEnabled, generatePermittedImage } from './LocalImageRuntime.ts'
 import type { CrownKeepTool, ToolRegistry } from '../tools/ToolRegistry.ts'
 import type { ImageAttachment } from '../domain/conversation.ts'
 import { getNativeAIHost } from '../native/NativeAIHost.ts'
 import { imageCapabilities } from './imageCapabilities.ts'
-import { understandImage, generateImage } from './imageTools.ts'
+import { understandImage } from './imageTools.ts'
 
 /** Attachment IDs are scoped to the current turn. The model cannot read a path
  * or arbitrary saved image and never passes pixels through a web tool. */
@@ -20,8 +21,8 @@ export function registerImageTools(registry: ToolRegistry, attachments: () => Im
   const generate: CrownKeepTool<{ prompt: string }> = {
     id: 'image.generate', name: 'Create image', description: 'Generate an image with the installed local capability. Requires the separate local image generation permission.', requiresNetwork: false, access: 'write',
     inputSchema: { type: 'object', properties: { prompt: { type: 'string', maxLength: 2000 } }, required: ['prompt'], additionalProperties: false },
-    isAvailable: async () => imageCapabilities(await getNativeAIHost()?.images?.status()).generationAvailable,
-    execute: async ({ prompt }) => ({ text: 'Image generated locally.', data: { dataUrl: await generateImage(prompt, 'http://127.0.0.1:7860') }, metadata: { dataLeftDevice: false } }),
+    isAvailable: async () => imageGenerationEnabled() && (await localImageRuntime().status()).state === 'ready',
+    execute: async ({ prompt }) => ({ text: 'Image generated locally.', data: { dataUrl: await generatePermittedImage(prompt) }, metadata: { dataLeftDevice: false } }),
   }
   registry.register(read)
   registry.register(generate)

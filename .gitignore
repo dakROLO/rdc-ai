@@ -33,3 +33,8 @@ playwright-report/
 # OCR runtime copied from pinned npm dependencies; language data is committed.
 public/ocr/*.js
 public/ocr/*.wasm
+
+# Julia development build output and manually staged inference assets.
+native/julia/target/
+*.onnx
+*.onnx.data*

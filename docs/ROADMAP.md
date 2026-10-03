@@ -1,5 +1,10 @@
 # CrownKeep — Sprint Roadmap
 
+## 4A.4P — Local decisions and image runtime (implemented; qualification pending)
+
+Add native Julia CPU contract/lifecycle/evals, Auto among existing qualified cached roles, advisory tool evaluation and unified loopback image capability. Shared/native adapter implemented; semantic categories remain disabled due measured misses. Exact Apple conversion and target-device benchmark steps: [Julia engine](JULIA-DECISION-ENGINE.md). Exit: held-out category accuracy and native Windows/iPhone parity/resource gates, plus [physical image/privacy matrix](DECISION-IMAGE-VALIDATION.md). Preserve phone tools → account → encrypted sync priority and existing physical failures.
+
+
 This roadmap is outcome-based. A sprint ends when its exit criteria are met, not merely when code has been written.
 
 Visual summary: `public/crownkeep-sprints.svg`. The same asset is rendered in the repository README and inside CrownKeep.

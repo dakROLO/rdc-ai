@@ -1,0 +1,274 @@
+{
+  "precision": "fp32",
+  "platform": "Linux-6.18.44-x86_64-with-glibc2.39",
+  "ort": "1.30.0",
+  "threads": 4,
+  "productionQualifiedJobs": [],
+  "loadMs": 171.10325999999532,
+  "parity": {
+    "matching": 100,
+    "total": 100,
+    "maxLogitDelta": 7.295608520507812e-05,
+    "medianMs": 39.11823050003704,
+    "p95Ms": 123.29125990001442
+  },
+  "cases": [
+    {
+      "id": "current-info",
+      "job": "tool-choice",
+      "expected": "WEB_SEARCH",
+      "selected": "IMAGE_GENERATE",
+      "correct": false,
+      "confidence": 0.4730890604990822,
+      "scores": {
+        "NONE": 0.05159969692567483,
+        "WEB_SEARCH": 0.21207789623596615,
+        "WEB_READ": 0.0067438717737731135,
+        "KEEP_SEARCH": 0.22784795305316594,
+        "IMAGE_READ": 0.028641521512337773,
+        "IMAGE_GENERATE": 0.4730890604990822
+      },
+      "latencyMs": 38.73537300000862
+    },
+    {
+      "id": "ordinary-local",
+      "job": "tool-choice",
+      "expected": "NONE",
+      "selected": "NONE",
+      "correct": true,
+      "confidence": 0.9797245286788352,
+      "scores": {
+        "NONE": 0.9797245286788352,
+        "WEB_SEARCH": 0.01463084494902672,
+        "WEB_READ": 0.0026293266014049696,
+        "KEEP_SEARCH": 0.0019270331176044588,
+        "IMAGE_READ": 0.001071887217130764,
+        "IMAGE_GENERATE": 1.6379435997884796e-05
+      },
+      "latencyMs": 45.223684999996294
+    },
+    {
+      "id": "generic-follow-up",
+      "job": "tool-choice",
+      "expected": "WEB_SEARCH",
+      "selected": "WEB_SEARCH",
+      "correct": true,
+      "confidence": 0.9966915946545576,
+      "scores": {
+        "NONE": 0.0029715043082350423,
+        "WEB_SEARCH": 0.9966915946545576,
+        "WEB_READ": 5.094552629115407e-06,
+        "KEEP_SEARCH": 0.0003256876894535951,
+        "IMAGE_READ": 1.8773976015370414e-06,
+        "IMAGE_GENERATE": 4.241397523259118e-06
+      },
+      "latencyMs": 40.597781999963445
+    },
+    {
+      "id": "image-generate",
+      "job": "tool-choice",
+      "expected": "IMAGE_GENERATE",
+      "selected": "NONE",
+      "correct": false,
+      "confidence": 0.5829372529438551,
+      "scores": {
+        "NONE": 0.5829372529438551,
+        "WEB_SEARCH": 3.457791723307165e-05,
+        "WEB_READ": 3.927124698868348e-05,
+        "KEEP_SEARCH": 3.0091994655833958e-05,
+        "IMAGE_READ": 0.0001699845161831739,
+        "IMAGE_GENERATE": 0.4167888213810841
+      },
+      "latencyMs": 35.6330770000568
+    },
+    {
+      "id": "image-read",
+      "job": "tool-choice",
+      "expected": "IMAGE_READ",
+      "selected": "IMAGE_READ",
+      "correct": true,
+      "confidence": 0.9999569349942223,
+      "scores": {
+        "NONE": 2.858644308827112e-05,
+        "WEB_SEARCH": 3.522340952723226e-07,
+        "WEB_READ": 4.691020454633755e-06,
+        "KEEP_SEARCH": 8.331324368037928e-06,
+        "IMAGE_READ": 0.9999569349942223,
+        "IMAGE_GENERATE": 1.1039837715607767e-06
+      },
+      "latencyMs": 40.82381200009877
+    },
+    {
+      "id": "retained-evidence",
+      "job": "tool-choice",
+      "expected": "NONE",
+      "selected": "NONE",
+      "correct": true,
+      "confidence": 0.7883477475951691,
+      "scores": {
+        "NONE": 0.7883477475951691,
+        "WEB_SEARCH": 0.13159243062677742,
+        "WEB_READ": 0.07938678419932442,
+        "KEEP_SEARCH": 0.0006334267955704723,
+        "IMAGE_READ": 2.8231142439693932e-05,
+        "IMAGE_GENERATE": 1.137964071888921e-05
+      },
+      "latencyMs": 56.9679200000337
+    },
+    {
+      "id": "keep-search",
+      "job": "tool-choice",
+      "expected": "KEEP_SEARCH",
+      "selected": "KEEP_SEARCH",
+      "correct": true,
+      "confidence": 0.9999287755979586,
+      "scores": {
+        "NONE": 4.3036227955985745e-05,
+        "WEB_SEARCH": 8.287206508594994e-06,
+        "WEB_READ": 1.1797831707261234e-05,
+        "KEEP_SEARCH": 0.9999287755979586,
+        "IMAGE_READ": 6.113453215271143e-06,
+        "IMAGE_GENERATE": 1.989682654265536e-06
+      },
+      "latencyMs": 49.19747599990387
+    },
+    {
+      "id": "read-url",
+      "job": "tool-choice",
+      "expected": "WEB_READ",
+      "selected": "WEB_READ",
+      "correct": true,
+      "confidence": 0.9999592486821809,
+      "scores": {
+        "NONE": 5.0961325520174e-06,
+        "WEB_SEARCH": 3.317937319259603e-05,
+        "WEB_READ": 0.9999592486821809,
+        "KEEP_SEARCH": 1.1142133484403381e-06,
+        "IMAGE_READ": 1.1830700756848623e-06,
+        "IMAGE_GENERATE": 1.785286503500717e-07
+      },
+      "latencyMs": 41.138216000035754
+    },
+    {
+      "id": "bad-query",
+      "job": "tool-arguments",
+      "expected": "IRRELEVANT",
+      "selected": "IRRELEVANT",
+      "correct": true,
+      "confidence": 0.7717468321603287,
+      "scores": {
+        "RELEVANT": 0.2282531678396713,
+        "IRRELEVANT": 0.7717468321603287
+      },
+      "latencyMs": 41.088330999969
+    },
+    {
+      "id": "recovered-query",
+      "job": "tool-arguments",
+      "expected": "RELEVANT",
+      "selected": "RELEVANT",
+      "correct": true,
+      "confidence": 0.5689578193658932,
+      "scores": {
+        "RELEVANT": 0.5689578193658932,
+        "IRRELEVANT": 0.43104218063410676
+      },
+      "latencyMs": 42.08624500006408
+    },
+    {
+      "id": "personal-checks-result",
+      "job": "tool-result",
+      "expected": "IRRELEVANT",
+      "selected": "RELEVANT",
+      "correct": false,
+      "confidence": 0.9814004326901524,
+      "scores": {
+        "RELEVANT": 0.9814004326901524,
+        "IRRELEVANT": 0.018599567309847558
+      },
+      "latencyMs": 35.60882099998253
+    },
+    {
+      "id": "iphone-result",
+      "job": "tool-result",
+      "expected": "RELEVANT",
+      "selected": "RELEVANT",
+      "correct": true,
+      "confidence": 0.9961596531116624,
+      "scores": {
+        "RELEVANT": 0.9961596531116624,
+        "IRRELEVANT": 0.0038403468883377086
+      },
+      "latencyMs": 35.50926000002619
+    },
+    {
+      "id": "stale-after-evidence",
+      "job": "tool-result",
+      "expected": "IRRELEVANT",
+      "selected": "RELEVANT",
+      "correct": false,
+      "confidence": 0.947777946777338,
+      "scores": {
+        "RELEVANT": 0.947777946777338,
+        "IRRELEVANT": 0.05222205322266196
+      },
+      "latencyMs": 39.82573799999045
+    },
+    {
+      "id": "simple",
+      "job": "model-route",
+      "expected": "Quick",
+      "selected": "Deep",
+      "correct": false,
+      "confidence": 0.8640215398014787,
+      "scores": {
+        "Quick": 0.13339717248818359,
+        "Balanced": 0.0025812877103377984,
+        "Deep": 0.8640215398014787
+      },
+      "latencyMs": 34.82653100002153
+    },
+    {
+      "id": "moderate",
+      "job": "model-route",
+      "expected": "Balanced",
+      "selected": "Deep",
+      "correct": false,
+      "confidence": 0.9995351846997267,
+      "scores": {
+        "Quick": 0.00017641248170846454,
+        "Balanced": 0.00028840281856488465,
+        "Deep": 0.9995351846997267
+      },
+      "latencyMs": 38.01332500006538
+    },
+    {
+      "id": "difficult",
+      "job": "model-route",
+      "expected": "Deep",
+      "selected": "Quick",
+      "correct": false,
+      "confidence": 0.9691406298422658,
+      "scores": {
+        "Quick": 0.9691406298422658,
+        "Balanced": 2.845903784186987e-05,
+        "Deep": 0.030830911119892324
+      },
+      "latencyMs": 42.83133799992811
+    }
+  ],
+  "accuracy": {
+    "correct": 9,
+    "total": 16
+  },
+  "confusions": [
+    "current-info",
+    "image-generate",
+    "personal-checks-result",
+    "stale-after-evidence",
+    "simple",
+    "moderate",
+    "difficult"
+  ],
+  "modelBytes": 579771259
+}

@@ -1,0 +1,260 @@
+{
+  "backend": "Rust ort 2.0.0-rc.10, ONNX Runtime CPU dynamic library",
+  "totalProcessMs": 26467.134779999924,
+  "productionQualifiedJobs": [],
+  "parity": {
+    "matching": 100,
+    "total": 100,
+    "maxProbabilityDelta": 1.301617358506757e-05,
+    "medianMs": 37.850114000000005
+  },
+  "accuracy": {
+    "correct": 9,
+    "total": 16
+  },
+  "cases": [
+    {
+      "selected": "IMAGE_GENERATE",
+      "confidence": 0.47308907,
+      "scores": {
+        "IMAGE_GENERATE": 0.47308907,
+        "IMAGE_READ": 0.028641522,
+        "KEEP_SEARCH": 0.22784795,
+        "NONE": 0.0515997,
+        "WEB_READ": 0.006743872,
+        "WEB_SEARCH": 0.21207789
+      },
+      "latencyMs": 36.598903,
+      "id": "current-info",
+      "job": "tool-choice",
+      "expected": "WEB_SEARCH",
+      "correct": false
+    },
+    {
+      "selected": "NONE",
+      "confidence": 0.9797245,
+      "scores": {
+        "IMAGE_GENERATE": 1.6379428e-05,
+        "IMAGE_READ": 0.0010718872,
+        "KEEP_SEARCH": 0.0019270331,
+        "NONE": 0.9797245,
+        "WEB_READ": 0.0026293267,
+        "WEB_SEARCH": 0.014630841
+      },
+      "latencyMs": 38.512808,
+      "id": "ordinary-local",
+      "job": "tool-choice",
+      "expected": "NONE",
+      "correct": true
+    },
+    {
+      "selected": "WEB_SEARCH",
+      "confidence": 0.99669147,
+      "scores": {
+        "IMAGE_GENERATE": 4.2413967e-06,
+        "IMAGE_READ": 1.8773975e-06,
+        "KEEP_SEARCH": 0.00032568772,
+        "NONE": 0.0029715043,
+        "WEB_READ": 5.094552e-06,
+        "WEB_SEARCH": 0.99669147
+      },
+      "latencyMs": 40.809902,
+      "id": "generic-follow-up",
+      "job": "tool-choice",
+      "expected": "WEB_SEARCH",
+      "correct": true
+    },
+    {
+      "selected": "NONE",
+      "confidence": 0.58293724,
+      "scores": {
+        "IMAGE_GENERATE": 0.41678882,
+        "IMAGE_READ": 0.00016998456,
+        "KEEP_SEARCH": 3.0092004e-05,
+        "NONE": 0.58293724,
+        "WEB_READ": 3.927126e-05,
+        "WEB_SEARCH": 3.4577926e-05
+      },
+      "latencyMs": 36.423639,
+      "id": "image-generate",
+      "job": "tool-choice",
+      "expected": "IMAGE_GENERATE",
+      "correct": false
+    },
+    {
+      "selected": "IMAGE_READ",
+      "confidence": 0.99995697,
+      "scores": {
+        "IMAGE_GENERATE": 1.1039838e-06,
+        "IMAGE_READ": 0.99995697,
+        "KEEP_SEARCH": 8.331325e-06,
+        "NONE": 2.8586444e-05,
+        "WEB_READ": 4.6910204e-06,
+        "WEB_SEARCH": 3.522341e-07
+      },
+      "latencyMs": 40.058549,
+      "id": "image-read",
+      "job": "tool-choice",
+      "expected": "IMAGE_READ",
+      "correct": true
+    },
+    {
+      "selected": "NONE",
+      "confidence": 0.7883477,
+      "scores": {
+        "IMAGE_GENERATE": 1.1379645e-05,
+        "IMAGE_READ": 2.8231154e-05,
+        "KEEP_SEARCH": 0.00063342677,
+        "NONE": 0.7883477,
+        "WEB_READ": 0.079386786,
+        "WEB_SEARCH": 0.13159242
+      },
+      "latencyMs": 40.588938,
+      "id": "retained-evidence",
+      "job": "tool-choice",
+      "expected": "NONE",
+      "correct": true
+    },
+    {
+      "selected": "KEEP_SEARCH",
+      "confidence": 0.9999287,
+      "scores": {
+        "IMAGE_GENERATE": 1.9896822e-06,
+        "IMAGE_READ": 6.1134524e-06,
+        "KEEP_SEARCH": 0.9999287,
+        "NONE": 4.303622e-05,
+        "WEB_READ": 1.179783e-05,
+        "WEB_SEARCH": 8.287205e-06
+      },
+      "latencyMs": 41.188753,
+      "id": "keep-search",
+      "job": "tool-choice",
+      "expected": "KEEP_SEARCH",
+      "correct": true
+    },
+    {
+      "selected": "WEB_READ",
+      "confidence": 0.99995935,
+      "scores": {
+        "IMAGE_GENERATE": 1.7852867e-07,
+        "IMAGE_READ": 1.1830703e-06,
+        "KEEP_SEARCH": 1.1142135e-06,
+        "NONE": 5.096133e-06,
+        "WEB_READ": 0.99995935,
+        "WEB_SEARCH": 3.3179374e-05
+      },
+      "latencyMs": 40.509349,
+      "id": "read-url",
+      "job": "tool-choice",
+      "expected": "WEB_READ",
+      "correct": true
+    },
+    {
+      "selected": "IRRELEVANT",
+      "confidence": 0.7717468,
+      "scores": {
+        "IRRELEVANT": 0.7717468,
+        "RELEVANT": 0.22825316
+      },
+      "latencyMs": 40.144096999999995,
+      "id": "bad-query",
+      "job": "tool-arguments",
+      "expected": "IRRELEVANT",
+      "correct": true
+    },
+    {
+      "selected": "RELEVANT",
+      "confidence": 0.5689578,
+      "scores": {
+        "IRRELEVANT": 0.43104216,
+        "RELEVANT": 0.5689578
+      },
+      "latencyMs": 40.695299,
+      "id": "recovered-query",
+      "job": "tool-arguments",
+      "expected": "RELEVANT",
+      "correct": true
+    },
+    {
+      "selected": "RELEVANT",
+      "confidence": 0.9814005,
+      "scores": {
+        "IRRELEVANT": 0.018599568,
+        "RELEVANT": 0.9814005
+      },
+      "latencyMs": 35.968172,
+      "id": "personal-checks-result",
+      "job": "tool-result",
+      "expected": "IRRELEVANT",
+      "correct": false
+    },
+    {
+      "selected": "RELEVANT",
+      "confidence": 0.9961597,
+      "scores": {
+        "IRRELEVANT": 0.003840347,
+        "RELEVANT": 0.9961597
+      },
+      "latencyMs": 36.081333,
+      "id": "iphone-result",
+      "job": "tool-result",
+      "expected": "RELEVANT",
+      "correct": true
+    },
+    {
+      "selected": "RELEVANT",
+      "confidence": 0.9477779,
+      "scores": {
+        "IRRELEVANT": 0.052222054,
+        "RELEVANT": 0.9477779
+      },
+      "latencyMs": 40.744954,
+      "id": "stale-after-evidence",
+      "job": "tool-result",
+      "expected": "IRRELEVANT",
+      "correct": false
+    },
+    {
+      "selected": "Deep",
+      "confidence": 0.86402154,
+      "scores": {
+        "Balanced": 0.0025812879,
+        "Deep": 0.86402154,
+        "Quick": 0.13339716
+      },
+      "latencyMs": 32.879216,
+      "id": "simple",
+      "job": "model-route",
+      "expected": "Quick",
+      "correct": false
+    },
+    {
+      "selected": "Deep",
+      "confidence": 0.9995352,
+      "scores": {
+        "Balanced": 0.0002884029,
+        "Deep": 0.9995352,
+        "Quick": 0.00017641252
+      },
+      "latencyMs": 36.532664,
+      "id": "moderate",
+      "job": "model-route",
+      "expected": "Balanced",
+      "correct": false
+    },
+    {
+      "selected": "Quick",
+      "confidence": 0.96914065,
+      "scores": {
+        "Balanced": 2.8459031e-05,
+        "Deep": 0.030830909,
+        "Quick": 0.96914065
+      },
+      "latencyMs": 42.14256,
+      "id": "difficult",
+      "job": "model-route",
+      "expected": "Deep",
+      "correct": false
+    }
+  ]
+}

@@ -1,3 +1,5 @@
+import { unrelatedChecksResult } from './webRelevance.ts'
+import type { DecisionAssist } from '../decision/DecisionEngine.ts'
 export type ToolAccess = 'read' | 'write'
 
 export interface ToolResultSource {
@@ -59,6 +61,9 @@ export class ToolPolicyError extends Error {
 /** Calling a tool never changes the selected local language-model runtime. */
 export class ToolRegistry {
   private readonly tools = new Map<string, CrownKeepTool>()
+  private steward?: { assist: DecisionAssist; context: string }
+  setSteward(assist: DecisionAssist, context: string): void { this.steward = { assist, context } }
+
   private policy: ToolExecutionPolicy = { ...DEFAULT_POLICY }
 
   register(tool: CrownKeepTool): void {
@@ -126,7 +131,17 @@ export class ToolRegistry {
       throw new Error(`Tool '${tool.name}' is unavailable.`)
     }
 
+    if (this.steward) {
+      const relevant = await this.steward.assist.relevant('tool-arguments', `Request/topic: ${this.steward.context}\nTool: ${tool.id}\nProposed arguments: ${JSON.stringify(input)}`)
+      if (relevant === false) throw new Error('Tool arguments do not preserve the request/topic. Retry using the resolved topic.')
+    }
     const result = await tool.execute(input)
+    const query = tool.id === 'web.search' && input && typeof input === 'object' ? (input as { query?: unknown }).query : undefined
+    if (typeof query === 'string' && unrelatedChecksResult(query, result.text)) return { text: 'Search returned unrelated checks/checkers results. Retry using the resolved topic; do not use this evidence.', metadata: { dataLeftDevice: true, detail: 'irrelevant-result' } }
+    if (this.steward) {
+      const relevant = await this.steward.assist.relevant('tool-result', `Request/topic: ${this.steward.context}\nTool: ${tool.id}\nEvidence: ${result.text.slice(0, 6000)}`)
+      if (relevant === false) return { text: 'Tool evidence was rejected as irrelevant. Retry with the resolved topic; do not use this evidence.', metadata: { dataLeftDevice: tool.requiresNetwork, detail: 'irrelevant-result' } }
+    }
     return {
       ...result,
       metadata: {

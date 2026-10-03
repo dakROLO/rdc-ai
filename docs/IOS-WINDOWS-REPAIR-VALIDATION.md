@@ -1,5 +1,7 @@
 # iOS / Windows context and image repair — 2026-10-03
 
+Current follow-on: [Decision / Auto / image-runtime validation](DECISION-IMAGE-VALIDATION.md). Julia categories are unqualified; earlier physical evidence is preserved.
+
 ## Current assistant-tools package
 
 The [assistant tool validation matrix](ASSISTANT-TOOLS-VALIDATION.md) supersedes the earlier editable-query review, default Apple prefetch, standalone Images/Prompt controls and Image Playground direction. Those older implementation notes are preserved below as history.

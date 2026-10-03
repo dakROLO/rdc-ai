@@ -1,5 +1,7 @@
 # Sprint 4A.4 — System Foundry Convergence Validation
 
+Current follow-on: [Decision / Auto / image-runtime validation](DECISION-IMAGE-VALIDATION.md). Julia categories are unqualified; earlier physical evidence is preserved.
+
 **Current October 3 package:** [Assistant tools validation](ASSISTANT-TOOLS-VALIDATION.md). Windows automatic web orchestration remains unaccepted after Quick ignored `/web` evidence and answered from its April 2023 cutoff. Repaired Windows and iOS physical tests remain open. The dated entries below preserve prior evidence.
 
 **Branch:** `sprint-4a3-local-platform-convergence`  

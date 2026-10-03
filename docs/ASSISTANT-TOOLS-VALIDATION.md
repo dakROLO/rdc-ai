@@ -1,5 +1,7 @@
 # Assistant tools implementation and device handoff — October 3, 2026
 
+Current follow-on: [Decision / Auto / image-runtime validation](DECISION-IMAGE-VALIDATION.md). Julia categories are unqualified; earlier physical evidence is preserved.
+
 Branch: `sprint-4a3-local-platform-convergence`. No merge, tag or branch deletion is part of this package.
 
 ## Physical findings preserved
