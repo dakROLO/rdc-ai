@@ -8,13 +8,16 @@ function fixture(selected = 'Quick', confidence = .95) {
   const engine: DecisionEngine = { status: async () => status, release: async () => { releases++ }, decide: async (): Promise<DecisionResult> => { calls++; return { selected, confidence, scores: { [selected]: confidence }, latencyMs: 12 } } }
   return { assist: new DecisionAssist(engine), status, calls: () => calls, releases: () => releases }
 }
-test('Julia disabled/unavailable/unqualified/low confidence use Quick without inference', async () => {
+test('Julia disabled/unavailable use Quick; unqualified jobs run only in shadow; low confidence falls back', async () => {
   const f = fixture('Deep')
   assert.equal(await f.assist.route('Auto', 'complex', ['Quick','Deep']), 'Quick'); assert.equal(f.calls(), 0)
   await f.assist.setEnabled(true); f.status.available = false
   assert.equal(await f.assist.route('Auto', 'complex', ['Quick','Deep']), 'Quick'); assert.equal(f.calls(), 0)
   f.status.available = true; f.status.qualifiedJobs = []
-  assert.equal(await f.assist.route('Auto', 'complex', ['Quick','Deep']), 'Quick'); assert.equal(f.calls(), 0)
+  assert.equal(await f.assist.route('Auto', 'complex', ['Quick','Deep']), 'Quick')
+  assert.equal(f.calls(), 1)
+  assert.match(f.assist.last?.reason ?? '', /shadow/i)
+  assert.equal(f.assist.last?.result?.selected, 'Deep')
   const low = fixture('Deep', .7); await low.assist.setEnabled(true)
   assert.equal(await low.assist.route('Auto', 'complex', ['Quick','Deep']), 'Quick')
   assert.equal(low.assist.history[0]?.result?.confidence, .7)
