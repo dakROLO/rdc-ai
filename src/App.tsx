@@ -3028,7 +3028,7 @@ ${image.extractedText}
                   <div className="diagnostics-panel">
                     <p>Julia: {decisionStatus?.version ?? 'Julia-1'} · {decisionStatus?.backend ?? 'checking'} · {decisionStatus?.loadState ?? 'unavailable'}</p>
                     <p>{decisionStatus?.detail}</p>
-                    <p>Last decision: {decisionAssist.last ? JSON.stringify(decisionAssist.last) : 'None'} · Mode: {modelMode}</p>
+                    <p>Last decision: {decisionAssist.last ? JSON.stringify(decisionAssist.last) : 'None'} · Mode: {modelMode}</p><details><summary>Recent local decisions</summary><pre>{JSON.stringify(decisionAssist.history, null, 2)}</pre></details>
                     <p>Image runtime: {imageRuntimeStatus?.backend ?? 'not probed'} · {imageRuntimeStatus?.state ?? 'unknown'} · {imageRuntimeStatus?.detail}</p>
                     <button type="button" disabled={toolBusy || isGenerating} onClick={() => { void localImageRuntime().status().then(setImageRuntimeStatus); void decisionAssist.engine.status().then(setDecisionStatus) }}>Refresh local capability diagnostics</button>
                     <p>Provider: {selectedProvider.displayName} · Model: {selectedModelId}</p>

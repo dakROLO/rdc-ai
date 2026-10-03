@@ -32,6 +32,12 @@ export const DECISION_THRESHOLD = 0.8
 export class DecisionAssist {
   enabled = false
   last: { job: DecisionJob; result?: DecisionResult; reason: string } | undefined
+  readonly history: Array<{ job: DecisionJob; result?: DecisionResult; reason: string }> = []
+  private record(decision: { job: DecisionJob; result?: DecisionResult; reason: string }): void {
+    this.last = decision
+    this.history.push(decision)
+    if (this.history.length > 20) this.history.shift()
+  }
   readonly engine: DecisionEngine
   constructor(engine: DecisionEngine) { this.engine = engine }
   async setEnabled(enabled: boolean) {
@@ -39,7 +45,7 @@ export class DecisionAssist {
     if (!enabled) await this.engine.release()
   }
   async judge(request: DecisionRequest): Promise<DecisionResult | undefined> {
-    const fallback = (reason: string) => { this.last = { job: request.job, reason }; return undefined }
+    const fallback = (reason: string) => { this.record({ job: request.job, reason }); return undefined }
     if (!this.enabled) return fallback('disabled')
     try {
       const status = await this.engine.status()
@@ -47,15 +53,15 @@ export class DecisionAssist {
       const result = await this.engine.decide(request)
       // Recheck opt-in after asynchronous loading/inference.
       if (!this.enabled) return fallback('disabled during evaluation')
-      if (!Number.isFinite(result.confidence) || result.confidence < DECISION_THRESHOLD || result.confidence > 1 || !request.options.some(x => x.id === result.selected)) return fallback('low confidence or invalid choice')
-      this.last = { job: request.job, result, reason: 'qualified local judgment' }
+      if (!Number.isFinite(result.confidence) || result.confidence < DECISION_THRESHOLD || result.confidence > 1 || !request.options.some(x => x.id === result.selected)) { this.record({ job: request.job, result, reason: 'low confidence or invalid choice; deterministic fallback' }); return undefined }
+      this.record({ job: request.job, result, reason: 'qualified local judgment' })
       return result
     } catch { return fallback('local engine failed; deterministic fallback') }
   }
   async route(mode: 'Auto' | ChatRole, prompt: string, qualified: ChatRole[]): Promise<ChatRole> {
-    if (mode !== 'Auto') return mode
+    if (mode !== 'Auto') { this.record({ job: 'model-route', reason: `manual override: ${mode}` }); return mode }
     const options = qualified.map(id => ({ id, description: ({ Quick: 'Simple everyday questions and concise answers', Balanced: 'Moderate analysis, planning and multi-part explanations', Deep: 'Difficult reasoning, complex tradeoffs and detailed technical analysis' })[id] }))
-    if (options.length < 2) { this.last = { job: 'model-route', reason: 'Quick fallback; fewer than two qualified roles' }; return 'Quick' }
+    if (options.length < 2) { this.record({ job: 'model-route', reason: 'Quick fallback; fewer than two qualified roles' }); return 'Quick' }
     const result = await this.judge({ job: 'model-route', state: prompt, question: 'Which available reasoning role is appropriate for this request?', options })
     return result && qualified.includes(result.selected as ChatRole) ? result.selected as ChatRole : 'Quick'
   }

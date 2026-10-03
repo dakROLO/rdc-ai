@@ -135,6 +135,10 @@ export class ToolRegistry {
       const relevant = await this.steward.assist.relevant('tool-arguments', `Request/topic: ${this.steward.context}\nTool: ${tool.id}\nProposed arguments: ${JSON.stringify(input)}`)
       if (relevant === false) throw new Error('Tool arguments do not preserve the request/topic. Retry using the resolved topic.')
     }
+    // Permission may change while availability or local advice is awaited.
+    // Recheck at the actual execution boundary; advice cannot preserve stale consent.
+    if (tool.requiresNetwork && this.policy.webAccess !== 'on') throw new ToolPolicyError('Web Access is OFF. CrownKeep blocked the network tool.')
+    if (tool.access === 'write' && !(tool.id === 'image.generate' ? this.policy.allowImageGeneration : this.policy.allowWriteTools)) throw new ToolPolicyError('Tool permission was revoked before execution.')
     const result = await tool.execute(input)
     const query = tool.id === 'web.search' && input && typeof input === 'object' ? (input as { query?: unknown }).query : undefined
     if (typeof query === 'string' && unrelatedChecksResult(query, result.text)) return { text: 'Search returned unrelated checks/checkers results. Retry using the resolved topic; do not use this evidence.', metadata: { dataLeftDevice: true, detail: 'irrelevant-result' } }

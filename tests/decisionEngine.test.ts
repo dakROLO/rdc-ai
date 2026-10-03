@@ -17,6 +17,8 @@ test('Julia disabled/unavailable/unqualified/low confidence use Quick without in
   assert.equal(await f.assist.route('Auto', 'complex', ['Quick','Deep']), 'Quick'); assert.equal(f.calls(), 0)
   const low = fixture('Deep', .7); await low.assist.setEnabled(true)
   assert.equal(await low.assist.route('Auto', 'complex', ['Quick','Deep']), 'Quick')
+  assert.equal(low.assist.history[0]?.result?.confidence, .7)
+  assert.equal(low.assist.history[0]?.result?.latencyMs, 12)
   await f.assist.setEnabled(false); assert.equal(f.releases(),1)
 })
 test('Auto routes simple/moderate/difficult only among supplied qualified roles; manual overrides', async () => {
@@ -71,4 +73,14 @@ test('real checks/checkers failure is rejected even with Julia OFF', async () =>
   registry.register({id:'web.search',name:'search',description:'',requiresNetwork:true,access:'read',isAvailable:async()=>true,execute:async()=>({text:'Order personal checks and bank checks online. Checkers.'})})
   const result=await registry.execute('web.search',{query:'newest Apple iPhone'})
   assert.equal(result.metadata?.detail,'irrelevant-result');assert.equal(result.data,undefined);assert.equal(result.metadata?.sources,undefined)
+})
+
+
+test('Web OFF during local evaluation blocks execution despite Julia approval', async () => {
+  const f=fixture('RELEVANT');await f.assist.setEnabled(true)
+  const r=new ToolRegistry();r.setPolicy({webAccess:'on'});r.setSteward(f.assist,'topic')
+  let executed=false
+  r.register({id:'web.search',name:'search',description:'',access:'read',requiresNetwork:true,isAvailable:async()=>true,execute:async()=>{executed=true;return {text:'evidence'}}})
+  f.assist.engine.decide=async()=>{r.setPolicy({webAccess:'off'});return {selected:'RELEVANT',confidence:.99,scores:{RELEVANT:.99},latencyMs:1}}
+  await assert.rejects(r.execute('web.search',{query:'topic'}),/OFF/);assert.equal(executed,false)
 })

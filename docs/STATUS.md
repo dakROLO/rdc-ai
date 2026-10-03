@@ -2,7 +2,7 @@
 
 ## Current — Julia decision and local image package / 4A.4P
 
-Independent native Rust/ONNX CPU decision adapter, typed shared advisory contract, persisted Decision Assist and Auto/manual mode are implemented. **No Julia production judgment category is qualified** after measured CrownKeep smoke failures (FP32 9/16); Auto safely uses cached Quick. iOS native Julia is unavailable pending conversion/parity/device benchmarking. Image runtime readiness and the saved Windows loopback endpoint are shared by manual workbench and Anne; Local Image Generation opt-in is enforced. See [architecture/evals](JULIA-DECISION-ENGINE.md) and [validation/physical plan](DECISION-IMAGE-VALIDATION.md). No physical Windows/iOS acceptance, main merge or branch deletion. Earlier findings below remain evidence.
+Independent native Rust/ONNX CPU decision adapter, typed shared advisory contract, persisted Decision Assist and Auto/manual mode are implemented. **No Julia production judgment category is qualified** after measured CrownKeep smoke failures (FP32 9/16); Auto safely uses cached Quick. iOS native Julia is unavailable pending conversion/parity/device benchmarking. Image runtime readiness and the saved Windows loopback endpoint are shared by manual workbench and Anne; Local Image Generation opt-in is enforced. See [architecture/evals](JULIA-DECISION-ENGINE.md) and [validation/physical plan](DECISION-IMAGE-VALIDATION.md). Automated: 68 unit/integration tests and 8 browser flows pass locally. Native CI run 896 passed shared verification, unsigned iOS baseline, Windows compile/image-status tests and lockfile consistency. No physical Windows/iOS acceptance, main merge or branch deletion. Earlier findings below remain evidence.
 
 
 **Updated:** 2026-10-03
