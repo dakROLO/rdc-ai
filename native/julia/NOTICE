@@ -11,3 +11,13 @@ notices (including future NOTICE files), identify modifications, and include
 applicable ONNX Runtime/tokenizers/dependency licenses. Do not imply endorsement.
 Julia retains the jhu-clsp/mmBERT-small encoder/tokenizer foundation; preserve
 its applicable notices and license metadata when shipping those artifacts.
+
+
+iOS optional Julia host:
+- Swift Julia Core AI reference host adapted from john-rocky/coreai-model-zoo.
+- Optional Core AI model source: mlboydaisuke/Julia-1-CoreAI, pinned revision
+  d1e943545c64e20e73a88ae1f890227c349e22ba.
+- The iPhone app downloads these optional model/tokenizer files only after
+  explicit user action; they are not committed or bundled in CrownKeep.
+- Native parity and device compatibility are checked separately from
+  CrownKeep semantic-job qualification.
