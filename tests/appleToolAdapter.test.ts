@@ -13,9 +13,9 @@ test('Apple adapter forwards native local tools and scoped images without openin
     },
   }
   const provider = new AppleFoundationModelsProvider(host)
-  const tools = ['keep.search', 'image.read'].map((id) => ({ id, functionName: `crownkeep_${id.replace('.', '_')}`, description: 'Local tool', inputSchema: {} }))
+  const tools = ['keep.search', 'image.read', 'image.generate'].map((id) => ({ id, functionName: `crownkeep_${id.replace('.', '_')}`, description: 'Local tool', inputSchema: {} }))
   for await (const _chunk of provider.streamChat({ modelId: 'proof', messages: [{ role: 'user', content: 'Read the attached image.' }], tools, context: { images: [{ id: 'attachment', dataUrl: 'data:image/png;base64,synthetic' }] } })) { /* collect native call */ }
   assert.equal(actual?.webAccess, 'off')
-  assert.deepEqual(actual?.tools?.map((item) => item.id), ['keep.search', 'image.read'])
+  assert.deepEqual(actual?.tools?.map((item) => item.id), ['keep.search', 'image.read', 'image.generate'])
   assert.deepEqual(actual?.images, [{ id: 'attachment', dataUrl: 'data:image/png;base64,synthetic' }])
 })
