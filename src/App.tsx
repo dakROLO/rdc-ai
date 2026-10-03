@@ -470,9 +470,6 @@ export default function App() {
     : undefined
   const webSearchAvailable = webProviderStatus.searchAvailable
   const webReadAvailable = webProviderStatus.readAvailable
-  const glanceRole =
-    activeChatRole ??
-    (selectedProviderId === 'apple-foundation-models' ? 'Quick' : undefined)
   const glanceState = useMemo(() => {
     const operationText = `${runtimeOperation?.stage ?? ''} ${runtimeOperation?.message ?? ''} ${runtimeActionMessage ?? ''}`
     if (
