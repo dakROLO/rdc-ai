@@ -1798,6 +1798,7 @@ ${image.extractedText}
               registry: requestTools,
               signal: generationSignal,
               fallback: () => runAutomaticReadOnlyTools(webPrompt, toolRegistry),
+              webSearchContext: webPrompt,
               onModelActivity: () => {
                 if (firstTokenAt !== undefined) return
                 firstTokenAt = performance.now()
