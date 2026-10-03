@@ -626,9 +626,19 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
 
         images: {
           status: () => call("imageStatus"),
+          install: () => call("imageInstall"),
+          remove: () => call("imageRemove"),
           understand: (dataUrl, prompt) => call("imageUnderstand", { dataUrl, prompt }),
           recognize: (dataUrl) => call("imageRecognize", { dataUrl }),
           generate: (prompt) => call("imageGenerate", { prompt })
+        },
+
+        decision: {
+          status: () => call("decisionStatus"),
+          install: () => call("decisionInstall"),
+          remove: () => call("decisionRemove"),
+          decide: (request) => call("decisionDecide", { request }),
+          release: () => call("decisionRelease")
         },
 
         getAvailability() {
@@ -730,15 +740,39 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
             }
 
         case "imageStatus":
-            var imageStatus: [String: Any] = [
-                "ocrAvailable": true, "understandingAvailable": false,
-                "generationAvailable": false, "generationState": "not-installed",
-                "detail": "Optional Core ML image generation is not installed. OCR stays local."
-            ]
+            var imageStatus = CrownKeepOptionalModels.shared.imageStatus()
             #if CROWNKEEP_IOS27_SDK
             if #available(iOS 27.0, *) { imageStatus["understandingAvailable"] = model.isAvailable }
             #endif
             resolve(id: id, value: imageStatus)
+
+        case "imageInstall":
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                do {
+                    var status = try await CrownKeepOptionalModels.shared.installImageModel()
+                    #if CROWNKEEP_IOS27_SDK
+                    if #available(iOS 27.0, *) { status["understandingAvailable"] = self.model.isAvailable }
+                    #endif
+                    self.resolve(id: id, value: status)
+                } catch {
+                    self.reject(id: id, message: error.localizedDescription)
+                }
+            }
+
+        case "imageRemove":
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                do {
+                    var status = try await CrownKeepOptionalModels.shared.removeImageModel()
+                    #if CROWNKEEP_IOS27_SDK
+                    if #available(iOS 27.0, *) { status["understandingAvailable"] = self.model.isAvailable }
+                    #endif
+                    self.resolve(id: id, value: status)
+                } catch {
+                    self.reject(id: id, message: error.localizedDescription)
+                }
+            }
 
         case "imageRecognize":
             guard let dataURL = args["dataUrl"] as? String,
@@ -793,7 +827,59 @@ final class CrownKeepNativeAIController: NSObject, WKScriptMessageHandler {
             #endif
 
         case "imageGenerate":
-            reject(id: id, message: "The optional Core ML image model is not installed. No image was uploaded.")
+            let prompt = (args["prompt"] as? String) ?? ""
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                do {
+                    self.resolve(
+                        id: id,
+                        value: try await CrownKeepOptionalModels.shared.generateImage(prompt: prompt)
+                    )
+                } catch {
+                    self.reject(id: id, message: error.localizedDescription)
+                }
+            }
+
+        case "decisionStatus":
+            resolve(id: id, value: CrownKeepOptionalModels.shared.juliaStatus())
+
+        case "decisionInstall":
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                do {
+                    self.resolve(id: id, value: try await CrownKeepOptionalModels.shared.installJulia())
+                } catch {
+                    self.reject(id: id, message: error.localizedDescription)
+                }
+            }
+
+        case "decisionRemove":
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                do {
+                    self.resolve(id: id, value: try await CrownKeepOptionalModels.shared.removeJulia())
+                } catch {
+                    self.reject(id: id, message: error.localizedDescription)
+                }
+            }
+
+        case "decisionRelease":
+            CrownKeepOptionalModels.shared.releaseJulia()
+            resolve(id: id, value: true)
+
+        case "decisionDecide":
+            guard let request = args["request"] as? [String: Any] else {
+                reject(id: id, message: "Invalid Julia decision request.")
+                return
+            }
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                do {
+                    self.resolve(id: id, value: try await CrownKeepOptionalModels.shared.decide(request))
+                } catch {
+                    self.reject(id: id, message: error.localizedDescription)
+                }
+            }
 
         case "getAvailability":
             resolve(id: id, value: availabilityPayload())
