@@ -16,6 +16,12 @@
 		AA0000000000000000000007 /* dist in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000018 /* dist */; };
 		AA0000000000000000000008 /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000019 /* WebKit.framework */; };
 		AA0000000000000000000009 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000021 /* Assets.xcassets */; };
+		AB0000000000000000000001 /* JuliaDecisions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000000011 /* JuliaDecisions.swift */; };
+		AB0000000000000000000002 /* CrownKeepOptionalModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000000012 /* CrownKeepOptionalModels.swift */; };
+		AB0000000000000000000003 /* CoreAI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AB0000000000000000000013 /* CoreAI.framework */; };
+		AB0000000000000000000004 /* StableDiffusion in Frameworks */ = {isa = PBXBuildFile; productRef = AB0000000000000000000110 /* StableDiffusion */; };
+		AB0000000000000000000005 /* Tokenizers in Frameworks */ = {isa = PBXBuildFile; productRef = AB0000000000000000000111 /* Tokenizers */; };
+		AB0000000000000000000006 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = AB0000000000000000000112 /* ZIPFoundation */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -29,6 +35,9 @@
 		AA0000000000000000000018 /* dist */ = {isa = PBXFileReference; lastKnownFileType = folder; name = dist; path = ../../../dist; sourceTree = "<group>"; };
 		AA0000000000000000000019 /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
 		AA0000000000000000000021 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AB0000000000000000000011 /* JuliaDecisions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JuliaDecisions.swift; sourceTree = "<group>"; };
+		AB0000000000000000000012 /* CrownKeepOptionalModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrownKeepOptionalModels.swift; sourceTree = "<group>"; };
+		AB0000000000000000000013 /* CoreAI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAI.framework; path = System/Library/Frameworks/CoreAI.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -38,6 +47,10 @@
 			files = (
 				AA0000000000000000000003 /* FoundationModels.framework in Frameworks */,
 				AA0000000000000000000008 /* WebKit.framework in Frameworks */,
+				AB0000000000000000000003 /* CoreAI.framework in Frameworks */,
+				AB0000000000000000000004 /* StableDiffusion in Frameworks */,
+				AB0000000000000000000005 /* Tokenizers in Frameworks */,
+				AB0000000000000000000006 /* ZIPFoundation in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -62,6 +75,8 @@
 				AA0000000000000000000015 /* CrownKeepBundleSchemeHandler.swift */,
 				AA0000000000000000000016 /* CrownKeepNativeAIController.swift */,
 				AA0000000000000000000017 /* CrownKeepWebView.swift */,
+				AB0000000000000000000011 /* JuliaDecisions.swift */,
+				AB0000000000000000000012 /* CrownKeepOptionalModels.swift */,
 				AA0000000000000000000021 /* Assets.xcassets */,
 			);
 			path = CrownKeepNative;
@@ -72,6 +87,7 @@
 			children = (
 				AA0000000000000000000014 /* FoundationModels.framework */,
 				AA0000000000000000000019 /* WebKit.framework */,
+				AB0000000000000000000013 /* CoreAI.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -100,6 +116,11 @@
 			dependencies = (
 			);
 			name = CrownKeepNative;
+			packageProductDependencies = (
+				AB0000000000000000000110 /* StableDiffusion */,
+				AB0000000000000000000111 /* Tokenizers */,
+				AB0000000000000000000112 /* ZIPFoundation */,
+			);
 			productName = CrownKeepNative;
 			productReference = AA0000000000000000000010 /* CrownKeepNative.app */;
 			productType = "com.apple.product-type.application";
@@ -128,6 +149,11 @@
 				Base,
 			);
 			mainGroup = AA0000000000000000000030;
+			packageReferences = (
+				AB0000000000000000000100 /* XCRemoteSwiftPackageReference "ml-stable-diffusion" */,
+				AB0000000000000000000101 /* XCRemoteSwiftPackageReference "swift-transformers" */,
+				AB0000000000000000000102 /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
+			);
 			productRefGroup = AA0000000000000000000033 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -159,10 +185,57 @@
 				AA0000000000000000000004 /* CrownKeepBundleSchemeHandler.swift in Sources */,
 				AA0000000000000000000005 /* CrownKeepNativeAIController.swift in Sources */,
 				AA0000000000000000000006 /* CrownKeepWebView.swift in Sources */,
+				AB0000000000000000000001 /* JuliaDecisions.swift in Sources */,
+				AB0000000000000000000002 /* CrownKeepOptionalModels.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		AB0000000000000000000100 /* XCRemoteSwiftPackageReference "ml-stable-diffusion" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple-aiml-research/ml-stable-diffusion.git";
+			requirement = {
+				kind = revision;
+				revision = ea2805dc1945be20561c77e5f6d1d9a5a637cda2;
+			};
+		};
+		AB0000000000000000000101 /* XCRemoteSwiftPackageReference "swift-transformers" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/huggingface/swift-transformers.git";
+			requirement = {
+				kind = exactVersion;
+				version = 0.1.8;
+			};
+		};
+		AB0000000000000000000102 /* XCRemoteSwiftPackageReference "ZIPFoundation" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/weichsel/ZIPFoundation.git";
+			requirement = {
+				kind = revision;
+				revision = 22787ffb59de99e5dc1fbfe80b19c97a904ad48d;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		AB0000000000000000000110 /* StableDiffusion */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AB0000000000000000000100 /* XCRemoteSwiftPackageReference "ml-stable-diffusion" */;
+			productName = StableDiffusion;
+		};
+		AB0000000000000000000111 /* Tokenizers */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AB0000000000000000000101 /* XCRemoteSwiftPackageReference "swift-transformers" */;
+			productName = Tokenizers;
+		};
+		AB0000000000000000000112 /* ZIPFoundation */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AB0000000000000000000102 /* XCRemoteSwiftPackageReference "ZIPFoundation" */;
+			productName = ZIPFoundation;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCBuildConfiguration section */
 		AA0000000000000000000080 /* Debug */ = {
