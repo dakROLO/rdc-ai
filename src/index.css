@@ -3745,3 +3745,28 @@ textarea::placeholder {
     display: none;
   }
 }
+
+
+.capability-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.capability-action-status {
+  margin: 8px 0;
+  padding: 9px 11px;
+  border: 1px solid rgba(70, 200, 230, 0.22);
+  border-radius: 10px;
+  background: rgba(6, 27, 42, 0.5);
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+@media (max-width: 620px) {
+  .capability-actions {
+    justify-content: flex-start;
+  }
+}
