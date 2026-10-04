@@ -323,8 +323,8 @@ final class CrownKeepOptionalModels {
         let bundlePrefix = variantPrefix + "julia1_fp32_s512.aimodel/"
         var assets: [JuliaAsset] = []
 
-        for line in manifestText.split(whereSeparator: \.isNewline) {
-            let fields = line.split(maxSplits: 1, whereSeparator: \.isWhitespace)
+        for line in manifestText.split(whereSeparator: { $0.isNewline }) {
+            let fields = line.split(maxSplits: 1, whereSeparator: { $0.isWhitespace })
             guard fields.count == 2 else { continue }
             let hash = String(fields[0])
             let path = String(fields[1]).trimmingCharacters(in: CharacterSet(charactersIn: " *"))
