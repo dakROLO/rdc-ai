@@ -22,10 +22,10 @@
 <text x="24" y="255" class="gate">Gate: physical iPhone tool matrix passes</text></g>
 <g transform="translate(565 338)"><rect width="470" height="280" rx="22" fill="#071426" stroke="#38D8FF" stroke-width="2"/>
 <text x="24" y="35" class="label" fill="#38D8FF">02 · ACTIVE / 4A.4O–4P</text><text x="24" y="76" class="head">Local decisions + images</text><path d="M24 94 H446" stroke="#224063"/>
-<circle cx="28" cy="123" r="3" fill="#38D8FF"/><text x="42" y="129" class="body">Auto + Julia contract; categories gated</text>
-<circle cx="28" cy="152" r="3" fill="#38D8FF"/><text x="42" y="158" class="body">Shared image runtime + readiness probe</text>
-<circle cx="28" cy="181" r="3" fill="#38D8FF"/><text x="42" y="187" class="body">CPU parity measured; iOS Julia pending</text>
-<circle cx="28" cy="210" r="3" fill="#38D8FF"/><text x="42" y="216" class="body">Physical image / tool tests remain open</text>
+<circle cx="28" cy="123" r="3" fill="#38D8FF"/><text x="42" y="129" class="body">Julia downloads + shadow decisions gated</text>
+<circle cx="28" cy="152" r="3" fill="#38D8FF"/><text x="42" y="158" class="body">iOS image model + Windows ComfyUI</text>
+<circle cx="28" cy="181" r="3" fill="#38D8FF"/><text x="42" y="187" class="body">Phone Q/B/D = orchestration profiles</text>
+<circle cx="28" cy="210" r="3" fill="#38D8FF"/><text x="42" y="216" class="body">Physical model / image tests remain open</text>
 <text x="24" y="255" class="gate">Gate: device repair matrix + safe history</text></g>
 <g transform="translate(1070 338)"><rect width="470" height="280" rx="22" fill="#071426" stroke="#38D8FF" stroke-width="2"/>
 <text x="24" y="35" class="label" fill="#38D8FF">03 · NEXT / 4B.1–4B.2</text><text x="24" y="76" class="head">One account, two devices</text><path d="M24 94 H446" stroke="#224063"/>
@@ -58,6 +58,6 @@
 <rect x="60" y="970" width="1480" height="85" rx="18" fill="#0B1A2C"/>
 <text x="84" y="1002" class="label" fill="#819AB7">LATER · DOES NOT BLOCK PERSONAL TWO-DEVICE USE</text>
 <text x="84" y="1033" class="body">AVD · Deep qualification · public installer release · general visual reasoning · cloud reasoning · optional RDC source</text>
-<text x="60" y="1100" class="foot">Julia + image runtime implemented; categories gated. Device acceptance pending.</text>
+<text x="60" y="1100" class="foot">Local decision/image stabilization active; branch flattening follows device acceptance.</text>
 <text x="1540" y="1100" text-anchor="end" class="foot">Detailed gates: docs/DAILY-USE-COMPLETION-PLAN.md</text>
 </svg>
