@@ -400,6 +400,12 @@ export default function App() {
   const [decisionStatus, setDecisionStatus] = useState<DecisionStatus>()
   const [imageRuntimeStatus, setImageRuntimeStatus] = useState<ImageRuntimeStatus>()
   const [capabilityAction, setCapabilityAction] = useState<string | null>(null)
+  const [capabilityProgress, setCapabilityProgress] = useState<{
+    kind: 'Julia' | 'Image'
+    stage: string
+    percent: number
+    message: string
+  } | null>(null)
   useEffect(() => {
     localStorage.setItem('crownkeep.modelMode', modelMode)
   }, [modelMode])
@@ -416,23 +422,50 @@ export default function App() {
     void localImageRuntime().status().then(setImageRuntimeStatus).catch(() => {})
   }, [])
 
+  function pollCapabilityProgress(
+    kind: 'Julia' | 'Image',
+    reader: () => Promise<{ installProgress?: { stage: string; percent: number; message: string } }>,
+  ): () => void {
+    let stopped = false
+    const tick = async () => {
+      try {
+        const status = await reader()
+        const value = status.installProgress
+        if (!stopped && value) setCapabilityProgress({ kind, ...value })
+      } catch {
+        // The install promise reports the authoritative failure.
+      }
+      if (!stopped) window.setTimeout(() => void tick(), 300)
+    }
+    void tick()
+    return () => { stopped = true }
+  }
+
   async function installJuliaCapability() {
     setCapabilityAction('Downloading and preparing Julia Decision Assist…')
+    setCapabilityProgress({ kind: 'Julia', stage: 'preparing', percent: 0, message: 'Preparing Julia download…' })
+    const stopPolling = pollCapabilityProgress('Julia', () => decisionAssist.engine.status())
     try {
       const status = await installDecisionModel()
       setDecisionStatus(status)
-      // Installing native Julia proves the runtime/row parity gate only.
-      // Keep Decision Assist enabled in shadow mode so CrownKeep can record
-      // device-local decisions without applying unqualified categories.
       setDecisionEnabled(status.available)
+      setCapabilityProgress({
+        kind: 'Julia',
+        stage: status.installProgress?.stage ?? 'complete',
+        percent: status.installProgress?.percent ?? 100,
+        message: status.installProgress?.message ?? 'Julia installation finished.',
+      })
       setCapabilityAction(status.detail)
     } catch (error) {
       setCapabilityAction(`Julia install failed: ${String(error)}`)
+    } finally {
+      stopPolling()
     }
   }
 
   async function removeJuliaCapability() {
     setCapabilityAction('Removing Julia Decision Assist model…')
+    setCapabilityProgress(null)
     try {
       await decisionAssist.setEnabled(false)
       setDecisionEnabled(false)
@@ -446,13 +479,25 @@ export default function App() {
 
   async function installImageCapability() {
     setCapabilityAction('Downloading and preparing the local image model…')
+    setCapabilityProgress({ kind: 'Image', stage: 'preparing', percent: 0, message: 'Preparing image model download…' })
     try {
       const runtime = localImageRuntime()
       if (!runtime.install) throw new Error('Image-model installation is not supported on this device.')
-      const status = await runtime.install()
-      setImageRuntimeStatus(status)
-      setLocalImagesEnabled(status.state === 'ready')
-      setCapabilityAction(status.detail)
+      const stopPolling = pollCapabilityProgress('Image', () => runtime.status())
+      try {
+        const status = await runtime.install()
+        setImageRuntimeStatus(status)
+        setLocalImagesEnabled(status.state === 'ready')
+        setCapabilityProgress({
+          kind: 'Image',
+          stage: status.installProgress?.stage ?? 'complete',
+          percent: status.installProgress?.percent ?? 100,
+          message: status.installProgress?.message ?? 'Image model installation finished.',
+        })
+        setCapabilityAction(status.detail)
+      } finally {
+        stopPolling()
+      }
     } catch (error) {
       setCapabilityAction(`Image model install failed: ${String(error)}`)
     }
@@ -460,6 +505,7 @@ export default function App() {
 
   async function removeImageCapability() {
     setCapabilityAction('Removing the local image model…')
+    setCapabilityProgress(null)
     try {
       const runtime = localImageRuntime()
       if (!runtime.remove) throw new Error('Image-model removal is not supported on this device.')
@@ -769,13 +815,16 @@ export default function App() {
     const element = conversationScrollRef.current
     if (!element) return
 
-    const nearBottom =
-      element.scrollHeight - element.scrollTop - element.clientHeight < 96
+    const distanceFromBottom =
+      element.scrollHeight - element.scrollTop - element.clientHeight
+    const autoFollow = distanceFromBottom < 96
+    const closeEnoughToHideJumpControl =
+      distanceFromBottom < Math.max(260, element.clientHeight * 0.28)
 
-    nearBottomRef.current = nearBottom
-    setIsNearBottom(nearBottom)
+    nearBottomRef.current = autoFollow
+    setIsNearBottom(closeEnoughToHideJumpControl)
 
-    if (nearBottom) {
+    if (closeEnoughToHideJumpControl) {
       setResponseFinishedAway(false)
     }
   }
@@ -3121,6 +3170,16 @@ ${image.extractedText}
                     )}
                   </div>
                 </div>
+                {capabilityProgress && (
+                  <div className="capability-progress" role="status" aria-live="polite">
+                    <div>
+                      <span>{capabilityProgress.kind} · {capabilityProgress.stage}</span>
+                      <strong>{Math.round(capabilityProgress.percent)}%</strong>
+                    </div>
+                    <progress max="100" value={Math.max(0, Math.min(100, capabilityProgress.percent))} />
+                    <small>{capabilityProgress.message}</small>
+                  </div>
+                )}
                 {capabilityAction && <p className="capability-action-status" role="status">{capabilityAction}</p>}
                 <div className="web-access-setting">
                   <div>
