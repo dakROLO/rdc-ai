@@ -167,3 +167,67 @@ test('generic online follow-up does not reuse image/OCR-bearing user content', (
 
   assert.equal(resolved, 'can you check online?')
 })
+
+
+test('local image intent uses permitted image.generate fallback and retains the image', async () => {
+  const registry = new ToolRegistry()
+  let calls = 0
+  const image: CrownKeepTool<{ prompt: string }> = {
+    id: 'image.generate',
+    name: 'Create image',
+    description: 'Generate locally.',
+    requiresNetwork: false,
+    access: 'write',
+    inputSchema: { type: 'object' },
+    isAvailable: async () => true,
+    execute: async ({ prompt }) => {
+      calls += 1
+      assert.match(prompt, /Pacific Northwest/i)
+      return {
+        text: 'Image generated locally.',
+        data: { dataUrl: 'data:image/png;base64,test' },
+        metadata: { dataLeftDevice: false },
+      }
+    },
+  }
+  registry.register(image)
+  registry.setPolicy({ allowImageGeneration: true })
+
+  const result = await runAutomaticReadOnlyTools(
+    'Make an image of a Pacific Northwest valley in spring.',
+    registry,
+  )
+
+  assert.equal(calls, 1)
+  assert.equal(result.attemptedWeb, false)
+  assert.equal(result.activities[0]?.toolId, 'image.generate')
+  assert.equal(result.activities[0]?.generatedImageDataUrl, 'data:image/png;base64,test')
+})
+
+test('local image intent fails locally without turning into a web tool', async () => {
+  const registry = new ToolRegistry()
+  const image: CrownKeepTool<{ prompt: string }> = {
+    id: 'image.generate',
+    name: 'Create image',
+    description: 'Generate locally.',
+    requiresNetwork: false,
+    access: 'write',
+    inputSchema: { type: 'object' },
+    isAvailable: async () => false,
+    execute: async () => {
+      throw new Error('should not execute')
+    },
+  }
+  registry.register(image)
+  registry.setPolicy({ allowImageGeneration: true })
+
+  const result = await runAutomaticReadOnlyTools(
+    'Create a picture of a mountain lake.',
+    registry,
+  )
+
+  assert.equal(result.attemptedWeb, false)
+  assert.equal(result.activities[0]?.toolId, 'image.generate')
+  assert.equal(result.activities[0]?.outcome, 'error')
+  assert.match(result.context, /local image generation could not run/i)
+})
