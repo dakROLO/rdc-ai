@@ -1,9 +1,16 @@
+export interface ImageInstallProgress {
+  stage: string
+  percent: number
+  message: string
+}
+
 export interface ImageCapabilities {
   ocrAvailable: boolean
   understandingAvailable: boolean
   generationAvailable: boolean
   generationState: 'not-installed' | 'ready' | 'unavailable'
   detail?: string
+  installProgress?: ImageInstallProgress
 }
 
 /** Optional Core ML capability contract. The base app never downloads weights
@@ -27,5 +34,6 @@ export function imageCapabilities(status?: Partial<ImageCapabilities>): ImageCap
     generationAvailable: status?.generationAvailable === true && status?.generationState === 'ready',
     generationState: status?.generationState ?? 'not-installed',
     detail: status?.detail,
+    installProgress: status?.installProgress,
   }
 }
