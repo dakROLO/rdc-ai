@@ -14,6 +14,7 @@ use std::{
 use tauri::Manager;
 
 static ENGINE: Mutex<Option<Engine>> = Mutex::new(None);
+static INSTALL_PROGRESS: Mutex<Option<InstallProgress>> = Mutex::new(None);
 
 const JULIA_REVISION: &str = "82a2fadf8fccfccdc5fd4e1009ba8f1a265eb7a8";
 const ORT_VERSION: &str = "1.22.0";
@@ -24,6 +25,14 @@ const SUPPORTED_JOBS: &[&str] = &[
     "tool-result",
 ];
 
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InstallProgress {
+    stage: String,
+    percent: f64,
+    message: String,
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Status {
@@ -33,6 +42,7 @@ pub struct Status {
     load_state: &'static str,
     qualified_jobs: &'static [&'static str],
     detail: String,
+    install_progress: Option<InstallProgress>,
 }
 
 fn directory(app: &tauri::AppHandle) -> Result<PathBuf, String> {
@@ -48,6 +58,17 @@ fn installed(directory: &Path) -> bool {
         .iter()
         .all(|name| directory.join(name).is_file())
 }
+
+fn set_install_progress(stage: &str, percent: f64, message: impl Into<String>) {
+    if let Ok(mut value) = INSTALL_PROGRESS.lock() {
+        *value = Some(InstallProgress {
+            stage: stage.into(),
+            percent: percent.clamp(0.0, 100.0),
+            message: message.into(),
+        });
+    }
+}
+
 
 #[tauri::command]
 pub fn crownkeep_decision_status(app: tauri::AppHandle) -> Result<Status, String> {
@@ -75,6 +96,10 @@ pub fn crownkeep_decision_status(app: tauri::AppHandle) -> Result<Status, String
             },
             directory.display()
         ),
+        install_progress: INSTALL_PROGRESS
+            .lock()
+            .map_err(|e| e.to_string())?
+            .clone(),
     })
 }
 
@@ -82,6 +107,10 @@ async fn download_to(
     client: &reqwest::Client,
     url: &str,
     destination: &Path,
+    stage: &str,
+    start_percent: f64,
+    span_percent: f64,
+    label: &str,
 ) -> Result<(), String> {
     let mut response = client
         .get(url)
@@ -90,9 +119,11 @@ async fn download_to(
         .map_err(|e| format!("Could not download Julia asset: {e}"))?
         .error_for_status()
         .map_err(|e| format!("Julia asset download failed: {e}"))?;
-
+    let expected = response.content_length();
+    let mut received = 0u64;
     let mut file = fs::File::create(destination)
         .map_err(|e| format!("Could not create {}: {e}", destination.display()))?;
+    set_install_progress(stage, start_percent, format!("Downloading {label}…"));
 
     while let Some(chunk) = response
         .chunk()
@@ -101,8 +132,23 @@ async fn download_to(
     {
         file.write_all(&chunk)
             .map_err(|e| format!("Could not write {}: {e}", destination.display()))?;
+        received += chunk.len() as u64;
+        if let Some(expected) = expected.filter(|value| *value > 0) {
+            let fraction = (received as f64 / expected as f64).clamp(0.0, 1.0);
+            let percent = start_percent + span_percent * fraction;
+            set_install_progress(
+                stage,
+                percent,
+                format!("Downloading {label}… {}%", percent.round() as u32),
+            );
+        }
     }
     file.flush().map_err(|e| e.to_string())?;
+    set_install_progress(
+        stage,
+        start_percent + span_percent,
+        format!("{label} downloaded."),
+    );
     Ok(())
 }
 
@@ -151,6 +197,7 @@ fn extract_ort(archive: &Path, destination: &Path) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn crownkeep_decision_install(app: tauri::AppHandle) -> Result<Status, String> {
+    set_install_progress("preparing", 1.0, "Preparing Julia download…");
     let directory = directory(&app)?;
     let parent = directory
         .parent()
@@ -174,17 +221,33 @@ pub async fn crownkeep_decision_install(app: tauri::AppHandle) -> Result<Status,
         .build()
         .map_err(|e| e.to_string())?;
 
-    download_to(&client, &format!("{base}/model.onnx"), &payload.join("model.onnx")).await?;
+    download_to(
+        &client,
+        &format!("{base}/model.onnx"),
+        &payload.join("model.onnx"),
+        "model",
+        2.0,
+        2.0,
+        "Julia graph",
+    ).await?;
     download_to(
         &client,
         &format!("{base}/model.onnx.data"),
         &payload.join("model.onnx.data"),
+        "weights",
+        4.0,
+        78.0,
+        "Julia weights",
     )
     .await?;
     download_to(
         &client,
         &format!("{base}/tokenizer.json"),
         &payload.join("tokenizer.json"),
+        "tokenizer",
+        82.0,
+        8.0,
+        "Julia tokenizer",
     )
     .await?;
 
@@ -192,7 +255,16 @@ pub async fn crownkeep_decision_install(app: tauri::AppHandle) -> Result<Status,
     let ort_url = format!(
         "https://github.com/microsoft/onnxruntime/releases/download/v{ORT_VERSION}/onnxruntime-win-x64-{ORT_VERSION}.zip"
     );
-    download_to(&client, &ort_url, &ort_archive).await?;
+    download_to(
+        &client,
+        &ort_url,
+        &ort_archive,
+        "runtime",
+        90.0,
+        6.0,
+        "ONNX Runtime CPU",
+    ).await?;
+    set_install_progress("runtime", 97.0, "Preparing ONNX Runtime CPU…");
     let ort_expanded = staging.path().join("onnxruntime");
     extract_ort(&ort_archive, &ort_expanded)?;
 
@@ -205,6 +277,7 @@ pub async fn crownkeep_decision_install(app: tauri::AppHandle) -> Result<Status,
         let _ = fs::copy(license, payload.join("ONNXRUNTIME-LICENSE.txt"));
     }
 
+    set_install_progress("verifying", 98.0, "Verifying Julia checksums…");
     verify_directory(&payload)?;
 
     if directory.exists() {
@@ -213,6 +286,7 @@ pub async fn crownkeep_decision_install(app: tauri::AppHandle) -> Result<Status,
     }
     fs::rename(&payload, &directory)
         .map_err(|e| format!("Could not activate the verified Julia package: {e}"))?;
+    set_install_progress("complete", 100.0, "Julia is installed locally.");
 
     crownkeep_decision_status(app)
 }
@@ -220,6 +294,7 @@ pub async fn crownkeep_decision_install(app: tauri::AppHandle) -> Result<Status,
 #[tauri::command]
 pub async fn crownkeep_decision_remove(app: tauri::AppHandle) -> Result<Status, String> {
     *ENGINE.lock().map_err(|e| e.to_string())? = None;
+    if let Ok(mut progress) = INSTALL_PROGRESS.lock() { *progress = None; }
     let directory = directory(&app)?;
     if directory.exists() {
         fs::remove_dir_all(&directory)
