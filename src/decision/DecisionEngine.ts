@@ -13,6 +13,11 @@ export interface DecisionResult {
   scores: Record<string, number>
   latencyMs: number
 }
+export interface InstallProgress {
+  stage: string
+  percent: number
+  message: string
+}
 export interface DecisionStatus {
   available: boolean
   version: string
@@ -20,6 +25,7 @@ export interface DecisionStatus {
   loadState: 'unavailable' | 'unloaded' | 'loaded'
   qualifiedJobs: DecisionJob[]
   detail: string
+  installProgress?: InstallProgress
 }
 export interface DecisionEngine {
   status(): Promise<DecisionStatus>
