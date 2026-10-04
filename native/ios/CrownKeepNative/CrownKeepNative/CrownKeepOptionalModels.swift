@@ -14,8 +14,11 @@ final class CrownKeepOptionalModels {
 
     private let fm = FileManager.default
     #if CROWNKEEP_IOS27_SDK
-    private var juliaRuntime: JuliaDecisions?
-    private var juliaTokenizer: (any Tokenizer)?
+    // Keep iOS-27-only Julia types out of stored-property signatures because
+    // CrownKeep still targets iOS 26. The concrete type is recovered only
+    // inside #available(iOS 27, *) code paths.
+    private var juliaRuntime: Any?
+    private var juliaTokenizer: Any?
     #endif
     private var imagePipeline: StableDiffusionPipeline?
 
@@ -155,7 +158,7 @@ final class CrownKeepOptionalModels {
         #if CROWNKEEP_IOS27_SDK
         if #available(iOS 27.0, *) {
             let installed = juliaFilesPresent()
-            if juliaRuntime != nil {
+            if (juliaRuntime as? JuliaDecisions) != nil {
                 return decisionStatus(
                     available: true,
                     loadState: "loaded",
@@ -343,7 +346,7 @@ final class CrownKeepOptionalModels {
 
     @available(iOS 27.0, *)
     private func loadJulia() async throws {
-        if juliaRuntime != nil { return }
+        if (juliaRuntime as? JuliaDecisions) != nil { return }
         guard juliaFilesPresent() else {
             throw NSError(domain: "CrownKeepJulia", code: 6, userInfo: [NSLocalizedDescriptionKey: "Julia is not installed."])
         }
@@ -358,7 +361,7 @@ final class CrownKeepOptionalModels {
         }
         try await loadJulia()
         guard
-            let runtime = juliaRuntime,
+            let runtime = juliaRuntime as? JuliaDecisions,
             let state = request["state"] as? String,
             let question = request["question"] as? String,
             let optionRecords = request["options"] as? [[String: Any]]
