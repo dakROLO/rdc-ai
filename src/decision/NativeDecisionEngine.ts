@@ -24,17 +24,19 @@ export const decisionAssist = new DecisionAssist(new NativeDecisionEngine())
 
 
 export async function installDecisionModel(): Promise<DecisionStatus> {
+  if (isTauri()) return invoke('crownkeep_decision_install')
   const native = getNativeAIHost()?.decision
   if (!native?.install) throw new Error('This device does not support installing the Julia decision model.')
   return native.install()
 }
 
 export async function removeDecisionModel(): Promise<DecisionStatus> {
+  if (isTauri()) return invoke('crownkeep_decision_remove')
   const native = getNativeAIHost()?.decision
   if (!native?.remove) throw new Error('This device does not support removing the Julia decision model.')
   return native.remove()
 }
 
 export function decisionModelInstallable(): boolean {
-  return Boolean(getNativeAIHost()?.decision?.install)
+  return isTauri() || Boolean(getNativeAIHost()?.decision?.install)
 }
