@@ -22,7 +22,7 @@ final class CrownKeepOptionalModels {
     #endif
     private var imagePipeline: StableDiffusionPipeline?
 
-    private let juliaRevision = "d1e943545c64e20e73a88ae1f890227c349e22ba"
+    private let juliaPublishedRevision = "d1e943545c64e20e73a88ae1f890227c349e22ba"
     private let juliaModelBytes: Int64 = 578_357_637
     private let juliaTokenizerBytes: Int64 = 34_363_188
     private let juliaTokenizerSHA256 = "609d8f4c067cd3950f88594c5a802616cea245823836ef5848ee4fc40aab5b6f"
@@ -245,36 +245,91 @@ final class CrownKeepOptionalModels {
         let staging = try stagingFolder("julia")
         defer { try? fm.removeItem(at: staging) }
 
-        let base = "https://huggingface.co/mlboydaisuke/Julia-1-CoreAI/resolve/\(juliaRevision)/macos/fp32-s512"
-        guard
-            let modelURL = URL(string: "\(base)/julia1_fp32_s512.aimodel?download=true"),
-            let metadataURL = URL(string: "\(base)/metadata.json?download=true"),
-            let tokenizerURL = URL(string: "\(base)/tokenizer/tokenizer.json?download=true"),
-            let tokenizerConfigURL = URL(string: "\(base)/tokenizer/tokenizer_config.json?download=true")
-        else {
-            throw NSError(domain: "CrownKeepJulia", code: 2, userInfo: [NSLocalizedDescriptionKey: "Pinned Julia model URLs are invalid."])
+        // The published model-zoo card names an immutable HF revision, but
+        // physical iPhone validation returned HTTP 404 for that exact resolve
+        // URL. Try the documented revision first, then the repository's current
+        // main transport path. The fallback is still gated by exact file size,
+        // tokenizer SHA-256, and CrownKeep's on-device row/inference parity test.
+        let revisions = [juliaPublishedRevision, "main"]
+
+        func juliaURL(_ revision: String, _ path: String) -> URL? {
+            URL(string:
+                "https://huggingface.co/mlboydaisuke/Julia-1-CoreAI/resolve/\(revision)/macos/fp32-s512/\(path)?download=true"
+            )
         }
 
-        try await download(
-            modelURL,
+        func downloadJuliaLarge(
+            _ path: String,
+            to destination: URL,
+            expectedBytes: Int64? = nil,
+            expectedSHA256: String? = nil,
+            assetName: String
+        ) async throws {
+            var lastError: Error?
+            for revision in revisions {
+                guard let url = juliaURL(revision, path) else { continue }
+                do {
+                    try await download(
+                        url,
+                        to: destination,
+                        expectedBytes: expectedBytes,
+                        expectedSHA256: expectedSHA256,
+                        assetName: assetName
+                    )
+                    return
+                } catch {
+                    lastError = error
+                }
+            }
+            throw lastError ?? NSError(
+                domain: "CrownKeepJulia",
+                code: 2,
+                userInfo: [NSLocalizedDescriptionKey: "No valid Julia download URL was available."]
+            )
+        }
+
+        func downloadJuliaSmall(
+            _ path: String,
+            to destination: URL,
+            assetName: String
+        ) async throws {
+            var lastError: Error?
+            for revision in revisions {
+                guard let url = juliaURL(revision, path) else { continue }
+                do {
+                    try await downloadSmall(url, to: destination, assetName: assetName)
+                    return
+                } catch {
+                    lastError = error
+                }
+            }
+            throw lastError ?? NSError(
+                domain: "CrownKeepJulia",
+                code: 2,
+                userInfo: [NSLocalizedDescriptionKey: "No valid Julia metadata URL was available."]
+            )
+        }
+
+        try await downloadJuliaLarge(
+            "julia1_fp32_s512.aimodel",
             to: staging.appending(path: "julia1_fp32_s512.aimodel"),
             expectedBytes: juliaModelBytes,
             assetName: "Julia Core AI model"
         )
-        try await downloadSmall(
-            metadataURL,
+        try await downloadJuliaSmall(
+            "metadata.json",
             to: staging.appending(path: "metadata.json"),
             assetName: "Julia metadata"
         )
-        try await download(
-            tokenizerURL,
+        try await downloadJuliaLarge(
+            "tokenizer/tokenizer.json",
             to: staging.appending(path: "tokenizer/tokenizer.json"),
             expectedBytes: juliaTokenizerBytes,
             expectedSHA256: juliaTokenizerSHA256,
             assetName: "Julia tokenizer"
         )
-        try await downloadSmall(
-            tokenizerConfigURL,
+        try await downloadJuliaSmall(
+            "tokenizer/tokenizer_config.json",
             to: staging.appending(path: "tokenizer/tokenizer_config.json"),
             assetName: "Julia tokenizer configuration"
         )
@@ -519,17 +574,10 @@ final class CrownKeepOptionalModels {
             try FileManager.default.unzipItem(at: archive, to: expanded)
         }.value
 
-        guard let resources = findStableDiffusionResources(inside: expanded) else {
-            throw NSError(
-                domain: "CrownKeepImages",
-                code: 21,
-                userInfo: [NSLocalizedDescriptionKey: "Downloaded image model did not contain the expected compiled Core ML resources."]
-            )
-        }
-
         let finalStaging = staging.appending(path: "final", directoryHint: .isDirectory)
-        try fm.createDirectory(at: finalStaging, withIntermediateDirectories: true)
-        try fm.copyItem(at: resources, to: finalStaging.appending(path: "Resources", directoryHint: .isDirectory))
+        let canonicalResources = finalStaging.appending(path: "Resources", directoryHint: .isDirectory)
+        try fm.createDirectory(at: canonicalResources, withIntermediateDirectories: true)
+        try stageStableDiffusionResources(from: expanded, to: canonicalResources)
 
         imagePipeline?.unloadResources()
         imagePipeline = nil
@@ -551,29 +599,86 @@ final class CrownKeepOptionalModels {
         return imageStatus()
     }
 
-    private func findStableDiffusionResources(inside root: URL) -> URL? {
+    private func allExpandedURLs(inside root: URL) -> [URL] {
         guard let enumerator = fm.enumerator(
             at: root,
             includingPropertiesForKeys: [.isDirectoryKey],
             options: [.skipsHiddenFiles]
-        ) else { return nil }
+        ) else { return [] }
+        return enumerator.compactMap { $0 as? URL }
+    }
 
-        for case let url as URL in enumerator {
-            guard url.lastPathComponent == "TextEncoder.mlmodelc" else { continue }
-            let parent = url.deletingLastPathComponent()
-            let hasDecoder = fm.fileExists(atPath: parent.appending(path: "VAEDecoder.mlmodelc").path())
-            let hasTokenizer =
-                fm.fileExists(atPath: parent.appending(path: "vocab.json").path()) &&
-                fm.fileExists(atPath: parent.appending(path: "merges.txt").path())
-            let hasUnet =
-                fm.fileExists(atPath: parent.appending(path: "Unet.mlmodelc").path()) ||
-                (
-                    fm.fileExists(atPath: parent.appending(path: "UnetChunk1.mlmodelc").path()) &&
-                    fm.fileExists(atPath: parent.appending(path: "UnetChunk2.mlmodelc").path())
-                )
-            if hasDecoder && hasTokenizer && hasUnet { return parent }
+    private func stageStableDiffusionResources(from expanded: URL, to destination: URL) throws {
+        let urls = allExpandedURLs(inside: expanded)
+
+        func namedFile(_ exact: String) -> URL? {
+            urls.first { $0.lastPathComponent.caseInsensitiveCompare(exact) == .orderedSame }
         }
-        return nil
+
+        func modelDirectory(_ terms: [String]) -> URL? {
+            urls.first { url in
+                let name = url.lastPathComponent.lowercased()
+                guard name.hasSuffix(".mlmodelc") else { return false }
+                return terms.allSatisfy { name.contains($0) }
+            }
+        }
+
+        let textEncoder =
+            modelDirectory(["text", "encoder"])
+            ?? modelDirectory(["textencoder"])
+        let vaeDecoder =
+            modelDirectory(["vae", "decoder"])
+            ?? modelDirectory(["vaedecoder"])
+        let unet =
+            modelDirectory(["unet"])
+        let safety =
+            modelDirectory(["safety"])
+        let vocab = namedFile("vocab.json")
+        let merges = namedFile("merges.txt")
+
+        guard
+            let textEncoder,
+            let vaeDecoder,
+            let unet,
+            let vocab,
+            let merges
+        else {
+            let modelNames = urls
+                .filter { $0.lastPathComponent.lowercased().hasSuffix(".mlmodelc") }
+                .map(\.lastPathComponent)
+                .sorted()
+                .prefix(12)
+                .joined(separator: ", ")
+            throw NSError(
+                domain: "CrownKeepImages",
+                code: 21,
+                userInfo: [
+                    NSLocalizedDescriptionKey:
+                        "Downloaded image model archive was valid, but CrownKeep could not map its compiled resources. Found: \(modelNames.isEmpty ? "no .mlmodelc folders" : modelNames)."
+                ]
+            )
+        }
+
+        func copy(_ source: URL, _ name: String) throws {
+            let target = destination.appending(path: name)
+            if fm.fileExists(atPath: target.path()) { try fm.removeItem(at: target) }
+            try fm.copyItem(at: source, to: target)
+        }
+
+        try copy(textEncoder, "TextEncoder.mlmodelc")
+        try copy(vaeDecoder, "VAEDecoder.mlmodelc")
+        try copy(unet, "Unet.mlmodelc")
+        try copy(vocab, "vocab.json")
+        try copy(merges, "merges.txt")
+        if let safety { try copy(safety, "SafetyChecker.mlmodelc") }
+
+        // VAEEncoder is optional for text-to-image generation but preserve it
+        // when the archive contains one.
+        if let vaeEncoder =
+            modelDirectory(["vae", "encoder"])
+            ?? modelDirectory(["vaeencoder"]) {
+            try copy(vaeEncoder, "VAEEncoder.mlmodelc")
+        }
     }
 
     private func makeImagePipeline() throws -> StableDiffusionPipeline {
