@@ -406,6 +406,11 @@ export default function App() {
     percent: number
     message: string
   } | null>(null)
+  const capabilityBusy = Boolean(
+    capabilityProgress &&
+    capabilityProgress.percent < 100 &&
+    capabilityProgress.stage !== 'failed',
+  )
   useEffect(() => {
     localStorage.setItem('crownkeep.modelMode', modelMode)
   }, [modelMode])
@@ -457,6 +462,9 @@ export default function App() {
       })
       setCapabilityAction(status.detail)
     } catch (error) {
+      setCapabilityProgress((current) =>
+        current ? { ...current, stage: 'failed', message: 'Julia installation failed.' } : current,
+      )
       setCapabilityAction(`Julia install failed: ${String(error)}`)
     } finally {
       stopPolling()
@@ -499,6 +507,9 @@ export default function App() {
         stopPolling()
       }
     } catch (error) {
+      setCapabilityProgress((current) =>
+        current ? { ...current, stage: 'failed', message: 'Image model installation failed.' } : current,
+      )
       setCapabilityAction(`Image model install failed: ${String(error)}`)
     }
   }
@@ -3130,11 +3141,11 @@ ${image.extractedText}
                   <div className="capability-actions">
                     {decisionStatus?.available ? (
                       <>
-                        <button type="button" aria-pressed={decisionEnabled} disabled={isGenerating || toolBusy} onClick={() => setDecisionEnabled(value => !value)}>{decisionEnabled ? 'Turn OFF' : 'Turn ON'}</button>
-                        {decisionModelInstallable() && <button type="button" disabled={isGenerating || toolBusy} onClick={() => void removeJuliaCapability()}>Remove</button>}
+                        <button type="button" aria-pressed={decisionEnabled} disabled={isGenerating || toolBusy || capabilityBusy} onClick={() => setDecisionEnabled(value => !value)}>{decisionEnabled ? 'Turn OFF' : 'Turn ON'}</button>
+                        {decisionModelInstallable() && <button type="button" disabled={isGenerating || toolBusy || capabilityBusy} onClick={() => void removeJuliaCapability()}>Remove</button>}
                       </>
                     ) : decisionModelInstallable() ? (
-                      <button type="button" disabled={isGenerating || toolBusy} onClick={() => void installJuliaCapability()}>Download Julia (~624 MB)</button>
+                      <button type="button" disabled={isGenerating || toolBusy || capabilityBusy} onClick={() => void installJuliaCapability()}>Download Julia (~624 MB)</button>
                     ) : (
                       <button type="button" disabled>Unavailable</button>
                     )}
@@ -3163,14 +3174,14 @@ ${image.extractedText}
                     {localImageRuntime().install ? (
                       imageRuntimeStatus?.state === 'ready' ? (
                         <>
-                          <button type="button" aria-pressed={localImagesEnabled} disabled={isGenerating || toolBusy} onClick={() => setLocalImagesEnabled(value => !value)}>{localImagesEnabled ? 'Turn OFF' : 'Turn ON'}</button>
-                          <button type="button" disabled={isGenerating || toolBusy} onClick={() => void removeImageCapability()}>Remove</button>
+                          <button type="button" aria-pressed={localImagesEnabled} disabled={isGenerating || toolBusy || capabilityBusy} onClick={() => setLocalImagesEnabled(value => !value)}>{localImagesEnabled ? 'Turn OFF' : 'Turn ON'}</button>
+                          <button type="button" disabled={isGenerating || toolBusy || capabilityBusy} onClick={() => void removeImageCapability()}>Remove</button>
                         </>
                       ) : (
-                        <button type="button" disabled={isGenerating || toolBusy} onClick={() => void installImageCapability()}>Download image model (~1.57 GB)</button>
+                        <button type="button" disabled={isGenerating || toolBusy || capabilityBusy} onClick={() => void installImageCapability()}>Download image model (~1.57 GB)</button>
                       )
                     ) : (
-                      <button type="button" aria-pressed={localImagesEnabled} disabled={isGenerating || toolBusy} onClick={() => setLocalImagesEnabled(value => !value)}>{localImagesEnabled ? 'Turn OFF' : 'Turn ON'}</button>
+                      <button type="button" aria-pressed={localImagesEnabled} disabled={isGenerating || toolBusy || capabilityBusy} onClick={() => setLocalImagesEnabled(value => !value)}>{localImagesEnabled ? 'Turn OFF' : 'Turn ON'}</button>
                     )}
                   </div>
                 </div>
