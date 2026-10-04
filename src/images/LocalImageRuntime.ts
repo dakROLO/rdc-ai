@@ -1,9 +1,15 @@
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { getNativeAIHost } from '../native/NativeAIHost.ts'
 import { imageCapabilities } from './imageCapabilities.ts'
+import type { ImageInstallProgress } from './imageCapabilities.ts'
 import { generateImage, localGeneratorEndpoint } from './imageTools.ts'
 export type ImageRuntimeState = 'stopped' | 'api-invalid' | 'wrong-endpoint' | 'ready' | 'generation-failed' | 'unavailable'
-export interface ImageRuntimeStatus { state: ImageRuntimeState; detail: string; backend: string }
+export interface ImageRuntimeStatus {
+  state: ImageRuntimeState
+  detail: string
+  backend: string
+  installProgress?: ImageInstallProgress
+}
 export interface LocalImageRuntime {
   status(): Promise<ImageRuntimeStatus>
   install?(): Promise<ImageRuntimeStatus>
@@ -29,19 +35,19 @@ export class AppleLocalImageRuntime implements LocalImageRuntime {
       capabilities.generationAvailable ? 'ready'
         : capabilities.generationState === 'not-installed' ? 'unavailable'
           : 'unavailable'
-    return { state, backend: 'AppleLocalImageRuntime', detail: capabilities.detail ?? (capabilities.generationAvailable ? 'Local image model ready.' : 'Optional Apple local image model is not installed.') }
+    return { state, backend: 'AppleLocalImageRuntime', detail: capabilities.detail ?? (capabilities.generationAvailable ? 'Local image model ready.' : 'Optional Apple local image model is not installed.'), installProgress: capabilities.installProgress }
   }
   async install(): Promise<ImageRuntimeStatus> {
     const native = getNativeAIHost()?.images
     if (!native?.install) throw new Error('This device does not support installing the local image model.')
     const capabilities = imageCapabilities(await native.install())
-    return { state: capabilities.generationAvailable ? 'ready' : 'unavailable', backend: 'AppleLocalImageRuntime', detail: capabilities.detail ?? 'Image model installation finished.' }
+    return { state: capabilities.generationAvailable ? 'ready' : 'unavailable', backend: 'AppleLocalImageRuntime', detail: capabilities.detail ?? 'Image model installation finished.', installProgress: capabilities.installProgress }
   }
   async remove(): Promise<ImageRuntimeStatus> {
     const native = getNativeAIHost()?.images
     if (!native?.remove) throw new Error('This device does not support removing the local image model.')
     const capabilities = imageCapabilities(await native.remove())
-    return { state: capabilities.generationAvailable ? 'ready' : 'unavailable', backend: 'AppleLocalImageRuntime', detail: capabilities.detail ?? 'Image model removed.' }
+    return { state: capabilities.generationAvailable ? 'ready' : 'unavailable', backend: 'AppleLocalImageRuntime', detail: capabilities.detail ?? 'Image model removed.', installProgress: capabilities.installProgress }
   }
   async generate(prompt: string): Promise<string> { return generateImage(prompt, imageEndpoint()) }
 }
