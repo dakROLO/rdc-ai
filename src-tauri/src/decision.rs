@@ -137,7 +137,7 @@ fn extract_ort(archive: &Path, destination: &Path) -> Result<(), String> {
     let script = format!(
         "Expand-Archive -LiteralPath '{}' -DestinationPath '{}' -Force",
         archive.display().to_string().replace('\'', "''"),
-        destination.display().to_string().replace(''', "''"),
+        destination.display().to_string().replace('\'', "''"),
     );
     let status = Command::new("powershell.exe")
         .args(["-NoProfile", "-NonInteractive", "-Command", &script])
