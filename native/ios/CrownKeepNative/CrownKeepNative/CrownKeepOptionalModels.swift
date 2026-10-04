@@ -21,12 +21,16 @@ final class CrownKeepOptionalModels {
     private var juliaTokenizer: Any?
     #endif
     private var imagePipeline: StableDiffusionPipeline?
+    private var juliaInstallProgress: [String: Any]?
+    private var imageInstallProgress: [String: Any]?
+
+    private struct DownloadResponse: Sendable {
+        let statusCode: Int
+        let finalURL: String
+        let host: String
+    }
 
     private let juliaPublishedRevision = "d1e943545c64e20e73a88ae1f890227c349e22ba"
-    private let juliaModelBytes: Int64 = 578_357_637
-    private let juliaTokenizerBytes: Int64 = 34_363_188
-    private let juliaTokenizerSHA256 = "609d8f4c067cd3950f88594c5a802616cea245823836ef5848ee4fc40aab5b6f"
-
     private let imageRevision = "2f36b5d37f234ef41df5e25b55240083bd6a95ee"
     private let imageArchiveBytes: Int64 = 1_565_721_660
     private let imageArchiveSHA256 = "fabf8f28478473abcf1c6288d35cc6faf1a399b09cb4813a8cb8bc44de2b734e"
@@ -86,23 +90,12 @@ final class CrownKeepOptionalModels {
         return request
     }
 
-    private func httpDownloadError(
-        _ response: URLResponse,
-        requestedURL: URL,
-        assetName: String
-    ) -> NSError {
-        let http = response as? HTTPURLResponse
-        let status = http?.statusCode ?? -1
-        let finalURL = response.url?.absoluteString ?? requestedURL.absoluteString
-        let host = response.url?.host ?? requestedURL.host ?? "unknown host"
-        return NSError(
-            domain: "CrownKeepModels",
-            code: 11,
-            userInfo: [
-                NSLocalizedDescriptionKey:
-                    "Could not download \(assetName). HTTP \(status) from \(host). Final URL: \(finalURL)"
-            ]
-        )
+    private func progress(_ stage: String, _ percent: Double, _ message: String) -> [String: Any] {
+        [
+            "stage": stage,
+            "percent": max(0, min(100, percent)),
+            "message": message,
+        ]
     }
 
     private func download(
@@ -110,16 +103,77 @@ final class CrownKeepOptionalModels {
         to destination: URL,
         expectedBytes: Int64? = nil,
         expectedSHA256: String? = nil,
-        assetName: String? = nil
+        assetName: String? = nil,
+        onProgress: (@MainActor (Double) -> Void)? = nil
     ) async throws {
         let name = assetName ?? destination.lastPathComponent
-        let (temporary, response) = try await URLSession.shared.download(for: modelRequest(url))
-        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            throw httpDownloadError(response, requestedURL: url, assetName: name)
+        try fm.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+        if fm.fileExists(atPath: destination.path()) {
+            try fm.removeItem(at: destination)
         }
 
-        let size = (try? temporary.resourceValues(forKeys: [.fileSizeKey]).fileSize).map(Int64.init)
+        let request = modelRequest(url)
+        let response: DownloadResponse = try await withCheckedThrowingContinuation { continuation in
+            let task = URLSession.shared.downloadTask(with: request) { temporary, response, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                guard let temporary, let response else {
+                    continuation.resume(throwing: NSError(
+                        domain: "CrownKeepModels",
+                        code: 11,
+                        userInfo: [NSLocalizedDescriptionKey: "No download response was returned for \(name)."]
+                    ))
+                    return
+                }
+                do {
+                    let manager = FileManager.default
+                    if manager.fileExists(atPath: destination.path()) {
+                        try manager.removeItem(at: destination)
+                    }
+                    try manager.moveItem(at: temporary, to: destination)
+                    let http = response as? HTTPURLResponse
+                    continuation.resume(returning: DownloadResponse(
+                        statusCode: http?.statusCode ?? -1,
+                        finalURL: response.url?.absoluteString ?? url.absoluteString,
+                        host: response.url?.host ?? url.host ?? "unknown host"
+                    ))
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+            task.resume()
+
+            if let onProgress {
+                Task { @MainActor in
+                    while task.state == .running {
+                        let expected = task.countOfBytesExpectedToReceive
+                        let received = task.countOfBytesReceived
+                        if expected > 0 {
+                            onProgress(Double(received) / Double(expected))
+                        }
+                        try? await Task.sleep(nanoseconds: 200_000_000)
+                    }
+                }
+            }
+        }
+
+        guard (200..<300).contains(response.statusCode) else {
+            try? fm.removeItem(at: destination)
+            throw NSError(
+                domain: "CrownKeepModels",
+                code: 11,
+                userInfo: [
+                    NSLocalizedDescriptionKey:
+                        "Could not download \(name). HTTP \(response.statusCode) from \(response.host). Final URL: \(response.finalURL)"
+                ]
+            )
+        }
+
+        let size = (try? destination.resourceValues(forKeys: [.fileSizeKey]).fileSize).map(Int64.init)
         if let expectedBytes, size != expectedBytes {
+            try? fm.removeItem(at: destination)
             throw NSError(
                 domain: "CrownKeepModels",
                 code: 12,
@@ -131,8 +185,9 @@ final class CrownKeepOptionalModels {
         }
 
         if let expectedSHA256 {
-            let actual = try sha256(of: temporary)
+            let actual = try sha256(of: destination)
             guard actual.caseInsensitiveCompare(expectedSHA256) == .orderedSame else {
+                try? fm.removeItem(at: destination)
                 throw NSError(
                     domain: "CrownKeepModels",
                     code: 13,
@@ -140,12 +195,7 @@ final class CrownKeepOptionalModels {
                 )
             }
         }
-
-        try fm.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
-        if fm.fileExists(atPath: destination.path()) {
-            try fm.removeItem(at: destination)
-        }
-        try fm.moveItem(at: temporary, to: destination)
+        onProgress?(1)
     }
 
     private func downloadSmall(
@@ -156,7 +206,16 @@ final class CrownKeepOptionalModels {
         let name = assetName ?? destination.lastPathComponent
         let (data, response) = try await URLSession.shared.data(for: modelRequest(url))
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            throw httpDownloadError(response, requestedURL: url, assetName: name)
+            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+            let finalURL = response.url?.absoluteString ?? url.absoluteString
+            throw NSError(
+                domain: "CrownKeepModels",
+                code: 14,
+                userInfo: [
+                    NSLocalizedDescriptionKey:
+                        "Could not download \(name). HTTP \(status). Final URL: \(finalURL)"
+                ]
+            )
         }
         try fm.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
         try data.write(to: destination, options: .atomic)
@@ -216,7 +275,7 @@ final class CrownKeepOptionalModels {
     }
 
     private func decisionStatus(available: Bool, loadState: String, detail: String) -> [String: Any] {
-        [
+        var value: [String: Any] = [
             "available": available,
             "version": "Julia-1 Core AI fp32-s512",
             "backend": "Apple Core AI · local GPU/CPU",
@@ -227,6 +286,8 @@ final class CrownKeepOptionalModels {
             "qualifiedJobs": [],
             "detail": detail,
         ]
+        if let juliaInstallProgress { value["installProgress"] = juliaInstallProgress }
+        return value
     }
 
     private func juliaFilesPresent() -> Bool {
@@ -244,119 +305,136 @@ final class CrownKeepOptionalModels {
         try ensureFreeSpace(900_000_000)
         let staging = try stagingFolder("julia")
         defer { try? fm.removeItem(at: staging) }
+        juliaInstallProgress = progress("manifest", 1, "Preparing Julia download…")
 
-        // The published model-zoo card names an immutable HF revision, but
-        // physical iPhone validation returned HTTP 404 for that exact resolve
-        // URL. Try the documented revision first, then the repository's current
-        // main transport path. The fallback is still gated by exact file size,
-        // tokenizer SHA-256, and CrownKeep's on-device row/inference parity test.
-        let revisions = [juliaPublishedRevision, "main"]
-
-        func juliaURL(_ revision: String, _ path: String) -> URL? {
-            URL(string:
-                "https://huggingface.co/mlboydaisuke/Julia-1-CoreAI/resolve/\(revision)/macos/fp32-s512/\(path)?download=true"
-            )
+        let repoBase = "https://huggingface.co/mlboydaisuke/Julia-1-CoreAI/resolve/\(juliaPublishedRevision)"
+        guard let manifestURL = URL(string: "\(repoBase)/SHA256SUMS?download=true") else {
+            throw NSError(domain: "CrownKeepJulia", code: 2, userInfo: [NSLocalizedDescriptionKey: "Julia manifest URL is invalid."])
         }
+        let manifestFile = staging.appending(path: "SHA256SUMS")
+        try await downloadSmall(manifestURL, to: manifestFile, assetName: "Julia SHA256 manifest")
+        let manifestText = try String(contentsOf: manifestFile, encoding: .utf8)
 
-        func downloadJuliaLarge(
-            _ path: String,
-            to destination: URL,
-            expectedBytes: Int64? = nil,
-            expectedSHA256: String? = nil,
-            assetName: String
-        ) async throws {
-            var lastError: Error?
-            for revision in revisions {
-                guard let url = juliaURL(revision, path) else { continue }
-                do {
-                    try await download(
-                        url,
-                        to: destination,
-                        expectedBytes: expectedBytes,
-                        expectedSHA256: expectedSHA256,
-                        assetName: assetName
-                    )
-                    return
-                } catch {
-                    lastError = error
-                }
+        struct JuliaAsset {
+            let path: String
+            let sha256: String
+        }
+        let variantPrefix = "macos/fp32-s512/"
+        let bundlePrefix = variantPrefix + "julia1_fp32_s512.aimodel/"
+        var assets: [JuliaAsset] = []
+
+        for line in manifestText.split(whereSeparator: \.isNewline) {
+            let fields = line.split(maxSplits: 1, whereSeparator: \.isWhitespace)
+            guard fields.count == 2 else { continue }
+            let hash = String(fields[0])
+            let path = String(fields[1]).trimmingCharacters(in: CharacterSet(charactersIn: " *"))
+            let needed =
+                path.hasPrefix(bundlePrefix) ||
+                path == variantPrefix + "metadata.json" ||
+                path.hasPrefix(variantPrefix + "tokenizer/")
+            if needed {
+                assets.append(.init(path: path, sha256: hash))
             }
-            throw lastError ?? NSError(
+        }
+
+        guard
+            assets.contains(where: { $0.path == bundlePrefix + "main.mlirb" }),
+            assets.contains(where: { $0.path == bundlePrefix + "main.hash" }),
+            assets.contains(where: { $0.path == bundlePrefix + "metadata.json" }),
+            assets.contains(where: { $0.path == variantPrefix + "metadata.json" }),
+            assets.contains(where: { $0.path == variantPrefix + "tokenizer/tokenizer.json" })
+        else {
+            throw NSError(
                 domain: "CrownKeepJulia",
-                code: 2,
-                userInfo: [NSLocalizedDescriptionKey: "No valid Julia download URL was available."]
+                code: 3,
+                userInfo: [NSLocalizedDescriptionKey: "Julia manifest did not contain the required Core AI bundle files."]
             )
         }
 
-        func downloadJuliaSmall(
-            _ path: String,
-            to destination: URL,
-            assetName: String
-        ) async throws {
-            var lastError: Error?
-            for revision in revisions {
-                guard let url = juliaURL(revision, path) else { continue }
-                do {
-                    try await downloadSmall(url, to: destination, assetName: assetName)
-                    return
-                } catch {
-                    lastError = error
-                }
+        assets.sort { left, right in
+            func rank(_ path: String) -> Int {
+                if path.hasSuffix("/main.mlirb") { return 0 }
+                if path.hasSuffix("/tokenizer.json") { return 1 }
+                return 2
             }
-            throw lastError ?? NSError(
-                domain: "CrownKeepJulia",
-                code: 2,
-                userInfo: [NSLocalizedDescriptionKey: "No valid Julia metadata URL was available."]
-            )
+            return rank(left.path) == rank(right.path)
+                ? left.path < right.path
+                : rank(left.path) < rank(right.path)
         }
 
-        try await downloadJuliaLarge(
-            "julia1_fp32_s512.aimodel",
-            to: staging.appending(path: "julia1_fp32_s512.aimodel"),
-            expectedBytes: juliaModelBytes,
-            assetName: "Julia Core AI model"
-        )
-        try await downloadJuliaSmall(
-            "metadata.json",
-            to: staging.appending(path: "metadata.json"),
-            assetName: "Julia metadata"
-        )
-        try await downloadJuliaLarge(
-            "tokenizer/tokenizer.json",
-            to: staging.appending(path: "tokenizer/tokenizer.json"),
-            expectedBytes: juliaTokenizerBytes,
-            expectedSHA256: juliaTokenizerSHA256,
-            assetName: "Julia tokenizer"
-        )
-        try await downloadJuliaSmall(
-            "tokenizer/tokenizer_config.json",
-            to: staging.appending(path: "tokenizer/tokenizer_config.json"),
-            assetName: "Julia tokenizer configuration"
-        )
+        let minorAssets = max(1, assets.filter { !$0.path.hasSuffix("/main.mlirb") && !$0.path.hasSuffix("/tokenizer.json") }.count)
+        var minorDone = 0
 
-        // ml-stable-diffusion currently pins swift-transformers 0.1.8.
-        // That version recognizes the same Gemma tokenizer implementation but
-        // predates the newer TokenizersBackend class label. Patch only the
-        // local config label, never the tokenizer vocabulary/merges.
+        for asset in assets {
+            let relative = String(asset.path.dropFirst(variantPrefix.count))
+            let destination = staging.appending(path: relative)
+            guard let url = URL(string: "\(repoBase)/\(asset.path)?download=true") else {
+                throw NSError(domain: "CrownKeepJulia", code: 4, userInfo: [NSLocalizedDescriptionKey: "Julia asset URL is invalid: \(asset.path)"])
+            }
+
+            if asset.path.hasSuffix("/main.mlirb") {
+                try await download(
+                    url,
+                    to: destination,
+                    expectedSHA256: asset.sha256,
+                    assetName: "Julia Core AI weights",
+                    onProgress: { [weak self] fraction in
+                        self?.juliaInstallProgress = self?.progress(
+                            "downloading",
+                            3 + fraction * 80,
+                            "Downloading Julia… \(Int((3 + fraction * 80).rounded()))%"
+                        )
+                    }
+                )
+            } else if asset.path.hasSuffix("/tokenizer.json") {
+                try await download(
+                    url,
+                    to: destination,
+                    expectedSHA256: asset.sha256,
+                    assetName: "Julia tokenizer",
+                    onProgress: { [weak self] fraction in
+                        self?.juliaInstallProgress = self?.progress(
+                            "tokenizer",
+                            84 + fraction * 10,
+                            "Downloading Julia tokenizer… \(Int((84 + fraction * 10).rounded()))%"
+                        )
+                    }
+                )
+            } else {
+                minorDone += 1
+                juliaInstallProgress = progress(
+                    "metadata",
+                    94 + (Double(minorDone) / Double(minorAssets)) * 3,
+                    "Verifying Julia metadata…"
+                )
+                try await download(
+                    url,
+                    to: destination,
+                    expectedSHA256: asset.sha256,
+                    assetName: destination.lastPathComponent
+                )
+            }
+        }
+
+        juliaInstallProgress = progress("tokenizer", 97, "Preparing Julia tokenizer…")
         try normalizeJuliaTokenizerConfig(at: staging.appending(path: "tokenizer/tokenizer_config.json"))
 
-        // This community Core AI export has Mac measurements but not iPhone
-        // measurements. Require a real iPhone load + exact row/token parity
-        // smoke check before making the installed state visible.
+        juliaInstallProgress = progress("validating", 98, "Running Julia parity check on this iPhone…")
         try await validateJulia(folder: staging)
 
         juliaRuntime = nil
         juliaTokenizer = nil
         if fm.fileExists(atPath: juliaFolder.path()) { try fm.removeItem(at: juliaFolder) }
         try fm.moveItem(at: staging, to: juliaFolder)
-        // defer's removal is harmless after the move.
         try await loadJulia()
+        juliaInstallProgress = progress("complete", 100, "Julia is installed locally.")
         return juliaStatus()
     }
 
     func removeJulia() async throws -> [String: Any] {
         juliaRuntime = nil
         juliaTokenizer = nil
+        juliaInstallProgress = nil
         if fm.fileExists(atPath: juliaFolder.path()) { try fm.removeItem(at: juliaFolder) }
         return juliaStatus()
     }
@@ -522,7 +600,7 @@ final class CrownKeepOptionalModels {
 
     func imageStatus() -> [String: Any] {
         let ready = imageResourcesReady()
-        return [
+        var value: [String: Any] = [
             "ocrAvailable": true,
             "understandingAvailable": false, // controller overlays Foundation Models image input availability
             "generationAvailable": ready,
@@ -531,24 +609,28 @@ final class CrownKeepOptionalModels {
                 ? "Stable Diffusion 1.4 palettized Core ML model is installed locally."
                 : "Optional local image model is not installed. Download is about 1.57 GB and occurs only when requested.",
         ]
+        if let imageInstallProgress { value["installProgress"] = imageInstallProgress }
+        return value
     }
 
-    private func imageResourcesReady() -> Bool {
+    private func imageResourcesReady(at resources: URL? = nil) -> Bool {
+        let base = resources ?? imageResources
         let required = [
             "TextEncoder.mlmodelc",
             "VAEDecoder.mlmodelc",
             "vocab.json",
             "merges.txt",
         ]
-        let basics = required.allSatisfy { fm.fileExists(atPath: imageResources.appending(path: $0).path()) }
-        let fullUnet = fm.fileExists(atPath: imageResources.appending(path: "Unet.mlmodelc").path())
-        let chunked = fm.fileExists(atPath: imageResources.appending(path: "UnetChunk1.mlmodelc").path()) &&
-            fm.fileExists(atPath: imageResources.appending(path: "UnetChunk2.mlmodelc").path())
+        let basics = required.allSatisfy { fm.fileExists(atPath: base.appending(path: $0).path()) }
+        let fullUnet = fm.fileExists(atPath: base.appending(path: "Unet.mlmodelc").path())
+        let chunked = fm.fileExists(atPath: base.appending(path: "UnetChunk1.mlmodelc").path()) &&
+            fm.fileExists(atPath: base.appending(path: "UnetChunk2.mlmodelc").path())
         return basics && (fullUnet || chunked)
     }
 
     func installImageModel() async throws -> [String: Any] {
         try ensureFreeSpace(4_500_000_000)
+        imageInstallProgress = progress("preparing", 1, "Preparing local image model download…")
         let staging = try stagingFolder("image")
         defer { try? fm.removeItem(at: staging) }
         let archive = staging.appending(path: "model.zip")
@@ -565,20 +647,37 @@ final class CrownKeepOptionalModels {
             to: archive,
             expectedBytes: imageArchiveBytes,
             expectedSHA256: imageArchiveSHA256,
-            assetName: "local image model archive"
+            assetName: "local image model archive",
+            onProgress: { [weak self] fraction in
+                self?.imageInstallProgress = self?.progress(
+                    "downloading",
+                    2 + fraction * 86,
+                    "Downloading image model… \(Int((2 + fraction * 86).rounded()))%"
+                )
+            }
         )
 
+        imageInstallProgress = progress("extracting", 90, "Extracting Core ML image model…")
         let expanded = staging.appending(path: "expanded", directoryHint: .isDirectory)
         try fm.createDirectory(at: expanded, withIntermediateDirectories: true)
         try await Task.detached(priority: .userInitiated) {
             try FileManager.default.unzipItem(at: archive, to: expanded)
         }.value
 
+        imageInstallProgress = progress("mapping", 94, "Preparing image model resources…")
         let finalStaging = staging.appending(path: "final", directoryHint: .isDirectory)
         let canonicalResources = finalStaging.appending(path: "Resources", directoryHint: .isDirectory)
         try fm.createDirectory(at: canonicalResources, withIntermediateDirectories: true)
         try stageStableDiffusionResources(from: expanded, to: canonicalResources)
+        guard imageResourcesReady(at: canonicalResources) else {
+            throw NSError(
+                domain: "CrownKeepImages",
+                code: 22,
+                userInfo: [NSLocalizedDescriptionKey: "Prepared image model is missing required Core ML resources."]
+            )
+        }
 
+        imageInstallProgress = progress("validating", 97, "Validating image runtime on this iPhone…")
         imagePipeline?.unloadResources()
         imagePipeline = nil
         if fm.fileExists(atPath: imageFolder.path()) { try fm.removeItem(at: imageFolder) }
@@ -589,11 +688,13 @@ final class CrownKeepOptionalModels {
         let pipeline = try makeImagePipeline()
         try pipeline.loadResources()
         pipeline.unloadResources()
+        imageInstallProgress = progress("complete", 100, "Local image model is installed.")
         return imageStatus()
     }
 
     func removeImageModel() async throws -> [String: Any] {
         imagePipeline?.unloadResources()
+        imageInstallProgress = nil
         imagePipeline = nil
         if fm.fileExists(atPath: imageFolder.path()) { try fm.removeItem(at: imageFolder) }
         return imageStatus()
@@ -629,25 +730,38 @@ final class CrownKeepOptionalModels {
         let vaeDecoder =
             modelDirectory(["vae", "decoder"])
             ?? modelDirectory(["vaedecoder"])
-        let unet =
-            modelDirectory(["unet"])
+        let unetChunk1 = urls.first {
+            $0.lastPathComponent.caseInsensitiveCompare("UnetChunk1.mlmodelc") == .orderedSame
+        }
+        let unetChunk2 = urls.first {
+            $0.lastPathComponent.caseInsensitiveCompare("UnetChunk2.mlmodelc") == .orderedSame
+        }
+        let fullUnet =
+            urls.first { $0.lastPathComponent.caseInsensitiveCompare("Unet.mlmodelc") == .orderedSame }
+            ?? urls.first {
+                let name = $0.lastPathComponent.lowercased()
+                return name.hasSuffix(".mlmodelc") &&
+                    name.contains("unet") &&
+                    !name.contains("chunk")
+            }
         let safety =
             modelDirectory(["safety"])
         let vocab = namedFile("vocab.json")
         let merges = namedFile("merges.txt")
 
+        let hasUnet = (unetChunk1 != nil && unetChunk2 != nil) || fullUnet != nil
         guard
             let textEncoder,
             let vaeDecoder,
-            let unet,
             let vocab,
-            let merges
+            let merges,
+            hasUnet
         else {
             let modelNames = urls
                 .filter { $0.lastPathComponent.lowercased().hasSuffix(".mlmodelc") }
                 .map(\.lastPathComponent)
                 .sorted()
-                .prefix(12)
+                .prefix(16)
                 .joined(separator: ", ")
             throw NSError(
                 domain: "CrownKeepImages",
@@ -667,7 +781,12 @@ final class CrownKeepOptionalModels {
 
         try copy(textEncoder, "TextEncoder.mlmodelc")
         try copy(vaeDecoder, "VAEDecoder.mlmodelc")
-        try copy(unet, "Unet.mlmodelc")
+        if let unetChunk1, let unetChunk2 {
+            try copy(unetChunk1, "UnetChunk1.mlmodelc")
+            try copy(unetChunk2, "UnetChunk2.mlmodelc")
+        } else if let fullUnet {
+            try copy(fullUnet, "Unet.mlmodelc")
+        }
         try copy(vocab, "vocab.json")
         try copy(merges, "merges.txt")
         if let safety { try copy(safety, "SafetyChecker.mlmodelc") }
