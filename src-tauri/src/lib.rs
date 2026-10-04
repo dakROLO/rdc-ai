@@ -1185,6 +1185,8 @@ pub fn run() {
             images::crownkeep_generate_image,
             images::crownkeep_image_status,
             decision::crownkeep_decision_status,
+            decision::crownkeep_decision_install,
+            decision::crownkeep_decision_remove,
             decision::crownkeep_decide,
             decision::crownkeep_decision_release
         ])
