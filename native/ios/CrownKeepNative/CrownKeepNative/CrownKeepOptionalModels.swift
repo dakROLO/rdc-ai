@@ -75,19 +75,47 @@ final class CrownKeepOptionalModels {
         }
     }
 
+    private func modelRequest(_ url: URL) -> URLRequest {
+        var request = URLRequest(
+            url: url,
+            cachePolicy: .reloadIgnoringLocalAndRemoteCacheData,
+            timeoutInterval: 120
+        )
+        request.setValue("CrownKeep-iOS/1.0", forHTTPHeaderField: "User-Agent")
+        request.setValue("application/octet-stream,*/*;q=0.8", forHTTPHeaderField: "Accept")
+        return request
+    }
+
+    private func httpDownloadError(
+        _ response: URLResponse,
+        requestedURL: URL,
+        assetName: String
+    ) -> NSError {
+        let http = response as? HTTPURLResponse
+        let status = http?.statusCode ?? -1
+        let finalURL = response.url?.absoluteString ?? requestedURL.absoluteString
+        let host = response.url?.host ?? requestedURL.host ?? "unknown host"
+        return NSError(
+            domain: "CrownKeepModels",
+            code: 11,
+            userInfo: [
+                NSLocalizedDescriptionKey:
+                    "Could not download \(assetName). HTTP \(status) from \(host). Final URL: \(finalURL)"
+            ]
+        )
+    }
+
     private func download(
         _ url: URL,
         to destination: URL,
         expectedBytes: Int64? = nil,
-        expectedSHA256: String? = nil
+        expectedSHA256: String? = nil,
+        assetName: String? = nil
     ) async throws {
-        let (temporary, response) = try await URLSession.shared.download(from: url)
+        let name = assetName ?? destination.lastPathComponent
+        let (temporary, response) = try await URLSession.shared.download(for: modelRequest(url))
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            throw NSError(
-                domain: "CrownKeepModels",
-                code: 11,
-                userInfo: [NSLocalizedDescriptionKey: "Model download failed with an unexpected HTTP response."]
-            )
+            throw httpDownloadError(response, requestedURL: url, assetName: name)
         }
 
         let size = (try? temporary.resourceValues(forKeys: [.fileSizeKey]).fileSize).map(Int64.init)
@@ -97,7 +125,7 @@ final class CrownKeepOptionalModels {
                 code: 12,
                 userInfo: [
                     NSLocalizedDescriptionKey:
-                        "Downloaded model size did not match the pinned release (expected \(expectedBytes), received \(size ?? -1))."
+                        "Downloaded \(name) size did not match the pinned release (expected \(expectedBytes), received \(size ?? -1))."
                 ]
             )
         }
@@ -108,7 +136,7 @@ final class CrownKeepOptionalModels {
                 throw NSError(
                     domain: "CrownKeepModels",
                     code: 13,
-                    userInfo: [NSLocalizedDescriptionKey: "Downloaded model checksum did not match the pinned release."]
+                    userInfo: [NSLocalizedDescriptionKey: "Downloaded \(name) checksum did not match the pinned release."]
                 )
             }
         }
@@ -120,14 +148,15 @@ final class CrownKeepOptionalModels {
         try fm.moveItem(at: temporary, to: destination)
     }
 
-    private func downloadSmall(_ url: URL, to destination: URL) async throws {
-        let (data, response) = try await URLSession.shared.data(from: url)
+    private func downloadSmall(
+        _ url: URL,
+        to destination: URL,
+        assetName: String? = nil
+    ) async throws {
+        let name = assetName ?? destination.lastPathComponent
+        let (data, response) = try await URLSession.shared.data(for: modelRequest(url))
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            throw NSError(
-                domain: "CrownKeepModels",
-                code: 14,
-                userInfo: [NSLocalizedDescriptionKey: "Model metadata download failed."]
-            )
+            throw httpDownloadError(response, requestedURL: url, assetName: name)
         }
         try fm.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
         try data.write(to: destination, options: .atomic)
@@ -218,10 +247,10 @@ final class CrownKeepOptionalModels {
 
         let base = "https://huggingface.co/mlboydaisuke/Julia-1-CoreAI/resolve/\(juliaRevision)/macos/fp32-s512"
         guard
-            let modelURL = URL(string: "\(base)/julia1_fp32_s512.aimodel"),
-            let metadataURL = URL(string: "\(base)/metadata.json"),
-            let tokenizerURL = URL(string: "\(base)/tokenizer/tokenizer.json"),
-            let tokenizerConfigURL = URL(string: "\(base)/tokenizer/tokenizer_config.json")
+            let modelURL = URL(string: "\(base)/julia1_fp32_s512.aimodel?download=true"),
+            let metadataURL = URL(string: "\(base)/metadata.json?download=true"),
+            let tokenizerURL = URL(string: "\(base)/tokenizer/tokenizer.json?download=true"),
+            let tokenizerConfigURL = URL(string: "\(base)/tokenizer/tokenizer_config.json?download=true")
         else {
             throw NSError(domain: "CrownKeepJulia", code: 2, userInfo: [NSLocalizedDescriptionKey: "Pinned Julia model URLs are invalid."])
         }
@@ -229,18 +258,25 @@ final class CrownKeepOptionalModels {
         try await download(
             modelURL,
             to: staging.appending(path: "julia1_fp32_s512.aimodel"),
-            expectedBytes: juliaModelBytes
+            expectedBytes: juliaModelBytes,
+            assetName: "Julia Core AI model"
         )
-        try await downloadSmall(metadataURL, to: staging.appending(path: "metadata.json"))
+        try await downloadSmall(
+            metadataURL,
+            to: staging.appending(path: "metadata.json"),
+            assetName: "Julia metadata"
+        )
         try await download(
             tokenizerURL,
             to: staging.appending(path: "tokenizer/tokenizer.json"),
             expectedBytes: juliaTokenizerBytes,
-            expectedSHA256: juliaTokenizerSHA256
+            expectedSHA256: juliaTokenizerSHA256,
+            assetName: "Julia tokenizer"
         )
         try await downloadSmall(
             tokenizerConfigURL,
-            to: staging.appending(path: "tokenizer/tokenizer_config.json")
+            to: staging.appending(path: "tokenizer/tokenizer_config.json"),
+            assetName: "Julia tokenizer configuration"
         )
 
         // ml-stable-diffusion currently pins swift-transformers 0.1.8.
@@ -464,7 +500,7 @@ final class CrownKeepOptionalModels {
 
         let filename = "coreml-stable-diffusion-1-4-palettized_split_einsum_v2_compiled.zip"
         guard let url = URL(string:
-            "https://huggingface.co/apple/coreml-stable-diffusion-1-4-palettized/resolve/\(imageRevision)/\(filename)"
+            "https://huggingface.co/apple/coreml-stable-diffusion-1-4-palettized/resolve/\(imageRevision)/\(filename)?download=true"
         ) else {
             throw NSError(domain: "CrownKeepImages", code: 20, userInfo: [NSLocalizedDescriptionKey: "Pinned image-model URL is invalid."])
         }
@@ -473,7 +509,8 @@ final class CrownKeepOptionalModels {
             url,
             to: archive,
             expectedBytes: imageArchiveBytes,
-            expectedSHA256: imageArchiveSHA256
+            expectedSHA256: imageArchiveSHA256,
+            assetName: "local image model archive"
         )
 
         let expanded = staging.appending(path: "expanded", directoryHint: .isDirectory)
