@@ -682,7 +682,9 @@ export function ModelAnalyst({
             disabled={busy || !viable.length}
             onClick={() => void benchmark(family.alias)}
           >
-            Compare paths and use fastest
+            {family.variants.some((variant) => variant.cached)
+              ? 'Test / compare this role'
+              : 'Download & test this role'}
           </button>
         )}
         {family.role === 'Voice' && (
