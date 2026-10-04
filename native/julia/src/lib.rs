@@ -28,14 +28,29 @@ fn verified(path: &Path, expected: &str) -> Result<(), String> {
     if format!("{:x}", hash.finalize()) != expected { return Err(format!("Julia asset checksum mismatch: {}", path.display())); }
     Ok(())
 }
+pub fn verify_directory(directory: &Path) -> Result<(), String> {
+    let hashes: BTreeMap<String, String> =
+        serde_json::from_str(include_str!("../assets.sha256.json")).map_err(|e| e.to_string())?;
+    for (name, hash) in hashes {
+        verified(&directory.join(name), &hash)?;
+    }
+    let dll = directory.join(if cfg!(windows) {
+        "onnxruntime.dll"
+    } else {
+        "libonnxruntime.so"
+    });
+    if !dll.is_file() {
+        return Err("Native ONNX Runtime CPU library is not installed.".into());
+    }
+    Ok(())
+}
+
 impl Engine {
     pub fn load(directory: &Path) -> Result<Self, String> {
         // Hashes pin the graph/weights/tokenizer. The installer must ship the ORT
         // CPU DLL alongside the app and its license; do not resolve a system DLL.
-        let hashes: BTreeMap<String, String> = serde_json::from_str(include_str!("../assets.sha256.json")).map_err(|e| e.to_string())?;
-        for (name, hash) in hashes { verified(&directory.join(name), &hash)?; }
+        verify_directory(directory)?;
         let dll = directory.join(if cfg!(windows) { "onnxruntime.dll" } else { "libonnxruntime.so" });
-        if !dll.is_file() { return Err("Native ONNX Runtime CPU library is not installed.".into()); }
         ort::init_from(dll.to_string_lossy()).with_name("CrownKeep Julia CPU").commit().map_err(|e| e.to_string())?;
         let session = Session::builder().map_err(|e| e.to_string())?.with_intra_threads(4).map_err(|e| e.to_string())?.commit_from_file(directory.join("model.onnx")).map_err(|e| e.to_string())?;
         let encoder = encoding::JuliaEncoder::new(&std::fs::read_to_string(directory.join("tokenizer.json")).map_err(|e| e.to_string())?)?;
