@@ -3145,14 +3145,18 @@ ${image.extractedText}
                     <strong>Local Image Generation · {
                       localImageRuntime().install
                         ? (imageRuntimeStatus?.state === 'ready' ? (localImagesEnabled ? 'ON' : 'OFF') : 'NOT INSTALLED')
-                        : (localImagesEnabled ? 'ON' : 'OFF')
+                        : imageRuntimeStatus?.state === 'ready'
+                          ? (localImagesEnabled ? 'ON' : 'OFF')
+                          : localImagesEnabled ? 'RUNTIME STOPPED' : 'OFF'
                     }</strong>
                     <span>{
                       localImageRuntime().install
                         ? (imageRuntimeStatus?.state === 'ready'
                             ? 'Anne may create images entirely on this device.'
                             : 'Optional on-device image model. The download is large and happens only when you choose it.')
-                        : 'Uses the configured local desktop image runtime when it is running.'
+                        : imageRuntimeStatus?.state === 'ready'
+                          ? imageRuntimeStatus.detail
+                          : imageRuntimeStatus?.detail ?? 'Start a supported local desktop image runtime; CrownKeep will detect it on loopback.'
                     }</span>
                   </div>
                   <div className="capability-actions">
