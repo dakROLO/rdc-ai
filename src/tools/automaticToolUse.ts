@@ -60,6 +60,10 @@ export function promptNeedsCurrentWeb(prompt: string): boolean {
   )
 }
 
+export function promptNeedsImageGeneration(prompt: string): boolean {
+  return /\b(?:make|create|generate|draw|render|design)\b[\s\S]{0,100}\b(?:image|picture|illustration|graphic|artwork|photo)\b|\b(?:image|picture|illustration|graphic|artwork|photo)\b[\s\S]{0,80}\b(?:make|create|generate|draw|render|design)\b/i.test(prompt)
+}
+
 export function promptNeedsPageRead(prompt: string): boolean {
   return Boolean(prompt.match(URL_PATTERN)) ||
     /\b(read|open|page|webpage|website|article|documentation|docs|source|according to|what does .* say|details from|summari[sz]e .* site|compare .* sources)\b/i.test(
@@ -81,6 +85,10 @@ function activityFor(
     sources: result.metadata?.sources ?? [],
     outcome: result.metadata?.detail === 'irrelevant-result' ? 'error' : 'success',
     retainedContext: result.text.slice(0, 6000),
+    generatedImageDataUrl:
+      toolId === 'image.generate'
+        ? (result.data as { dataUrl?: string } | undefined)?.dataUrl
+        : undefined,
   }
 }
 
@@ -97,13 +105,46 @@ function toolContext(
 
 /**
  * Safe fallback for providers/models that do not expose structured tool calling.
- * It is intentionally small and inspectable: current prompt only, read-only
- * tools only, and at most one search plus two page reads.
+ * It is intentionally small and inspectable: current prompt only. It may
+ * generate one local image only when the separate image permission/runtime is
+ * ready; network behavior remains read-only and bounded to one search plus two
+ * page reads.
  */
 export async function runAutomaticReadOnlyTools(
   prompt: string,
   registry: ToolRegistry,
 ): Promise<AutomaticToolResult> {
+  if (promptNeedsImageGeneration(prompt)) {
+    const imageTool = registry.get('image.generate')
+    try {
+      const result = await registry.execute('image.generate', { prompt: prompt.slice(0, 2000) })
+      return {
+        context: [
+          'CrownKeep generated the requested image locally. The generated image is attached to this response.',
+          result.text,
+        ].join('\n'),
+        activities: [activityFor(registry, 'image.generate', result)],
+        attemptedWeb: false,
+      }
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error)
+      return {
+        context: `Local image generation could not run: ${detail}. Do not claim image generation is impossible in general; explain the local runtime state briefly.`,
+        activities: [{
+          toolId: 'image.generate',
+          label: imageTool?.name ?? 'Create image',
+          requiresNetwork: false,
+          dataLeftDevice: false,
+          outcome: 'error',
+          sources: [],
+          retainedContext: detail,
+        }],
+        attemptedWeb: false,
+        error: detail,
+      }
+    }
+  }
+
   const explicitUrl = prompt.match(URL_PATTERN)?.[0]
   const needsWeb = Boolean(explicitUrl) || promptNeedsCurrentWeb(prompt)
   if (!needsWeb) {
