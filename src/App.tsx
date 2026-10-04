@@ -3145,6 +3145,57 @@ ${image.extractedText}
                   </button>
                 </div>
 
+                {selectedProviderId === 'foundry-local' && localRuntimeManager.mode === 'embedded' && (
+                  <details className="model-analyst model-setup-panel">
+                    <summary>Model setup &amp; testing · Quick / Balanced / Deep</summary>
+                    <ModelAnalyst manager={localRuntimeManager} provider={foundryLocalProvider}
+                      candidates={modelCandidates} busy={isRuntimeActionRunning || isGenerating || speechBusy || isRuntimeCheckRunning}
+                      setBusy={setIsRuntimeActionRunning} refresh={refreshModelAnalyst}
+                      onReady={(ready) => { setRuntimeSleeping(!ready); setProviderRefreshNonce((n) => n + 1); void refreshFingerprint() }}
+                      onCatalogChanged={() => { setProviderRefreshNonce((n) => n + 1); void refreshFingerprint() }} />
+                    <details className="model-analyst-panel"><summary>Advanced · force a chat variant</summary>
+                      <label className="model-analyst-select">
+                        <span>Candidate</span>
+                        <select
+                          value={analystModelId}
+                          onChange={(event) => setAnalystModelId(event.target.value)}
+                          disabled={isRuntimeActionRunning || modelCandidates.length === 0}
+                        >
+                          {modelCandidates.filter((item) => taskOf(item) === 'chat').map((candidate) => (
+                            <option value={candidate.id} key={candidate.id}>
+                              {candidate.alias} · {candidate.device ?? 'Auto'}
+                              {candidate.cached ? ' · Cached' : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      {modelCandidates
+                        .filter((candidate) => candidate.id === analystModelId)
+                        .map((candidate) => (
+                          <div className="model-analyst-details" key={candidate.id}>
+                            <span><strong>Variant</strong>{candidate.id}</span>
+                            <span><strong>Device</strong>{candidate.device ?? 'Auto'}</span>
+                            <span><strong>Runtime</strong>{candidate.executionProvider ?? 'Default'}</span>
+                            <span><strong>Cache</strong>{candidate.cached ? 'Downloaded' : 'Not downloaded'}</span>
+                            <span><strong>Size</strong>{candidate.fileSizeMb ? `${candidate.fileSizeMb} MB` : '—'}</span>
+                            <span><strong>Context</strong>{candidate.contextLength ? candidate.contextLength.toLocaleString() : '—'}</span>
+                          </div>
+                        ))}
+
+                      <button
+                        type="button"
+                        className="runtime-native-button"
+                        onClick={() => void useAnalystModel(analystModelId)}
+                        disabled={!analystModelId || isRuntimeActionRunning || isGenerating || speechBusy || isRuntimeCheckRunning}
+                      >
+                        {isRuntimeActionRunning ? 'Switching model…' : 'Use this model'}
+                      </button>
+                    </details>
+                      </details>
+                    )}
+
+
                 <button type="button" className="secondary-button" onClick={() => setShowPromptInspector(true)}>System Prompt / Prompt &amp; Context</button>
                 <details><summary>Knowledge</summary><p>Local knowledge stays on this device. Current search includes CrownKeep reference notes only; personal file ingestion is not enabled.</p></details>
                 <details className="diagnostics-disclosure">
@@ -3312,56 +3363,6 @@ ${image.extractedText}
                           <option value={60}>60 minutes</option>
                         </select>
                       </label>
-                    )}
-
-                    {localRuntimeManager.mode === 'embedded' && (
-                      <details className="model-analyst">
-                        <summary>Local Model Analyst</summary>
-                        <ModelAnalyst manager={localRuntimeManager} provider={foundryLocalProvider}
-                          candidates={modelCandidates} busy={isRuntimeActionRunning || isGenerating || speechBusy || isRuntimeCheckRunning}
-                          setBusy={setIsRuntimeActionRunning} refresh={refreshModelAnalyst}
-                          onReady={(ready) => { setRuntimeSleeping(!ready); setProviderRefreshNonce((n) => n + 1); void refreshFingerprint() }}
-                          onCatalogChanged={() => { setProviderRefreshNonce((n) => n + 1); void refreshFingerprint() }} />
-                        <details className="model-analyst-panel"><summary>Advanced · force a chat variant</summary>
-                          <label className="model-analyst-select">
-                            <span>Candidate</span>
-                            <select
-                              value={analystModelId}
-                              onChange={(event) => setAnalystModelId(event.target.value)}
-                              disabled={isRuntimeActionRunning || modelCandidates.length === 0}
-                            >
-                              {modelCandidates.filter((item) => taskOf(item) === 'chat').map((candidate) => (
-                                <option value={candidate.id} key={candidate.id}>
-                                  {candidate.alias} · {candidate.device ?? 'Auto'}
-                                  {candidate.cached ? ' · Cached' : ''}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-
-                          {modelCandidates
-                            .filter((candidate) => candidate.id === analystModelId)
-                            .map((candidate) => (
-                              <div className="model-analyst-details" key={candidate.id}>
-                                <span><strong>Variant</strong>{candidate.id}</span>
-                                <span><strong>Device</strong>{candidate.device ?? 'Auto'}</span>
-                                <span><strong>Runtime</strong>{candidate.executionProvider ?? 'Default'}</span>
-                                <span><strong>Cache</strong>{candidate.cached ? 'Downloaded' : 'Not downloaded'}</span>
-                                <span><strong>Size</strong>{candidate.fileSizeMb ? `${candidate.fileSizeMb} MB` : '—'}</span>
-                                <span><strong>Context</strong>{candidate.contextLength ? candidate.contextLength.toLocaleString() : '—'}</span>
-                              </div>
-                            ))}
-
-                          <button
-                            type="button"
-                            className="runtime-native-button"
-                            onClick={() => void useAnalystModel(analystModelId)}
-                            disabled={!analystModelId || isRuntimeActionRunning || isGenerating || speechBusy || isRuntimeCheckRunning}
-                          >
-                            {isRuntimeActionRunning ? 'Switching model…' : 'Use this model'}
-                          </button>
-                        </details>
-                      </details>
                     )}
 
                     {runtimeActionMessage && (
